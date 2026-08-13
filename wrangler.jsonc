@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "drop",
+  "main": "server/index.ts",
+  "compatibility_date": "2026-08-12",
+  "assets": {
+    "not_found_handling": "single-page-application"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "drop-db",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "db/migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "drop-files"
+    }
+  ],
+  "vars": {
+    "APP_ORIGIN": "https://drop.28207.cc",
+    "UPLOAD_CHUNK_SIZE": "33554432",
+    "MAX_FILE_SIZE": "2147483648",
+    "SESSION_TTL_SECONDS": "2592000",
+    "DEFAULT_RETENTION_DAYS": "30"
+  }
+}
