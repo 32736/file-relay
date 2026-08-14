@@ -33,3 +33,11 @@ export function isSameOrigin(request: Request): boolean {
   if (!origin) return false
   return origin === new URL(request.url).origin
 }
+
+/** Middleware form of `isSameOrigin` for state-changing routes. */
+export const requireSameOrigin = createMiddleware<AppEnv>(async (c, next) => {
+  if (!isSameOrigin(c.req.raw)) {
+    return apiError(c, 403, 'FORBIDDEN', 'Cross-origin request rejected')
+  }
+  await next()
+})

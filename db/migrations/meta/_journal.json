@@ -8,6 +8,13 @@
       "when": 1786679225424,
       "tag": "0000_watery_lilandra",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1786681785232,
+      "tag": "0001_swift_talkback",
+      "breakpoints": true
     }
   ]
 }

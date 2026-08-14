@@ -1,7 +1,6 @@
 // An in-memory D1Database-shaped fake covering exactly the SQL statements the
-// server uses. It is intentionally minimal: a table store with INSERT/SELECT/
-// DELETE and equality WHERE clauses, plus the UNIQUE constraint on
-// sessions.token_hash. Tests cast it to D1Database when building bindings.
+// server uses: INSERT / SELECT / UPDATE / DELETE with equality conditions and
+// batched statements. Tests cast it to D1Database when building bindings.
 
 type Row = Record<string, unknown>
 
@@ -16,61 +15,159 @@ interface TableState {
 
 interface WhereClause {
   column: string
+  operator: '=' | 'is-null' | 'is-not-null'
+  value?: unknown
+}
+
+interface Assignment {
+  column: string
   value: unknown
+}
+
+interface OrderByClause {
+  column: string
+  direction: 'asc' | 'desc'
 }
 
 type Query =
   | { kind: 'insert'; table: string; columns: string[]; values: unknown[] }
-  | { kind: 'select'; columns: string[]; table: string; where?: WhereClause }
-  | { kind: 'delete'; table: string; where?: WhereClause }
+  | {
+      kind: 'select'
+      columns: string[]
+      table: string
+      where: WhereClause[]
+      orderBy: OrderByClause[]
+      limit?: number
+      offset: number
+    }
+  | { kind: 'update'; table: string; assignments: Assignment[]; where: WhereClause[] }
+  | { kind: 'delete'; table: string; where: WhereClause[] }
 
-function parseWhere(clause: string | undefined, params: unknown[]): WhereClause | undefined {
-  if (!clause) return undefined
-  const match = /^(\w+)\s*=\s*(\?|'[^']*')$/.exec(clause.trim())
-  if (!match) throw new Error(`unsupported WHERE clause in fake: ${clause}`)
-  const value = match[2] === '?' ? params[0] : match[2].slice(1, -1)
-  return { column: match[1], value }
+/** Parses `col = ?` / `col = 'literal'` pairs, consuming `?` params via cursor. */
+function parseAssignments(
+  clause: string,
+  params: unknown[],
+  cursor: { index: number },
+): Assignment[] {
+  const assignments: Assignment[] = []
+  const pattern = /(\w+)\s*=\s*(\?|'[^']*')/g
+  let match: RegExpExecArray | null
+  while ((match = pattern.exec(clause)) !== null) {
+    const value = match[2] === '?' ? params[cursor.index++] : match[2].slice(1, -1)
+    assignments.push({ column: match[1], value })
+  }
+  return assignments
+}
+
+function parseWhere(
+  clause: string | undefined,
+  params: unknown[],
+  cursor: { index: number },
+): WhereClause[] {
+  if (!clause) return []
+  return clause.split(/\s+AND\s+/i).map((condition) => {
+    const nullMatch = /^(\w+)\s+IS\s+(NOT\s+)?NULL$/i.exec(condition.trim())
+    if (nullMatch) {
+      return {
+        column: nullMatch[1],
+        operator: nullMatch[2] ? 'is-not-null' : 'is-null',
+      }
+    }
+    const assignment = parseAssignments(condition, params, cursor)[0]
+    if (!assignment) throw new Error(`unsupported WHERE clause: ${condition}`)
+    return { column: assignment.column, operator: '=', value: assignment.value }
+  })
+}
+
+function parseOrderBy(clause: string | undefined): OrderByClause[] {
+  if (!clause) return []
+  return clause.split(',').map((part) => {
+    const match = /(\w+)(?:\s+(ASC|DESC))?/i.exec(part.trim())
+    if (!match) throw new Error(`unsupported ORDER BY clause: ${part}`)
+    return { column: match[1], direction: (match[2] ?? 'asc').toLowerCase() as 'asc' | 'desc' }
+  })
+}
+
+/** Resolves a LIMIT/OFFSET value that is either a literal number or a `?` param. */
+function parseNumber(value: string | undefined, params: unknown[], cursor: { index: number }): number | undefined {
+  if (value === undefined) return undefined
+  if (value === '?') return Number(params[cursor.index++])
+  return Number(value)
 }
 
 function parseQuery(sql: string, params: unknown[]): Query {
-  const insertMatch = /^INSERT INTO (\w+) \(([^)]+)\) VALUES \(([^)]+)\)/i.exec(sql)
+  // The server formats long SQL across lines; normalize whitespace so the
+  // statement regexes match regardless of formatting.
+  const normalized = sql.replace(/\s+/g, ' ').trim()
+  const cursor = { index: 0 }
+
+  const insertMatch = /^INSERT INTO (\w+) \(([^)]+)\) VALUES \(([^)]+)\)/i.exec(normalized)
   if (insertMatch) {
     const columns = insertMatch[2].split(',').map((name) => name.trim())
     const placeholders = insertMatch[3].split(',').map((name) => name.trim())
-    const values = placeholders.map((placeholder, index) => {
+    const values = placeholders.map((placeholder) => {
       if (placeholder !== '?') throw new Error(`unsupported INSERT literal: ${placeholder}`)
-      return params[index]
+      return params[cursor.index++]
     })
     return { kind: 'insert', table: insertMatch[1], columns, values }
   }
 
-  const selectMatch = /^SELECT (.+) FROM (\w+)(?:\s+WHERE\s+(.+))?$/i.exec(sql)
+  const selectMatch = /^SELECT (.+) FROM (\w+)(.*)$/i.exec(normalized)
   if (selectMatch) {
+    const rest = selectMatch[3]
+    const whereMatch = /WHERE\s+(.+?)(?=\s+ORDER BY\s|\s+LIMIT\s|\s+OFFSET\s|$)/i.exec(rest)
+    const orderMatch = /ORDER BY\s+(.+?)(?=\s+LIMIT\s|\s+OFFSET\s|$)/i.exec(rest)
+    const limitMatch = /LIMIT\s+(\?|\d+)/i.exec(rest)
+    const offsetMatch = /OFFSET\s+(\?|\d+)/i.exec(rest)
     return {
       kind: 'select',
       columns: selectMatch[1].split(',').map((name) => name.trim()),
       table: selectMatch[2],
-      where: parseWhere(selectMatch[3], params),
+      where: parseWhere(whereMatch?.[1], params, cursor),
+      orderBy: parseOrderBy(orderMatch?.[1]),
+      limit: parseNumber(limitMatch?.[1], params, cursor),
+      offset: parseNumber(offsetMatch?.[1], params, cursor) ?? 0,
     }
   }
 
-  const deleteMatch = /^DELETE FROM (\w+)(?:\s+WHERE\s+(.+))?$/i.exec(sql)
-  if (deleteMatch) {
-    return { kind: 'delete', table: deleteMatch[1], where: parseWhere(deleteMatch[2], params) }
+  const updateMatch = /^UPDATE (\w+) SET (.+?)(?:\s+WHERE\s+(.+))?$/i.exec(normalized)
+  if (updateMatch) {
+    return {
+      kind: 'update',
+      table: updateMatch[1],
+      assignments: parseAssignments(updateMatch[2], params, cursor),
+      where: parseWhere(updateMatch[3], params, cursor),
+    }
   }
 
-  throw new Error(`unsupported SQL in fake: ${sql}`)
+  const deleteMatch = /^DELETE FROM (\w+)(?:\s+WHERE\s+(.+))?$/i.exec(normalized)
+  if (deleteMatch) {
+    return {
+      kind: 'delete',
+      table: deleteMatch[1],
+      where: parseWhere(deleteMatch[2], params, cursor),
+    }
+  }
+
+  throw new Error(`unsupported SQL in fake: ${normalized}`)
 }
 
-function matchesWhere(row: Row, where: WhereClause | undefined): boolean {
-  if (!where) return true
-  return row[where.column] === where.value
+function matchesWhere(row: Row, where: WhereClause[]): boolean {
+  return where.every((condition) => {
+    if (condition.operator === 'is-null') {
+      return row[condition.column] === null || row[condition.column] === undefined
+    }
+    if (condition.operator === 'is-not-null') {
+      return row[condition.column] !== null && row[condition.column] !== undefined
+    }
+    return row[condition.column] === condition.value
+  })
 }
 
 export class D1Fake {
   private tables = new Map<string, TableState>()
 
-  constructor(seed: { sessions?: Row[] } = {}) {
+  constructor(seed: { sessions?: Row[]; files?: Row[]; upload_sessions?: Row[] } = {}) {
     this.tables.set('sessions', {
       columns: [
         { name: 'id' },
@@ -81,10 +178,54 @@ export class D1Fake {
       ],
       rows: seed.sessions ? seed.sessions.map((row) => ({ ...row })) : [],
     })
+    this.tables.set('files', {
+      columns: [
+        { name: 'id' },
+        { name: 'object_key' },
+        { name: 'original_name' },
+        { name: 'mime_type' },
+        { name: 'size' },
+        { name: 'etag' },
+        { name: 'source' },
+        { name: 'created_at' },
+        { name: 'expires_at' },
+        { name: 'deleted_at' },
+      ],
+      rows: seed.files ? seed.files.map((row) => ({ ...row })) : [],
+    })
+    this.tables.set('upload_sessions', {
+      columns: [
+        { name: 'id' },
+        { name: 'file_id' },
+        { name: 'object_key' },
+        { name: 'original_name' },
+        { name: 'mime_type' },
+        { name: 'total_size' },
+        { name: 'chunk_size' },
+        { name: 'total_parts' },
+        { name: 'mode' },
+        { name: 'r2_upload_id' },
+        { name: 'auth_kind' },
+        { name: 'access_token_hash' },
+        { name: 'status' },
+        { name: 'created_at' },
+        { name: 'expires_at' },
+        { name: 'completed_at' },
+      ],
+      rows: seed.upload_sessions ? seed.upload_sessions.map((row) => ({ ...row })) : [],
+    })
   }
 
   prepare(sql: string): FakeStatement {
     return new FakeStatement(this, sql)
+  }
+
+  async batch(statements: FakeStatement[]): Promise<{ success: boolean; meta: { changes: number } }[]> {
+    const results: { success: boolean; meta: { changes: number } }[] = []
+    for (const statement of statements) {
+      results.push(await statement.run())
+    }
+    return results
   }
 
   /** Internal access for FakeStatement; not part of the D1Database shape. */
@@ -119,13 +260,33 @@ class FakeStatement {
     const query = parseQuery(this.sql, this.params)
     if (query.kind !== 'select') throw new Error('all() only supports SELECT in fake')
     const table = this.db.tableState(query.table)
-    const results = table.rows
-      .filter((row) => matchesWhere(row, query.where))
-      .map((row) => {
-        const picked: Row = {}
-        for (const column of query.columns) picked[column] = row[column]
-        return picked
-      })
+
+    const filtered = table.rows.filter((row) => matchesWhere(row, query.where))
+    const sorted =
+      query.orderBy.length === 0
+        ? filtered
+        : [...filtered].sort((a, b) => {
+            for (const { column, direction } of query.orderBy) {
+              const left = a[column] as number | string | null | undefined
+              const right = b[column] as number | string | null | undefined
+              if (left === right) continue
+              if (left == null) return direction === 'desc' ? 1 : -1
+              if (right == null) return direction === 'desc' ? -1 : 1
+              const comparison = left < right ? -1 : 1
+              return direction === 'desc' ? -comparison : comparison
+            }
+            return 0
+          })
+    const paged =
+      query.limit === undefined
+        ? sorted
+        : sorted.slice(query.offset, query.offset + query.limit)
+
+    const results = paged.map((row) => {
+      const picked: Row = {}
+      for (const column of query.columns) picked[column] = row[column]
+      return picked
+    })
     return { results, success: true }
   }
 
@@ -149,8 +310,32 @@ class FakeStatement {
       ) {
         throw new Error('UNIQUE constraint failed: sessions.token_hash')
       }
+      if (
+        query.table === 'files' &&
+        table.rows.some((existing) => existing.object_key === row.object_key)
+      ) {
+        throw new Error('UNIQUE constraint failed: files.object_key')
+      }
+      if (
+        query.table === 'upload_sessions' &&
+        table.rows.some((existing) => existing.object_key === row.object_key)
+      ) {
+        throw new Error('UNIQUE constraint failed: upload_sessions.object_key')
+      }
       table.rows.push(row)
       return { success: true, meta: { changes: 1 } }
+    }
+
+    if (query.kind === 'update') {
+      let changes = 0
+      table.rows = table.rows.map((row) => {
+        if (!matchesWhere(row, query.where)) return row
+        changes++
+        const updated: Row = { ...row }
+        for (const { column, value } of query.assignments) updated[column] = value
+        return updated
+      })
+      return { success: true, meta: { changes } }
     }
 
     if (query.kind === 'delete') {
@@ -159,6 +344,6 @@ class FakeStatement {
       return { success: true, meta: { changes: before - table.rows.length } }
     }
 
-    throw new Error('run() only supports INSERT/DELETE in fake')
+    throw new Error('run() only supports INSERT/UPDATE/DELETE in fake')
   }
 }

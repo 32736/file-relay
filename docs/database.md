@@ -23,10 +23,11 @@ together.
 ## Implemented ownership
 
 - Phase 01: `sessions` (token hashes only; raw session tokens never stored).
+- Phase 02: `files` and `upload_sessions` (single uploads; the session table is
+  created with the Phase 03-ready multipart shape).
 
 ## Planned ownership
 
-- Phase 02: `files` and `upload_sessions` needed for single uploads.
 - Phase 03: multipart fields and `upload_parts`.
 - Phase 05: `shares`.
 - Phase 08: `incoming_requests` and public upload authorization state.
