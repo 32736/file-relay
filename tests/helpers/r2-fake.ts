@@ -10,6 +10,7 @@ export interface StoredObject {
   etag: string
   contentType: string | null
   body: Uint8Array
+  range?: { offset: number; length: number }
 }
 
 export interface MultipartState {
@@ -73,8 +74,33 @@ export class R2Fake {
     return object
   }
 
-  async get(key: string): Promise<StoredObject | null> {
-    return this.objects.get(key) ?? null
+  async get(
+    key: string,
+    options?: { range?: { offset?: number; length?: number; suffix?: number } },
+  ): Promise<StoredObject | null> {
+    const object = this.objects.get(key)
+    if (!object) return null
+
+    const range = options?.range
+    if (!range) {
+      return { ...object, body: object.body }
+    }
+
+    let offset = 0
+    let length = object.size
+    if (range.suffix !== undefined) {
+      offset = Math.max(0, object.size - range.suffix)
+      length = object.size - offset
+    } else if (range.offset !== undefined) {
+      offset = range.offset
+      length = range.length ?? Math.max(0, object.size - offset)
+    }
+
+    return {
+      ...object,
+      body: object.body.slice(offset, offset + length),
+      range: { offset, length },
+    }
   }
 
   async head(key: string): Promise<StoredObject | null> {

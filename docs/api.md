@@ -168,8 +168,26 @@ Multipart sessions additionally return `completedParts`:
 Multipart sessions abort the R2 multipart before marking `aborted` (`204`,
 idempotent). Completed uploads → `409`.
 
+## Phase 04
+
+Owner-only streaming downloads with HTTP Range support (plan §32). Downloads
+stream from R2; nothing is buffered in the Worker. Responses always carry
+`X-Content-Type-Options: nosniff` and `Accept-Ranges: bytes`; filenames are
+header-injection-safe (`filename="..."` ASCII fallback plus RFC 5987
+`filename*=UTF-8''...`).
+
+### `GET /api/files/:id/download`
+
+- Owner-only. Missing or logically deleted file → `404 NOT_FOUND`.
+- No `Range` header → `200` with `Content-Length: size`.
+- Valid single range (`bytes=start-end`, `bytes=start-`, `bytes=-suffix`) →
+  `206 Partial Content` with `Content-Range: bytes start-end/size`.
+- Unsatisfiable, malformed, or multi-range → `416 Range Not Satisfiable` with
+  `Content-Range: bytes */size`.
+- `Content-Disposition: attachment; ...` always in this phase (inline previews
+  arrive in Phase 07).
+
 ## Future phases
 
-- Phase 04: owner streaming and range downloads.
 - Phase 05: owner share management and public share downloads.
 - Phase 06: scheduled cleanup, with no public route required.

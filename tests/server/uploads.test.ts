@@ -749,4 +749,110 @@ describe('Phase 03 multipart', () => {
     )
     expect(response.status).toBe(409)
   })
+
+  it('rejects cross-origin complete and abort', async () => {
+    const uploadId = await createMultipart()
+    await uploadPart(uploadId, 1, PART_SIZES[0])
+
+    const complete = await app.request(
+      `/api/uploads/${uploadId}/complete`,
+      { method: 'POST', headers: { Cookie: cookie, Origin: 'https://evil.example' } },
+      env,
+    )
+    expect(complete.status).toBe(403)
+    expect(db.rows('upload_sessions')[0].status).toBe('uploading')
+
+    const abort = await app.request(
+      `/api/uploads/${uploadId}`,
+      { method: 'DELETE', headers: { Cookie: cookie, Origin: 'https://evil.example' } },
+      env,
+    )
+    expect(abort.status).toBe(403)
+    expect(db.rows('upload_sessions')[0].status).toBe('uploading')
+  })
+
+  it('rejects parts for an aborted session', async () => {
+    const uploadId = await createMultipart()
+    await uploadPart(uploadId, 1, PART_SIZES[0])
+    await app.request(
+      `/api/uploads/${uploadId}`,
+      { method: 'DELETE', headers: authHeaders(cookie) },
+      env,
+    )
+
+    const response = await uploadPart(uploadId, 2, PART_SIZES[1])
+    expect(response.status).toBe(409)
+  })
+
+  it('complete conflicts for an aborted multipart session', async () => {
+    const uploadId = await createMultipart()
+    await uploadPart(uploadId, 1, PART_SIZES[0])
+    await app.request(
+      `/api/uploads/${uploadId}`,
+      { method: 'DELETE', headers: authHeaders(cookie) },
+      env,
+    )
+
+    const response = await app.request(
+      `/api/uploads/${uploadId}/complete`,
+      { method: 'POST', headers: authHeaders(cookie) },
+      env,
+    )
+    expect(response.status).toBe(409)
+  })
+
+  it('complete returns 409 when the R2 object is missing after completion', async () => {
+    const now = Math.floor(Date.now() / 1000)
+    const objectKey = 'objects/2026/08/file-no-object'
+    await db
+      .prepare(
+        `INSERT INTO upload_sessions
+         (id, file_id, object_key, original_name, mime_type, total_size, chunk_size,
+          total_parts, mode, r2_upload_id, auth_kind, access_token_hash, status,
+          created_at, expires_at, completed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        'sess-no-object',
+        'file-no-object',
+        objectKey,
+        'ghost.bin',
+        'application/octet-stream',
+        FILE_SIZE,
+        CHUNK,
+        3,
+        'multipart',
+        'fake-mpu-1',
+        'owner',
+        null,
+        'completed',
+        now - 100,
+        now + 100,
+        now,
+      )
+      .run()
+    // No files row and no R2 object: the completed marker cannot be repaired.
+
+    const response = await app.request(
+      '/api/uploads/sess-no-object/complete',
+      { method: 'POST', headers: authHeaders(cookie) },
+      env,
+    )
+    expect(response.status).toBe(409)
+  })
+
+  it('rejects uploads requiring more than 10,000 parts', async () => {
+    const smallChunkEnv = makeTestEnv(db, bucket, { UPLOAD_CHUNK_SIZE: '1024' })
+    const response = await app.request(
+      '/api/uploads',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders(cookie) },
+        body: JSON.stringify({ name: 'many.bin', size: 1024 * 10001 }),
+      },
+      smallChunkEnv,
+    )
+    expect(response.status).toBe(413)
+    expect(db.rows('upload_sessions')).toHaveLength(0)
+  })
 })
