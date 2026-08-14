@@ -61,6 +61,31 @@ export const uploadParts = sqliteTable(
 // (mode / r2_upload_id / access_token_hash / status lifecycle) so multipart
 // only adds behavior, not schema. `auth_kind` is 'owner' until Phase 08 adds
 // incoming uploads.
+// Phase 05: shares. Only the SHA-256 hash of the share token is stored; the
+// raw token appears exactly once in the creation response. Download limits are
+// enforced with atomic `UPDATE ... RETURNING` claims. `password_mac` stays NULL
+// until Phase 07; physical cleanup of exhausted/expired shares is Phase 06.
+export const shares = sqliteTable(
+  'shares',
+  {
+    id: text('id').primaryKey(),
+    fileId: text('file_id').notNull(),
+    tokenHash: text('token_hash').notNull().unique(),
+    passwordMac: text('password_mac'),
+    expiresAt: integer('expires_at'),
+    maxDownloads: integer('max_downloads'),
+    downloadCount: integer('download_count').notNull().default(0),
+    lastDownloadAt: integer('last_download_at'),
+    deleteFileAfterExhausted: integer('delete_file_after_exhausted').notNull().default(0),
+    createdAt: integer('created_at').notNull(),
+    revokedAt: integer('revoked_at'),
+  },
+  (table) => [
+    index('idx_shares_expires_at').on(table.expiresAt),
+    index('idx_shares_file_id').on(table.fileId),
+  ],
+)
+
 export const uploadSessions = sqliteTable(
   'upload_sessions',
   {

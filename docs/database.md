@@ -26,8 +26,9 @@ together.
 - Phase 02: `files` and `upload_sessions` (single uploads; the session table is
   created with the Phase 03-ready multipart shape).
 - Phase 03: `upload_parts` (multipart part records, UPSERTed per part).
+- Phase 05: `shares` (token hashes only; atomic download claims via
+  `UPDATE ... RETURNING`; `password_mac` reserved for Phase 07).
 
 ## Planned ownership
 
-- Phase 05: `shares`.
 - Phase 08: `incoming_requests` and public upload authorization state.

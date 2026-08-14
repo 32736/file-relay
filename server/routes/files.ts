@@ -2,8 +2,10 @@ import { Hono } from 'hono'
 
 import type { AppEnv } from '../env'
 import { buildDownloadResponse, parseRange } from '../lib/download'
+import { randomToken, sha256Hex } from '../lib/crypto'
 import { apiError } from '../lib/errors'
 import { requireAuth, requireSameOrigin } from '../middleware/auth'
+import { createShareSchema } from './shares'
 
 const DEFAULT_LIMIT = 30
 const MAX_LIMIT = 100
@@ -110,6 +112,57 @@ export const fileRoutes = new Hono<AppEnv>()
     }
 
     return buildDownloadResponse(object, row.original_name, row.mime_type, range)
+  })
+  .post('/:id/shares', requireAuth, requireSameOrigin, async (c) => {
+    const fileId = c.req.param('id')
+    const file = await c.env.DB.prepare('SELECT id FROM files WHERE id = ? AND deleted_at IS NULL')
+      .bind(fileId)
+      .first()
+    if (!file) {
+      return apiError(c, 404, 'NOT_FOUND', 'File not found')
+    }
+
+    const body = await c.req.json().catch(() => null)
+    const parsed = createShareSchema.safeParse(body)
+    if (!parsed.success) {
+      return apiError(c, 400, 'VALIDATION_ERROR', 'Invalid share request')
+    }
+    const { expiresIn, maxDownloads, deleteFileAfterExhausted } = parsed.data
+
+    const token = randomToken(32)
+    const tokenHash = await sha256Hex(token)
+    const shareId = crypto.randomUUID()
+    const now = Math.floor(Date.now() / 1000)
+    const expiresAt = expiresIn ? now + expiresIn : null
+
+    await c.env.DB.prepare(
+      `INSERT INTO shares
+       (id, file_id, token_hash, password_mac, expires_at, max_downloads,
+        download_count, delete_file_after_exhausted, created_at, revoked_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        shareId,
+        fileId,
+        tokenHash,
+        null,
+        expiresAt,
+        maxDownloads ?? null,
+        0,
+        deleteFileAfterExhausted ? 1 : 0,
+        now,
+        null,
+      )
+      .run()
+
+    // The raw token appears exactly once, inside the share URL.
+    return c.json({
+      id: shareId,
+      url: `${c.env.APP_ORIGIN}/s/${token}`,
+      expiresAt,
+      maxDownloads: maxDownloads ?? null,
+      deleteFileAfterExhausted: deleteFileAfterExhausted ?? false,
+    })
   })
   .delete('/:id', requireAuth, requireSameOrigin, async (c) => {
     const now = Math.floor(Date.now() / 1000)

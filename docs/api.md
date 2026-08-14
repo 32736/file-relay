@@ -187,7 +187,44 @@ header-injection-safe (`filename="..."` ASCII fallback plus RFC 5987
 - `Content-Disposition: attachment; ...` always in this phase (inline previews
   arrive in Phase 07).
 
+## Phase 05
+
+Owner share management and public share downloads. Share tokens are 32-byte
+Web Crypto values; D1 stores only their SHA-256 hash. The raw token appears
+exactly once, in the share URL returned by creation. Download limits are
+enforced with a single atomic `UPDATE ... RETURNING` claim per request (plan
+§30); a resumable client issuing several range requests consumes several
+counts (accepted for MVP).
+
+### `POST /api/files/:fileId/shares` (owner)
+
+Body: `{ "expiresIn"?: seconds, "maxDownloads"?: number,
+"deleteFileAfterExhausted"?: boolean }`; a `password` field → `400` until
+Phase 07. Returns `{ "id", "url", "expiresAt", "maxDownloads",
+"deleteFileAfterExhausted" }` — `url` is `${APP_ORIGIN}/s/<raw token>` and is
+the only response containing the raw token. Missing/deleted file → `404`.
+
+### `GET /api/shares` (owner)
+
+Cursor-paginated share list with `{ id, fileId, fileName, createdAt,
+expiresAt, maxDownloads, downloadCount, deleteFileAfterExhausted, revokedAt }`
+— never raw tokens.
+
+### `DELETE /api/shares/:id` (owner)
+
+Revokes (`revoked_at`), `204`; idempotent; unknown → `404`.
+
+### `GET /api/public/shares/:token`
+
+Public metadata: `{ "name", "size", "mimeType", "expiresAt",
+"remainingDownloads", "passwordRequired": false }`. Unknown, revoked, expired,
+or file-deleted shares → `404` (never reveals which).
+
+### `GET /api/public/shares/:token/download`
+
+Streams the file (Phase 04 pipeline, full Range support). Atomically claims
+one download first; expired/revoked/exhausted → `403 FORBIDDEN`.
+
 ## Future phases
 
-- Phase 05: owner share management and public share downloads.
 - Phase 06: scheduled cleanup, with no public route required.

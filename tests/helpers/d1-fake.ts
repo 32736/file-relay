@@ -1,6 +1,7 @@
 // An in-memory D1Database-shaped fake covering exactly the SQL statements the
-// server uses: INSERT / SELECT / UPDATE / DELETE with equality conditions and
-// batched statements. Tests cast it to D1Database when building bindings.
+// server uses: INSERT / SELECT / UPDATE / DELETE with equality and comparison
+// conditions, `col = col + N` assignments, `RETURNING` on UPDATE, and batched
+// statements. Tests cast it to D1Database when building bindings.
 
 type Row = Record<string, unknown>
 
@@ -13,15 +14,25 @@ interface TableState {
   rows: Row[]
 }
 
+type CompareOperator = '=' | '<' | '>' | '<=' | '>='
+
 interface WhereClause {
   column: string
-  operator: '=' | 'is-null' | 'is-not-null'
+  operator: CompareOperator | 'is-null' | 'is-not-null' | 'in'
   value?: unknown
+  values?: unknown[]
+  otherColumn?: string
+}
+
+/** One AND term; its conditions are OR-ed together (parenthesized groups). */
+interface WhereGroup {
+  conditions: WhereClause[]
 }
 
 interface Assignment {
   column: string
-  value: unknown
+  value?: unknown
+  increment?: number
 }
 
 interface OrderByClause {
@@ -35,47 +46,90 @@ type Query =
       kind: 'select'
       columns: string[]
       table: string
-      where: WhereClause[]
+      where: WhereGroup[]
       orderBy: OrderByClause[]
       limit?: number
       offset: number
     }
-  | { kind: 'update'; table: string; assignments: Assignment[]; where: WhereClause[] }
-  | { kind: 'delete'; table: string; where: WhereClause[] }
+  | {
+      kind: 'update'
+      table: string
+      assignments: Assignment[]
+      where: WhereGroup[]
+      returning: boolean
+    }
+  | { kind: 'delete'; table: string; where: WhereGroup[] }
 
-/** Parses `col = ?` / `col = 'literal'` pairs, consuming `?` params via cursor. */
+/** Parses `col = rhs` pairs in a SET clause; `?` params are consumed via cursor. */
 function parseAssignments(
   clause: string,
   params: unknown[],
   cursor: { index: number },
 ): Assignment[] {
-  const assignments: Assignment[] = []
-  const pattern = /(\w+)\s*=\s*(\?|'[^']*')/g
-  let match: RegExpExecArray | null
-  while ((match = pattern.exec(clause)) !== null) {
-    const value = match[2] === '?' ? params[cursor.index++] : match[2].slice(1, -1)
-    assignments.push({ column: match[1], value })
+  return clause.split(',').map((part) => {
+    const match = /^(\w+)\s*=\s*(.+)$/.exec(part.trim())
+    if (!match) throw new Error(`unsupported SET clause: ${part}`)
+    const column = match[1]
+    const rhs = match[2].trim()
+
+    const incrementMatch = /^(\w+)\s*\+\s*(\?|\d+)$/.exec(rhs)
+    if (incrementMatch && incrementMatch[1] === column) {
+      const by = incrementMatch[2] === '?' ? Number(params[cursor.index++]) : Number(incrementMatch[2])
+      return { column, increment: by }
+    }
+    if (rhs === '?') return { column, value: params[cursor.index++] }
+    if (/^-?\d+$/.test(rhs)) return { column, value: Number(rhs) }
+    if (rhs.startsWith("'")) return { column, value: rhs.slice(1, -1) }
+    throw new Error(`unsupported SET value in fake: ${rhs}`)
+  })
+}
+
+function parseCondition(
+  condition: string,
+  params: unknown[],
+  cursor: { index: number },
+): WhereClause {
+  const trimmed = condition.trim()
+  const nullMatch = /^(\w+)\s+IS\s+(NOT\s+)?NULL$/i.exec(trimmed)
+  if (nullMatch) {
+    return { column: nullMatch[1], operator: nullMatch[2] ? 'is-not-null' : 'is-null' }
   }
-  return assignments
+  const inMatch = /^(\w+)\s+IN\s*\(([^)]+)\)$/.exec(trimmed)
+  if (inMatch) {
+    const values = inMatch[2].split(',').map((placeholder) => {
+      const value = placeholder.trim()
+      if (value === '?') return params[cursor.index++]
+      if (value.startsWith("'")) return value.slice(1, -1)
+      return Number(value)
+    })
+    return { column: inMatch[1], operator: 'in', values }
+  }
+  const compareMatch = /^(\w+)\s*(<=|>=|<|>|=)\s*(.+)$/.exec(trimmed)
+  if (!compareMatch) throw new Error(`unsupported WHERE clause: ${condition}`)
+  const column = compareMatch[1]
+  const operator = compareMatch[2] as CompareOperator
+  const rhs = compareMatch[3].trim()
+
+  if (rhs === '?') return { column, operator, value: params[cursor.index++] }
+  if (/^-?\d+$/.test(rhs)) return { column, operator, value: Number(rhs) }
+  if (rhs.startsWith("'")) return { column, operator, value: rhs.slice(1, -1) }
+  if (/^\w+$/.test(rhs)) return { column, operator, otherColumn: rhs }
+  throw new Error(`unsupported WHERE clause: ${condition}`)
 }
 
 function parseWhere(
   clause: string | undefined,
   params: unknown[],
   cursor: { index: number },
-): WhereClause[] {
+): WhereGroup[] {
   if (!clause) return []
-  return clause.split(/\s+AND\s+/i).map((condition) => {
-    const nullMatch = /^(\w+)\s+IS\s+(NOT\s+)?NULL$/i.exec(condition.trim())
-    if (nullMatch) {
-      return {
-        column: nullMatch[1],
-        operator: nullMatch[2] ? 'is-not-null' : 'is-null',
-      }
-    }
-    const assignment = parseAssignments(condition, params, cursor)[0]
-    if (!assignment) throw new Error(`unsupported WHERE clause: ${condition}`)
-    return { column: assignment.column, operator: '=', value: assignment.value }
+  return clause.split(/\s+AND\s+/i).map((part) => {
+    const trimmed = part.trim()
+    const inner = trimmed.startsWith('(') && trimmed.endsWith(')') ? trimmed.slice(1, -1) : trimmed
+    const conditions = inner
+      .split(/\s+OR\s+/i)
+      .map((condition) => parseCondition(condition, params, cursor))
+    return { conditions }
   })
 }
 
@@ -89,7 +143,11 @@ function parseOrderBy(clause: string | undefined): OrderByClause[] {
 }
 
 /** Resolves a LIMIT/OFFSET value that is either a literal number or a `?` param. */
-function parseNumber(value: string | undefined, params: unknown[], cursor: { index: number }): number | undefined {
+function parseNumber(
+  value: string | undefined,
+  params: unknown[],
+  cursor: { index: number },
+): number | undefined {
   if (value === undefined) return undefined
   if (value === '?') return Number(params[cursor.index++])
   return Number(value)
@@ -138,13 +196,16 @@ function parseQuery(sql: string, params: unknown[]): Query {
     }
   }
 
-  const updateMatch = /^UPDATE (\w+) SET (.+?)(?:\s+WHERE\s+(.+))?$/i.exec(normalized)
+  const updateMatch = /^UPDATE (\w+) SET (.+?)(?:\s+WHERE\s+(.+?))?(?:\s+RETURNING\s+\*)?$/i.exec(
+    normalized,
+  )
   if (updateMatch) {
     return {
       kind: 'update',
       table: updateMatch[1],
       assignments: parseAssignments(updateMatch[2], params, cursor),
       where: parseWhere(updateMatch[3], params, cursor),
+      returning: /RETURNING\s+\*$/i.test(normalized),
     }
   }
 
@@ -160,16 +221,49 @@ function parseQuery(sql: string, params: unknown[]): Query {
   throw new Error(`unsupported SQL in fake: ${normalized}`)
 }
 
-function matchesWhere(row: Row, where: WhereClause[]): boolean {
-  return where.every((condition) => {
-    if (condition.operator === 'is-null') {
-      return row[condition.column] === null || row[condition.column] === undefined
+function matchCondition(row: Row, condition: WhereClause): boolean {
+  const left = row[condition.column]
+  if (condition.operator === 'is-null') {
+    return left === null || left === undefined
+  }
+  if (condition.operator === 'is-not-null') {
+    return left !== null && left !== undefined
+  }
+  if (condition.operator === 'in') {
+    return (condition.values ?? []).includes(left)
+  }
+  const right =
+    condition.otherColumn !== undefined ? row[condition.otherColumn] : condition.value
+  switch (condition.operator) {
+    case '=':
+      return left === right
+    case '<':
+      return (left as number) < (right as number)
+    case '>':
+      return (left as number) > (right as number)
+    case '<=':
+      return (left as number) <= (right as number)
+    case '>=':
+      return (left as number) >= (right as number)
+  }
+}
+
+function matchesWhere(row: Row, groups: WhereGroup[]): boolean {
+  return groups.every((group) =>
+    group.conditions.some((condition) => matchCondition(row, condition)),
+  )
+}
+
+function applyAssignments(row: Row, assignments: Assignment[]): Row {
+  const updated: Row = { ...row }
+  for (const { column, value, increment } of assignments) {
+    if (increment !== undefined) {
+      updated[column] = Number(updated[column] ?? 0) + increment
+    } else {
+      updated[column] = value
     }
-    if (condition.operator === 'is-not-null') {
-      return row[condition.column] !== null && row[condition.column] !== undefined
-    }
-    return row[condition.column] === condition.value
-  })
+  }
+  return updated
 }
 
 export class D1Fake {
@@ -180,6 +274,7 @@ export class D1Fake {
     files?: Row[]
     upload_sessions?: Row[]
     upload_parts?: Row[]
+    shares?: Row[]
   } = {}) {
     this.tables.set('sessions', {
       columns: [
@@ -237,13 +332,31 @@ export class D1Fake {
       ],
       rows: seed.upload_sessions ? seed.upload_sessions.map((row) => ({ ...row })) : [],
     })
+    this.tables.set('shares', {
+      columns: [
+        { name: 'id' },
+        { name: 'file_id' },
+        { name: 'token_hash' },
+        { name: 'password_mac' },
+        { name: 'expires_at' },
+        { name: 'max_downloads' },
+        { name: 'download_count' },
+        { name: 'last_download_at' },
+        { name: 'delete_file_after_exhausted' },
+        { name: 'created_at' },
+        { name: 'revoked_at' },
+      ],
+      rows: seed.shares ? seed.shares.map((row) => ({ ...row })) : [],
+    })
   }
 
   prepare(sql: string): FakeStatement {
     return new FakeStatement(this, sql)
   }
 
-  async batch(statements: FakeStatement[]): Promise<{ success: boolean; meta: { changes: number } }[]> {
+  async batch(
+    statements: FakeStatement[],
+  ): Promise<{ success: boolean; meta: { changes: number } }[]> {
     const results: { success: boolean; meta: { changes: number } }[] = []
     for (const statement of statements) {
       results.push(await statement.run())
@@ -256,6 +369,19 @@ export class D1Fake {
     const state = this.tables.get(table)
     if (!state) throw new Error(`unknown table: ${table}`)
     return state
+  }
+
+  /** Applies an UPDATE query and returns the updated rows (for RETURNING). */
+  applyUpdate(query: Extract<Query, { kind: 'update' }>): Row[] {
+    const table = this.tableState(query.table)
+    const updatedRows: Row[] = []
+    table.rows = table.rows.map((row) => {
+      if (!matchesWhere(row, query.where)) return row
+      const updated = applyAssignments(row, query.assignments)
+      updatedRows.push(updated)
+      return updated
+    })
+    return updatedRows
   }
 
   /** Test helper: returns a copy of the rows of a table. */
@@ -281,36 +407,40 @@ class FakeStatement {
 
   async all(): Promise<{ results: Row[]; success: boolean }> {
     const query = parseQuery(this.sql, this.params)
-    if (query.kind !== 'select') throw new Error('all() only supports SELECT in fake')
-    const table = this.db.tableState(query.table)
 
-    const filtered = table.rows.filter((row) => matchesWhere(row, query.where))
-    const sorted =
-      query.orderBy.length === 0
-        ? filtered
-        : [...filtered].sort((a, b) => {
-            for (const { column, direction } of query.orderBy) {
-              const left = a[column] as number | string | null | undefined
-              const right = b[column] as number | string | null | undefined
-              if (left === right) continue
-              if (left == null) return direction === 'desc' ? 1 : -1
-              if (right == null) return direction === 'desc' ? -1 : 1
-              const comparison = left < right ? -1 : 1
-              return direction === 'desc' ? -comparison : comparison
-            }
-            return 0
-          })
-    const paged =
-      query.limit === undefined
-        ? sorted
-        : sorted.slice(query.offset, query.offset + query.limit)
+    if (query.kind === 'select') {
+      const table = this.db.tableState(query.table)
+      const filtered = table.rows.filter((row) => matchesWhere(row, query.where))
+      const sorted =
+        query.orderBy.length === 0
+          ? filtered
+          : [...filtered].sort((a, b) => {
+              for (const { column, direction } of query.orderBy) {
+                const left = a[column] as number | string | null | undefined
+                const right = b[column] as number | string | null | undefined
+                if (left === right) continue
+                if (left == null) return direction === 'desc' ? 1 : -1
+                if (right == null) return direction === 'desc' ? -1 : 1
+                const comparison = left < right ? -1 : 1
+                return direction === 'desc' ? -comparison : comparison
+              }
+              return 0
+            })
+      const paged =
+        query.limit === undefined ? sorted : sorted.slice(query.offset, query.offset + query.limit)
+      const results = paged.map((row) => {
+        const picked: Row = {}
+        for (const column of query.columns) picked[column] = row[column]
+        return picked
+      })
+      return { results, success: true }
+    }
 
-    const results = paged.map((row) => {
-      const picked: Row = {}
-      for (const column of query.columns) picked[column] = row[column]
-      return picked
-    })
-    return { results, success: true }
+    if (query.kind === 'update' && query.returning) {
+      return { results: this.db.applyUpdate(query), success: true }
+    }
+
+    throw new Error('all() only supports SELECT or UPDATE ... RETURNING in fake')
   }
 
   async first(): Promise<Row | null> {
@@ -320,6 +450,15 @@ class FakeStatement {
 
   async run(): Promise<{ success: boolean; meta: { changes: number } }> {
     const query = parseQuery(this.sql, this.params)
+
+    if (query.kind === 'update') {
+      if (query.returning) throw new Error('run() cannot return rows in fake')
+      return {
+        success: true,
+        meta: { changes: this.db.applyUpdate(query).length },
+      }
+    }
+
     const table = this.db.tableState(query.table)
 
     if (query.kind === 'insert') {
@@ -357,20 +496,14 @@ class FakeStatement {
       ) {
         throw new Error('UNIQUE constraint failed: upload_sessions.object_key')
       }
+      if (
+        query.table === 'shares' &&
+        table.rows.some((existing) => existing.token_hash === row.token_hash)
+      ) {
+        throw new Error('UNIQUE constraint failed: shares.token_hash')
+      }
       table.rows.push(row)
       return { success: true, meta: { changes: 1 } }
-    }
-
-    if (query.kind === 'update') {
-      let changes = 0
-      table.rows = table.rows.map((row) => {
-        if (!matchesWhere(row, query.where)) return row
-        changes++
-        const updated: Row = { ...row }
-        for (const { column, value } of query.assignments) updated[column] = value
-        return updated
-      })
-      return { success: true, meta: { changes } }
     }
 
     if (query.kind === 'delete') {
