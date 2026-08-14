@@ -248,4 +248,28 @@ describe('Phase 06 cleanup', () => {
     expect(db.rows('files')).toHaveLength(0)
     expect(bucket.keys()).toHaveLength(0)
   })
+
+  it('deletes revoked and expired incoming requests', async () => {
+    const now = Math.floor(Date.now() / 1000)
+    for (const [id, tokenHash, revokedAt, expiresAt] of [
+      ['inc-revoked', 'h-inc-rev', now - 100, now + DAY],
+      ['inc-expired', 'h-inc-exp', null, now - 100],
+      ['inc-live', 'h-inc-live', null, now + DAY],
+    ] as [string, string, number | null, number | null][]) {
+      await db
+        .prepare(
+          `INSERT INTO incoming_requests
+           (id, token_hash, title, expires_at, max_file_size, max_files,
+            uploaded_count, created_at, revoked_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(id, tokenHash, null, expiresAt, 1024, 1, 0, now, revokedAt)
+        .run()
+    }
+
+    await runCleanup(env)
+
+    const remaining = db.rows('incoming_requests').map((row) => row.id)
+    expect(remaining).toEqual(['inc-live'])
+  })
 })

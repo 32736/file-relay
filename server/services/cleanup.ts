@@ -17,6 +17,7 @@ export async function runCleanup(env: Bindings): Promise<void> {
   await cleanupExpiredFiles(env, now)
   await cleanupDeletedFiles(env)
   await cleanupShares(env, now)
+  await cleanupIncomingRequests(env, now)
 }
 
 async function cleanupExpiredSessions(env: Bindings, now: number): Promise<void> {
@@ -112,6 +113,17 @@ async function cleanupShares(env: Bindings, now: number): Promise<void> {
     `DELETE FROM shares
      WHERE revoked_at IS NULL AND expires_at IS NOT NULL AND expires_at <= ?
      LIMIT ?`,
+  )
+    .bind(now, BATCH_SIZE)
+    .run()
+}
+
+async function cleanupIncomingRequests(env: Bindings, now: number): Promise<void> {
+  await env.DB.prepare('DELETE FROM incoming_requests WHERE revoked_at IS NOT NULL LIMIT ?')
+    .bind(BATCH_SIZE)
+    .run()
+  await env.DB.prepare(
+    'DELETE FROM incoming_requests WHERE revoked_at IS NULL AND expires_at <= ? LIMIT ?',
   )
     .bind(now, BATCH_SIZE)
     .run()

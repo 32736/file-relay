@@ -258,11 +258,19 @@ export const uploadRoutes = new Hono<AppEnv>()
     }
 
     // Stream the request body straight to R2; never buffer it in the Worker.
-    const object = await c.env.BUCKET.put(session.object_key, c.req.raw.body, {
-      httpMetadata: {
-        contentType: session.mime_type ?? DEFAULT_CONTENT_TYPE,
-      },
-    })
+    let object: { size: number; etag: string }
+    try {
+      object = await c.env.BUCKET.put(session.object_key, c.req.raw.body, {
+        httpMetadata: {
+          contentType: session.mime_type ?? DEFAULT_CONTENT_TYPE,
+        },
+      })
+    } catch {
+      // Client aborted (cancel/pause) or upstream failure: remove any partial
+      // object so it cannot become an orphan, and let the client retry.
+      await c.env.BUCKET.delete(session.object_key).catch(() => undefined)
+      return apiError(c, 400, 'UPLOAD_INTERRUPTED', 'Upload was interrupted')
+    }
 
     if (object.size !== session.total_size) {
       await c.env.BUCKET.delete(session.object_key)

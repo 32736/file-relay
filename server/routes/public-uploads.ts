@@ -15,9 +15,15 @@ export const publicUploadRoutes = new Hono<AppEnv>()
       return apiError(c, 409, 'CONFLICT', 'Upload session is not ready for content')
     }
 
-    const object = await c.env.BUCKET.put(session.object_key, c.req.raw.body, {
-      httpMetadata: { contentType: session.mime_type ?? DEFAULT_CONTENT_TYPE },
-    })
+    let object: { size: number; etag: string }
+    try {
+      object = await c.env.BUCKET.put(session.object_key, c.req.raw.body, {
+        httpMetadata: { contentType: session.mime_type ?? DEFAULT_CONTENT_TYPE },
+      })
+    } catch {
+      await c.env.BUCKET.delete(session.object_key).catch(() => undefined)
+      return apiError(c, 400, 'UPLOAD_INTERRUPTED', 'Upload was interrupted')
+    }
     if (object.size !== session.total_size) {
       await c.env.BUCKET.delete(session.object_key)
       return apiError(c, 400, 'SIZE_MISMATCH', 'Uploaded size does not match the declared size')

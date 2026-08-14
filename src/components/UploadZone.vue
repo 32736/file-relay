@@ -1,67 +1,68 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-import { api } from '../lib/api'
-
-interface UploadSession {
-  uploadId: string
-  mode: 'single' | 'multipart'
-  chunkSize: number
-  totalParts: number
-}
+import { useUploads, type UploadTask } from '../composables/useUploads'
+import { formatBytes } from '../lib/format'
 
 const emit = defineEmits<{ uploaded: [] }>()
 
+const { tasks, addFiles, pause, resume, cancel, retry, restore, hasFile } = useUploads(() =>
+  emit('uploaded'),
+)
+
 const dragging = ref(false)
-const busy = ref(false)
-const error = ref<string | null>(null)
-const progress = ref<string | null>(null)
+const speeds = ref<Record<string, number>>({})
+const lastBytes = new Map<string, number>()
+const pickInput = ref<HTMLInputElement | null>(null)
 
-async function uploadFile(file: File): Promise<void> {
-  const session = await api<UploadSession>('/api/uploads', {
-    method: 'POST',
-    body: JSON.stringify({ name: file.name, size: file.size, type: file.type }),
-  })
+let timer: ReturnType<typeof setInterval> | undefined
 
-  if (session.mode === 'single') {
-    progress.value = `上传中 ${file.name}…`
-    await fetch(`/api/uploads/${session.uploadId}/content`, { method: 'PUT', body: file })
-    await api(`/api/uploads/${session.uploadId}/complete`, { method: 'POST' })
-    return
-  }
-
-  // Multipart: stream slices of the file; Content-Length comes from the slice.
-  for (let partNumber = 1; partNumber <= session.totalParts; partNumber++) {
-    const start = (partNumber - 1) * session.chunkSize
-    const end = Math.min(start + session.chunkSize, file.size)
-    progress.value = `上传中 ${file.name}（${partNumber}/${session.totalParts}）…`
-    const response = await fetch(`/api/uploads/${session.uploadId}/parts/${partNumber}`, {
-      method: 'PUT',
-      body: file.slice(start, end),
-    })
-    if (!response.ok) {
-      throw new Error(`分片 ${partNumber} 上传失败`)
+onMounted(() => {
+  void restore()
+  // Per-task transfer speed sampled once per second.
+  timer = setInterval(() => {
+    const next: Record<string, number> = {}
+    for (const task of tasks.value) {
+      if (task.status !== 'uploading') {
+        next[task.uploadId] = 0
+        continue
+      }
+      const previous = lastBytes.get(task.uploadId) ?? task.transferred
+      next[task.uploadId] = Math.max(0, task.transferred - previous)
+      lastBytes.set(task.uploadId, task.transferred)
     }
+    speeds.value = next
+  }, 1000)
+})
+
+onBeforeUnmount(() => {
+  if (timer) clearInterval(timer)
+})
+
+function percent(task: UploadTask): number {
+  return task.size > 0 ? Math.min(100, Math.round((task.transferred / task.size) * 100)) : 0
+}
+
+function statusLabel(task: UploadTask): string {
+  switch (task.status) {
+    case 'queued':
+      return '排队中'
+    case 'uploading':
+      return '上传中'
+    case 'paused':
+      return hasFile(task.uploadId) ? '已暂停' : '已暂停（需重新选择文件）'
+    case 'completed':
+      return '完成'
+    case 'canceled':
+      return '已取消'
+    case 'failed':
+      return '失败'
   }
-  progress.value = `合并中 ${file.name}…`
-  await api(`/api/uploads/${session.uploadId}/complete`, { method: 'POST' })
 }
 
 async function handleFiles(files: File[]): Promise<void> {
   if (files.length === 0) return
-  busy.value = true
-  error.value = null
-  try {
-    for (const file of files) {
-      await uploadFile(file)
-    }
-    emit('uploaded')
-  } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : String(cause)
-  } finally {
-    busy.value = false
-    progress.value = null
-  }
+  addFiles(files)
 }
 
 function onDrop(event: DragEvent): void {
@@ -70,10 +71,20 @@ function onDrop(event: DragEvent): void {
   void handleFiles(files)
 }
 
-function onPick(event: Event): void {
+function onPickFiles(event: Event): void {
   const files = Array.from((event.target as HTMLInputElement).files ?? [])
   void handleFiles(files)
   ;(event.target as HTMLInputElement).value = ''
+}
+
+function pickForResume(): void {
+  pickInput.value?.click()
+}
+
+function onPickResume(event: Event): void {
+  const files = Array.from((event.target as HTMLInputElement).files ?? [])
+  ;(event.target as HTMLInputElement).value = ''
+  if (files.length > 0) void handleFiles(files)
 }
 </script>
 
@@ -89,37 +100,107 @@ function onPick(event: Event): void {
       @dragleave.prevent="dragging = false"
       @drop.prevent="onDrop"
     >
-      <p>拖放文件到这里，或</p>
-      <label class="pick">
-        选择文件
-        <input
-          type="file"
-          multiple
-          @change="onPick"
-        >
-      </label>
+      <p>
+        拖放文件到这里，或
+        <label class="pick">
+          选择文件
+          <input
+            type="file"
+            multiple
+            @change="onPickFiles"
+          >
+        </label>
+      </p>
     </div>
-    <p
-      v-if="progress"
-      class="progress"
-      role="status"
+
+    <ul
+      v-if="tasks.length"
+      class="tasks"
+      aria-label="上传队列"
     >
-      {{ progress }}
-    </p>
-    <p
-      v-if="error"
-      class="error"
-      role="alert"
+      <li
+        v-for="task in tasks"
+        :key="task.uploadId"
+        class="task"
+        :class="task.status"
+      >
+        <div class="row">
+          <span class="name">{{ task.name }}</span>
+          <span class="meta">{{ formatBytes(task.size) }}</span>
+          <span class="status">{{ statusLabel(task) }}</span>
+        </div>
+        <div
+          class="bar"
+          aria-hidden="true"
+        >
+          <div
+            class="fill"
+            :style="{ width: `${percent(task)}%` }"
+          />
+        </div>
+        <div class="row sub">
+          <span v-if="task.status === 'uploading'">
+            {{ percent(task) }}% · {{ formatBytes(speeds[task.uploadId] ?? 0) }}/s
+          </span>
+          <span
+            v-else-if="task.status === 'failed'"
+            class="error"
+            role="alert"
+          >
+            {{ task.error }}
+          </span>
+          <span v-else-if="task.status === 'paused' && !hasFile(task.uploadId)">
+            刷新后文件已丢失，重新选择同一文件可继续
+          </span>
+        </div>
+        <div class="actions">
+          <button
+            v-if="task.status === 'uploading'"
+            type="button"
+            @click="pause(task.uploadId)"
+          >
+            暂停
+          </button>
+          <button
+            v-else-if="task.status === 'paused' && hasFile(task.uploadId)"
+            type="button"
+            @click="resume(task.uploadId)"
+          >
+            继续
+          </button>
+          <button
+            v-else-if="task.status === 'paused' && !hasFile(task.uploadId)"
+            type="button"
+            @click="pickForResume"
+          >
+            选择文件续传
+          </button>
+          <button
+            v-if="task.status === 'failed' || task.status === 'canceled'"
+            type="button"
+            @click="retry(task.uploadId)"
+          >
+            重试
+          </button>
+          <button
+            v-if="task.status !== 'completed' && task.status !== 'canceled'"
+            type="button"
+            class="danger"
+            @click="cancel(task.uploadId)"
+          >
+            取消
+          </button>
+        </div>
+      </li>
+    </ul>
+
+    <input
+      ref="pickInput"
+      type="file"
+      class="hidden-input"
+      multiple
+      @change="onPickResume"
     >
-      {{ error }}
-    </p>
-    <p
-      v-if="busy"
-      class="busy"
-      role="status"
-    >
-      处理中…
-    </p>
   </section>
 </template>
 
@@ -127,7 +208,7 @@ function onPick(event: Event): void {
 .upload-zone .drop-area {
   border: 2px dashed var(--border, #ccc);
   border-radius: 8px;
-  padding: 2rem;
+  padding: 1.5rem;
   text-align: center;
 }
 .upload-zone.dragging .drop-area {
@@ -142,7 +223,77 @@ function onPick(event: Event): void {
   color: var(--accent, #3b82f6);
   text-decoration: underline;
 }
+.tasks {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.task {
+  border: 1px solid var(--border, #eee);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+}
+.task.completed {
+  opacity: 0.7;
+}
+.row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+.name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meta {
+  color: #888;
+  font-size: 0.8rem;
+}
+.status {
+  color: #555;
+  font-size: 0.8rem;
+}
+.sub {
+  font-size: 0.8rem;
+  color: #666;
+  min-height: 1.1rem;
+}
+.bar {
+  height: 6px;
+  background: #eee;
+  border-radius: 3px;
+  margin: 0.4rem 0;
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  background: var(--accent, #3b82f6);
+  transition: width 0.2s;
+}
+.actions {
+  display: flex;
+  gap: 0.4rem;
+}
+.actions button {
+  background: transparent;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 4px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.actions button.danger {
+  color: #dc2626;
+}
 .error {
   color: #dc2626;
+}
+.hidden-input {
+  display: none;
 }
 </style>
