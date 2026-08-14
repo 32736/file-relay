@@ -56,6 +56,10 @@ Phase 08 adds incoming uploads. `TURNSTILE_SECRET_KEY` is a Wrangler secret;
 metadata endpoint for the widget). Without a configured secret, Turnstile
 verification always fails closed (`403`).
 
+Phase 09 adds PWA installability: `public/manifest.webmanifest`, `icon.svg`,
+and a network-first `sw.js` (app-shell caching only; `/api/*` is never
+cached). The service worker registers in production builds only.
+
 ## Local development
 
 `pnpm dev` runs the Cloudflare Vite integration. Local state belongs under

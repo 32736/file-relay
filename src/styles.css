@@ -171,6 +171,38 @@ footer code {
     align-items: flex-end;
     flex-direction: column;
   }
+
+  /* Mobile: file list rows become cards with larger touch targets. */
+  .file-list table,
+  .file-list thead {
+    display: block;
+  }
+
+  .file-list tbody {
+    display: block;
+  }
+
+  .file-list tr {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.25rem 0.6rem;
+    padding: 0.5rem 0;
+  }
+
+  .file-list td {
+    border-bottom: none;
+    padding: 0.2rem 0;
+  }
+
+  .file-list .actions {
+    grid-column: 2 / 4;
+    flex-wrap: wrap;
+  }
+
+  .file-list button.ghost {
+    min-height: 2.25rem;
+    padding: 0.35rem 0.8rem;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {

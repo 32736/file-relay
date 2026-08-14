@@ -23,6 +23,23 @@ export default tseslint.config(
     },
   },
   {
+    files: ['public/**/*.js'],
+    languageOptions: {
+      globals: {
+        self: 'readonly',
+        caches: 'readonly',
+        clients: 'readonly',
+        skipWaiting: 'readonly',
+        claim: 'readonly',
+        URL: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
+        fetch: 'readonly',
+        addEventListener: 'readonly',
+      },
+    },
+  },
+  {
     rules: {
       'vue/multi-word-component-names': 'off',
     },
