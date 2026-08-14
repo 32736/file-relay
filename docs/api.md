@@ -225,6 +225,52 @@ or file-deleted shares → `404` (never reveals which).
 Streams the file (Phase 04 pipeline, full Range support). Atomically claims
 one download first; expired/revoked/exhausted → `403 FORBIDDEN`.
 
+## Phase 07
+
+Share enhancements and the first usable owner UI. Passwords are stored as
+HMAC-SHA-256 MACs under `TOKEN_HMAC_SECRET`; downloads of protected shares
+require a short-lived stateless unlock cookie.
+
+### `POST /api/files/:fileId/shares` (owner)
+
+Body gains optional `"password": string` (1–128). Response adds
+`"passwordProtected": true` when set.
+
+### `GET /api/public/shares/:token`
+
+`passwordRequired` reflects the stored password MAC.
+
+### `POST /api/public/shares/:token/unlock`
+
+Body `{ "password": string }`. Wrong password → `403 FORBIDDEN`; match → sets
+the HttpOnly `share_unlock_<shareId>` cookie (30 min, value = the MAC) and
+`200 { "ok": true }`.
+
+### `GET /api/public/shares/:token/download`
+
+Password-protected shares require the unlock cookie (checked before the atomic
+claim, so failed unlocks never consume a download).
+
+### Preview whitelist (owner + public downloads)
+
+`Content-Disposition: inline` only for `image/png`, `image/jpeg`,
+`image/webp`, `image/gif`, `application/pdf`; everything else (including
+HTML/SVG/XHTML) stays `attachment`.
+
+### `GET /api/stats` (owner)
+
+`200 { "fileCount", "totalBytes" }` over non-deleted files.
+
+### `POST /api/files/batch-delete` (owner)
+
+Body `{ "ids": string[] }` (1–100) → logical delete; `200 { "deleted":
+number }`.
+
+### `GET /api/files?q=...`
+
+Case-insensitive filename search (`LIKE` with escaped wildcards); empty `q`
+ignored; pagination unchanged.
+
 ## Future phases
 
 - Phase 06: scheduled cleanup, with no public route required.

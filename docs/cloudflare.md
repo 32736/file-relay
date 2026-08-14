@@ -48,9 +48,11 @@ exhausted burn-after-reading files (after a 1-hour safety window), physically
 deleted logically-deleted files, and revoked/expired shares. Each task is
 capped at 50 rows per run.
 
+Phase 07 adds share passwords. `TOKEN_HMAC_SECRET` keys the password MACs
+(HMAC-SHA-256) and is a Wrangler secret (`.dev.vars` locally).
+
 Future phases configure additional secrets through `wrangler secret put`,
-including `SESSION_SECRET`, `TOKEN_HMAC_SECRET`, and (for incoming uploads)
-`TURNSTILE_SECRET_KEY`.
+including `TURNSTILE_SECRET_KEY` (Phase 08 incoming uploads).
 
 ## Local development
 

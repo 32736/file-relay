@@ -4,7 +4,22 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from '../src/App.vue'
 
 function stubMe(status: number): void {
-  vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status })))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/api/auth/me')) {
+        return new Response('{}', { status })
+      }
+      if (url.includes('/api/files')) {
+        return new Response(JSON.stringify({ files: [], nextCursor: null }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      return new Response('not found', { status: 404 })
+    }),
+  )
 }
 
 describe('App', () => {
@@ -12,11 +27,10 @@ describe('App', () => {
     vi.unstubAllGlobals()
   })
 
-  it('renders the service foundation', () => {
+  it('renders the service title', () => {
     const wrapper = mount(App)
 
     expect(wrapper.get('h1').text()).toBe('Drop')
-    expect(wrapper.text()).toContain('Private R2')
   })
 
   it('shows the sign-in link when unauthenticated', async () => {
@@ -27,11 +41,13 @@ describe('App', () => {
     expect(wrapper.get('a[href="/api/auth/github"]').text()).toBe('Sign in with GitHub')
   })
 
-  it('shows the owner state when authenticated', async () => {
+  it('shows the owner workspace when authenticated', async () => {
     stubMe(200)
     const wrapper = mount(App)
     await flushPromises()
 
     expect(wrapper.text()).toContain('Signed in as owner')
+    expect(wrapper.get('.workspace')).toBeDefined()
+    expect(wrapper.text()).toContain('拖放文件到这里')
   })
 })

@@ -5,6 +5,7 @@ import { authRoutes } from './routes/auth'
 import { fileRoutes } from './routes/files'
 import { shareRoutes } from './routes/shares'
 import { publicShareRoutes } from './routes/shares-public'
+import { statsRoutes } from './routes/stats'
 import { uploadRoutes } from './routes/uploads'
 import { runCleanup } from './services/cleanup'
 
@@ -17,6 +18,7 @@ app.route('/api/files', fileRoutes)
 app.route('/api/uploads', uploadRoutes)
 app.route('/api/shares', shareRoutes)
 app.route('/api/public/shares', publicShareRoutes)
+app.route('/api/stats', statsRoutes)
 
 app.notFound(async (context) => {
   if (context.req.path.startsWith('/api/')) {

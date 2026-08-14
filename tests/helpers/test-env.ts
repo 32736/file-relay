@@ -18,6 +18,7 @@ export function makeTestEnv(
     OWNER_GITHUB_ID: OWNER_ID,
     GITHUB_CLIENT_ID: 'test-client-id',
     GITHUB_CLIENT_SECRET: 'test-client-secret',
+    TOKEN_HMAC_SECRET: 'test-hmac-secret',
     UPLOAD_CHUNK_SIZE: '33554432',
     MAX_FILE_SIZE: '2147483648',
     SESSION_TTL_SECONDS: '2592000',

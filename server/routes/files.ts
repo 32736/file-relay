@@ -1,14 +1,20 @@
 import { Hono } from 'hono'
+import { z } from 'zod'
 
 import type { AppEnv } from '../env'
-import { buildDownloadResponse, parseRange } from '../lib/download'
-import { randomToken, sha256Hex } from '../lib/crypto'
+import { buildDownloadResponse, dispositionFor, parseRange } from '../lib/download'
+import { randomToken, hmacSha256Hex, sha256Hex } from '../lib/crypto'
 import { apiError } from '../lib/errors'
 import { requireAuth, requireSameOrigin } from '../middleware/auth'
 import { createShareSchema } from './shares'
 
 const DEFAULT_LIMIT = 30
 const MAX_LIMIT = 100
+
+/** Escapes `%`, `_` and `\` so user input is literal in a `LIKE ... ESCAPE '\'` pattern. */
+function escapeLike(input: string): string {
+  return input.replace(/[\\%_]/g, (char) => `\\${char}`)
+}
 
 interface FileRow {
   id: string
@@ -45,20 +51,50 @@ export const fileRoutes = new Hono<AppEnv>()
     const rawCursor = Number(c.req.query('cursor'))
     const offset = Number.isFinite(rawCursor) ? Math.max(Math.trunc(rawCursor), 0) : 0
 
+    const q = (c.req.query('q') ?? '').trim()
+    const whereParts = ['deleted_at IS NULL']
+    const params: unknown[] = [limit + 1, offset]
+    if (q) {
+      whereParts.push(`original_name LIKE ? ESCAPE '\\'`)
+      params.unshift(`%${escapeLike(q)}%`)
+    }
+
     const result = await c.env.DB.prepare(
       `SELECT id, original_name, mime_type, size, created_at
        FROM files
-       WHERE deleted_at IS NULL
+       WHERE ${whereParts.join(' AND ')}
        ORDER BY created_at DESC, id DESC
        LIMIT ? OFFSET ?`,
     )
-      .bind(limit + 1, offset)
+      .bind(...params)
       .all<FileRow>()
 
     const hasMore = result.results.length > limit
     const files = result.results.slice(0, limit).map(toPublicFile)
 
     return c.json({ files, nextCursor: hasMore ? String(offset + limit) : null })
+  })
+  .post('/batch-delete', requireAuth, requireSameOrigin, async (c) => {
+    const body = await c.req.json().catch(() => null)
+    const parsed = z
+      .object({
+        ids: z.array(z.string().uuid()).min(1).max(100),
+      })
+      .safeParse(body)
+    if (!parsed.success) {
+      return apiError(c, 400, 'VALIDATION_ERROR', 'Invalid batch-delete request')
+    }
+    const ids = parsed.data.ids
+
+    const now = Math.floor(Date.now() / 1000)
+    const result = await c.env.DB.prepare(
+      `UPDATE files SET deleted_at = ?
+       WHERE id IN (${ids.map(() => '?').join(', ')}) AND deleted_at IS NULL`,
+    )
+      .bind(now, ...ids)
+      .run()
+
+    return c.json({ deleted: result.meta.changes })
   })
   .get('/:id', requireAuth, async (c) => {
     const row = await c.env.DB.prepare(
@@ -111,7 +147,13 @@ export const fileRoutes = new Hono<AppEnv>()
       return apiError(c, 404, 'NOT_FOUND', 'File content is missing')
     }
 
-    return buildDownloadResponse(object, row.original_name, row.mime_type, range)
+    return buildDownloadResponse(
+      object,
+      row.original_name,
+      row.mime_type,
+      range,
+      dispositionFor(row.mime_type),
+    )
   })
   .post('/:id/shares', requireAuth, requireSameOrigin, async (c) => {
     const fileId = c.req.param('id')
@@ -127,13 +169,16 @@ export const fileRoutes = new Hono<AppEnv>()
     if (!parsed.success) {
       return apiError(c, 400, 'VALIDATION_ERROR', 'Invalid share request')
     }
-    const { expiresIn, maxDownloads, deleteFileAfterExhausted } = parsed.data
+    const { expiresIn, maxDownloads, deleteFileAfterExhausted, password } = parsed.data
 
     const token = randomToken(32)
     const tokenHash = await sha256Hex(token)
     const shareId = crypto.randomUUID()
     const now = Math.floor(Date.now() / 1000)
     const expiresAt = expiresIn ? now + expiresIn : null
+    const passwordMac = password
+      ? await hmacSha256Hex(c.env.TOKEN_HMAC_SECRET, `${shareId}\0${password}`)
+      : null
 
     await c.env.DB.prepare(
       `INSERT INTO shares
@@ -145,7 +190,7 @@ export const fileRoutes = new Hono<AppEnv>()
         shareId,
         fileId,
         tokenHash,
-        null,
+        passwordMac,
         expiresAt,
         maxDownloads ?? null,
         0,
@@ -162,6 +207,7 @@ export const fileRoutes = new Hono<AppEnv>()
       expiresAt,
       maxDownloads: maxDownloads ?? null,
       deleteFileAfterExhausted: deleteFileAfterExhausted ?? false,
+      passwordProtected: passwordMac !== null,
     })
   })
   .delete('/:id', requireAuth, requireSameOrigin, async (c) => {

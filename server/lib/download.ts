@@ -1,5 +1,19 @@
 const DEFAULT_CONTENT_TYPE = 'application/octet-stream'
 
+/** MIME types that may render inline on the application origin (plan §33). */
+const PREVIEW_WHITELIST = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+])
+
+/** `inline` only for the preview whitelist; everything else is `attachment`. */
+export function dispositionFor(mimeType: string | null): 'attachment' | 'inline' {
+  return mimeType !== null && PREVIEW_WHITELIST.has(mimeType) ? 'inline' : 'attachment'
+}
+
 /** Parsed `Range` header. `bytes` ranges are closed intervals [start, end]. */
 export type RangeSpec =
   | { kind: 'full' }
@@ -82,10 +96,11 @@ export function buildDownloadResponse(
   filename: string,
   mimeType: string | null,
   range: RangeSpec,
+  disposition: 'attachment' | 'inline' = 'attachment',
 ): Response {
   const headers = new Headers({
     'Content-Type': mimeType ?? DEFAULT_CONTENT_TYPE,
-    'Content-Disposition': contentDisposition(filename),
+    'Content-Disposition': contentDisposition(filename, disposition),
     'X-Content-Type-Options': 'nosniff',
     'Accept-Ranges': 'bytes',
   })

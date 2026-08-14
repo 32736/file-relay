@@ -18,7 +18,7 @@ type CompareOperator = '=' | '<' | '>' | '<=' | '>='
 
 interface WhereClause {
   column: string
-  operator: CompareOperator | 'is-null' | 'is-not-null' | 'in'
+  operator: CompareOperator | 'is-null' | 'is-not-null' | 'in' | 'like'
   value?: unknown
   values?: unknown[]
   otherColumn?: string
@@ -40,11 +40,50 @@ interface OrderByClause {
   direction: 'asc' | 'desc'
 }
 
+/** Splits a SELECT column list on top-level commas (not inside parentheses). */
+function splitSelectColumns(raw: string): string[] {
+  const parts: string[] = []
+  let depth = 0
+  let current = ''
+  for (const char of raw) {
+    if (char === '(') depth++
+    if (char === ')') depth--
+    if (char === ',' && depth === 0) {
+      parts.push(current)
+      current = ''
+    } else {
+      current += char
+    }
+  }
+  if (current.trim()) parts.push(current)
+  return parts
+}
+
+/** A SELECT output column: a plain column or an aggregate expression. */
+type SelectColumn =
+  | { kind: 'plain'; name: string; alias: string }
+  | { kind: 'count'; alias: string }
+  | { kind: 'sum'; column: string; alias: string }
+
+function parseSelectColumn(raw: string): SelectColumn {
+  const trimmed = raw.trim()
+  const countMatch = /^COUNT\(\*\)\s+AS\s+(\w+)$/i.exec(trimmed)
+  if (countMatch) return { kind: 'count', alias: countMatch[1] }
+  const coalescedSum = /^COALESCE\(\s*SUM\((\w+)\)\s*,\s*\d+\s*\)\s+AS\s+(\w+)$/i.exec(trimmed)
+  if (coalescedSum) return { kind: 'sum', column: coalescedSum[1], alias: coalescedSum[2] }
+  const plainSum = /^SUM\((\w+)\)\s+AS\s+(\w+)$/i.exec(trimmed)
+  if (plainSum) return { kind: 'sum', column: plainSum[1], alias: plainSum[2] }
+  const aliased = /^(\w+)\s+AS\s+(\w+)$/i.exec(trimmed)
+  if (aliased) return { kind: 'plain', name: aliased[1], alias: aliased[2] }
+  if (/^\w+$/.test(trimmed)) return { kind: 'plain', name: trimmed, alias: trimmed }
+  throw new Error(`unsupported SELECT column in fake: ${trimmed}`)
+}
+
 type Query =
   | { kind: 'insert'; table: string; columns: string[]; values: unknown[]; orReplace: boolean }
   | {
       kind: 'select'
-      columns: string[]
+      columns: SelectColumn[]
       table: string
       where: WhereGroup[]
       orderBy: OrderByClause[]
@@ -94,6 +133,11 @@ function parseCondition(
   const nullMatch = /^(\w+)\s+IS\s+(NOT\s+)?NULL$/i.exec(trimmed)
   if (nullMatch) {
     return { column: nullMatch[1], operator: nullMatch[2] ? 'is-not-null' : 'is-null' }
+  }
+  const likeMatch = /^(\w+)\s+LIKE\s+(\?|'[^']*')(?:\s+ESCAPE\s+'\\')?$/i.exec(trimmed)
+  if (likeMatch) {
+    const value = likeMatch[2] === '?' ? params[cursor.index++] : likeMatch[2].slice(1, -1)
+    return { column: likeMatch[1], operator: 'like', value }
   }
   const inMatch = /^(\w+)\s+IN\s*\(([^)]+)\)$/.exec(trimmed)
   if (inMatch) {
@@ -188,7 +232,7 @@ function parseQuery(sql: string, params: unknown[]): Query {
     const offsetMatch = /OFFSET\s+(\?|\d+)/i.exec(rest)
     return {
       kind: 'select',
-      columns: selectMatch[1].split(',').map((name) => name.trim()),
+      columns: splitSelectColumns(selectMatch[1]).map((name) => parseSelectColumn(name)),
       table: selectMatch[2],
       where: parseWhere(whereMatch?.[1], params, cursor),
       orderBy: parseOrderBy(orderMatch?.[1]),
@@ -226,6 +270,29 @@ function parseQuery(sql: string, params: unknown[]): Query {
   throw new Error(`unsupported SQL in fake: ${normalized}`)
 }
 
+function escapeRegExpChar(char: string): string {
+  return /[.*+?^${}()|[\]\\]/.test(char) ? `\\${char}` : char
+}
+
+/** Converts a SQL LIKE pattern (with `%`/`_` and `\` escapes) to a regex. */
+function likePatternToRegExp(pattern: string): RegExp {
+  let source = ''
+  for (let i = 0; i < pattern.length; i++) {
+    const char = pattern[i]
+    if (char === '\\' && i + 1 < pattern.length) {
+      source += escapeRegExpChar(pattern[i + 1])
+      i++
+    } else if (char === '%') {
+      source += '.*'
+    } else if (char === '_') {
+      source += '.'
+    } else {
+      source += escapeRegExpChar(char)
+    }
+  }
+  return new RegExp(`^${source}$`, 'i')
+}
+
 function matchCondition(row: Row, condition: WhereClause): boolean {
   const left = row[condition.column]
   if (condition.operator === 'is-null') {
@@ -236,6 +303,11 @@ function matchCondition(row: Row, condition: WhereClause): boolean {
   }
   if (condition.operator === 'in') {
     return (condition.values ?? []).includes(left)
+  }
+  if (condition.operator === 'like') {
+    return (
+      typeof left === 'string' && likePatternToRegExp(String(condition.value ?? '')).test(left)
+    )
   }
   const right =
     condition.otherColumn !== undefined ? row[condition.otherColumn] : condition.value
@@ -419,6 +491,25 @@ class FakeStatement {
     if (query.kind === 'select') {
       const table = this.db.tableState(query.table)
       const filtered = table.rows.filter((row) => matchesWhere(row, query.where))
+
+      // Aggregate queries (COUNT/SUM/COALESCE) return a single computed row.
+      if (query.columns.some((column) => column.kind !== 'plain')) {
+        const row: Row = {}
+        for (const column of query.columns) {
+          if (column.kind === 'count') {
+            row[column.alias] = filtered.length
+          } else if (column.kind === 'sum') {
+            row[column.alias] = filtered.reduce(
+              (sum, item) => sum + Number(item[column.column] ?? 0),
+              0,
+            )
+          } else {
+            row[column.alias] = filtered[0]?.[column.name] ?? null
+          }
+        }
+        return { results: [row], success: true }
+      }
+
       const sorted =
         query.orderBy.length === 0
           ? filtered
@@ -438,7 +529,9 @@ class FakeStatement {
         query.limit === undefined ? sorted : sorted.slice(query.offset, query.offset + query.limit)
       const results = paged.map((row) => {
         const picked: Row = {}
-        for (const column of query.columns) picked[column] = row[column]
+        for (const column of query.columns) {
+          if (column.kind === 'plain') picked[column.alias] = row[column.name]
+        }
         return picked
       })
       return { results, success: true }

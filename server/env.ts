@@ -6,6 +6,7 @@ export interface Bindings {
   OWNER_GITHUB_ID: string
   GITHUB_CLIENT_ID: string
   GITHUB_CLIENT_SECRET: string
+  TOKEN_HMAC_SECRET: string
   UPLOAD_CHUNK_SIZE: string
   MAX_FILE_SIZE: string
   SESSION_TTL_SECONDS: string

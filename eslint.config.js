@@ -15,9 +15,11 @@ export default tseslint.config(
       parserOptions: {
         parser: tseslint.parser,
       },
-      globals: {
-        fetch: 'readonly',
-      },
+    },
+    rules: {
+      // TypeScript (vue-tsc) already reports undefined identifiers; the core
+      // no-undef rule misfires on browser globals in SFC script blocks.
+      'no-undef': 'off',
     },
   },
   {

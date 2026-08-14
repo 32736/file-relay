@@ -1,10 +1,18 @@
 import { Hono } from 'hono'
+import { getCookie, setCookie } from 'hono/cookie'
+import { z } from 'zod'
 
 import type { AppEnv } from '../env'
-import { buildDownloadResponse, parseRange } from '../lib/download'
-import { sha256Hex } from '../lib/crypto'
+import { buildDownloadResponse, dispositionFor, parseRange } from '../lib/download'
+import { hmacSha256Hex, sha256Hex } from '../lib/crypto'
 import { apiError } from '../lib/errors'
 import { findShareByHash } from './shares'
+
+const UNLOCK_COOKIE_TTL_SECONDS = 30 * 60
+
+const unlockSchema = z.object({
+  password: z.string().min(1).max(128),
+})
 
 interface PublicFileRow {
   id: string
@@ -37,6 +45,10 @@ async function resolvePublicShare(
   return { share, file }
 }
 
+function unlockCookieName(shareId: string): string {
+  return `share_unlock_${shareId}`
+}
+
 export const publicShareRoutes = new Hono<AppEnv>()
   .get('/:token', async (c) => {
     const resolved = await resolvePublicShare(c.env, c.req.param('token'))
@@ -54,8 +66,41 @@ export const publicShareRoutes = new Hono<AppEnv>()
         share.max_downloads === null
           ? null
           : Math.max(0, share.max_downloads - share.download_count),
-      passwordRequired: false,
+      passwordRequired: share.password_mac !== null,
     })
+  })
+  .post('/:token/unlock', async (c) => {
+    const resolved = await resolvePublicShare(c.env, c.req.param('token'))
+    if (!resolved) {
+      return apiError(c, 404, 'NOT_FOUND', 'Share not found')
+    }
+    const { share } = resolved
+    if (!share.password_mac) {
+      return c.json({ ok: true })
+    }
+
+    const body = await c.req.json().catch(() => null)
+    const parsed = unlockSchema.safeParse(body)
+    if (!parsed.success) {
+      return apiError(c, 403, 'FORBIDDEN', 'Invalid password')
+    }
+
+    const mac = await hmacSha256Hex(c.env.TOKEN_HMAC_SECRET, `${share.id}\0${parsed.data.password}`)
+    if (mac !== share.password_mac) {
+      return apiError(c, 403, 'FORBIDDEN', 'Invalid password')
+    }
+
+    // Stateless unlock proof: the cookie value IS the MAC; downloads compare
+    // it against password_mac. Short-lived and impossible to forge without the
+    // secret.
+    setCookie(c, unlockCookieName(share.id), mac, {
+      httpOnly: true,
+      secure: new URL(c.req.url).protocol === 'https:',
+      sameSite: 'Lax',
+      path: '/',
+      maxAge: UNLOCK_COOKIE_TTL_SECONDS,
+    })
+    return c.json({ ok: true })
   })
   .get('/:token/download', async (c) => {
     const resolved = await resolvePublicShare(c.env, c.req.param('token'))
@@ -63,6 +108,14 @@ export const publicShareRoutes = new Hono<AppEnv>()
       return apiError(c, 404, 'NOT_FOUND', 'Share not found')
     }
     const { share, file } = resolved
+
+    // Password gate first: a failed unlock must not consume a download claim.
+    if (share.password_mac) {
+      const cookieValue = getCookie(c, unlockCookieName(share.id))
+      if (!cookieValue || cookieValue !== share.password_mac) {
+        return apiError(c, 403, 'FORBIDDEN', 'Share requires a password')
+      }
+    }
 
     // Atomic claim (plan §30): one increment per download request. Zero rows
     // means expired, revoked, or exhausted.
@@ -107,5 +160,11 @@ export const publicShareRoutes = new Hono<AppEnv>()
       return apiError(c, 404, 'NOT_FOUND', 'File content is missing')
     }
 
-    return buildDownloadResponse(object, file.original_name, file.mime_type, range)
+    return buildDownloadResponse(
+      object,
+      file.original_name,
+      file.mime_type,
+      range,
+      dispositionFor(file.mime_type),
+    )
   })
