@@ -22,6 +22,11 @@
       "bucket_name": "drop-files"
     }
   ],
+  "triggers": {
+    "crons": [
+      "17 * * * *"
+    ]
+  },
   "vars": {
     "APP_ORIGIN": "https://drop.28207.cc",
     "OWNER_GITHUB_ID": "",

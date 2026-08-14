@@ -57,8 +57,9 @@ type Query =
       assignments: Assignment[]
       where: WhereGroup[]
       returning: boolean
+      limit?: number
     }
-  | { kind: 'delete'; table: string; where: WhereGroup[] }
+  | { kind: 'delete'; table: string; where: WhereGroup[]; limit?: number }
 
 /** Parses `col = rhs` pairs in a SET clause; `?` params are consumed via cursor. */
 function parseAssignments(
@@ -196,9 +197,10 @@ function parseQuery(sql: string, params: unknown[]): Query {
     }
   }
 
-  const updateMatch = /^UPDATE (\w+) SET (.+?)(?:\s+WHERE\s+(.+?))?(?:\s+RETURNING\s+\*)?$/i.exec(
-    normalized,
-  )
+  const updateMatch =
+    /^UPDATE (\w+) SET (.+?)(?:\s+WHERE\s+(.+?))?(?:\s+RETURNING\s+\*)?(?:\s+LIMIT\s+(\?|\d+))?$/i.exec(
+      normalized,
+    )
   if (updateMatch) {
     return {
       kind: 'update',
@@ -206,15 +208,18 @@ function parseQuery(sql: string, params: unknown[]): Query {
       assignments: parseAssignments(updateMatch[2], params, cursor),
       where: parseWhere(updateMatch[3], params, cursor),
       returning: /RETURNING\s+\*$/i.test(normalized),
+      limit: parseNumber(updateMatch[4], params, cursor),
     }
   }
 
-  const deleteMatch = /^DELETE FROM (\w+)(?:\s+WHERE\s+(.+))?$/i.exec(normalized)
+  const deleteMatch =
+    /^DELETE FROM (\w+)(?:\s+WHERE\s+(.+?))?(?:\s+LIMIT\s+(\?|\d+))?$/i.exec(normalized)
   if (deleteMatch) {
     return {
       kind: 'delete',
       table: deleteMatch[1],
       where: parseWhere(deleteMatch[2], params, cursor),
+      limit: parseNumber(deleteMatch[3], params, cursor),
     }
   }
 
@@ -375,8 +380,11 @@ export class D1Fake {
   applyUpdate(query: Extract<Query, { kind: 'update' }>): Row[] {
     const table = this.tableState(query.table)
     const updatedRows: Row[] = []
+    let matched = 0
     table.rows = table.rows.map((row) => {
       if (!matchesWhere(row, query.where)) return row
+      if (query.limit !== undefined && matched >= query.limit) return row
+      matched++
       const updated = applyAssignments(row, query.assignments)
       updatedRows.push(updated)
       return updated
@@ -507,9 +515,14 @@ class FakeStatement {
     }
 
     if (query.kind === 'delete') {
-      const before = table.rows.length
-      table.rows = table.rows.filter((row) => !matchesWhere(row, query.where))
-      return { success: true, meta: { changes: before - table.rows.length } }
+      let removed = 0
+      table.rows = table.rows.filter((row) => {
+        if (!matchesWhere(row, query.where)) return true
+        if (query.limit !== undefined && removed >= query.limit) return true
+        removed++
+        return false
+      })
+      return { success: true, meta: { changes: removed } }
     }
 
     throw new Error('run() only supports INSERT/UPDATE/DELETE in fake')

@@ -41,6 +41,13 @@ and `GITHUB_CLIENT_ID` are non-secret vars configured in `wrangler.jsonc`
 `GITHUB_CLIENT_SECRET` is configured through `wrangler secret put`, and
 locally through `.dev.vars`.
 
+Phase 06 adds an hourly cron trigger (`17 * * * *`). The Worker's `scheduled`
+handler runs the bounded cleanup pass in `server/services/cleanup.ts`: expired
+sessions, stale upload sessions (aborting R2 multiparts), expired files,
+exhausted burn-after-reading files (after a 1-hour safety window), physically
+deleted logically-deleted files, and revoked/expired shares. Each task is
+capped at 50 rows per run.
+
 Future phases configure additional secrets through `wrangler secret put`,
 including `SESSION_SECRET`, `TOKEN_HMAC_SECRET`, and (for incoming uploads)
 `TURNSTILE_SECRET_KEY`.

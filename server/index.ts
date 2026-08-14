@@ -1,11 +1,12 @@
 import { Hono } from 'hono'
 
-import type { AppEnv } from './env'
+import type { AppEnv, Bindings } from './env'
 import { authRoutes } from './routes/auth'
 import { fileRoutes } from './routes/files'
 import { shareRoutes } from './routes/shares'
 import { publicShareRoutes } from './routes/shares-public'
 import { uploadRoutes } from './routes/uploads'
+import { runCleanup } from './services/cleanup'
 
 export const app = new Hono<AppEnv>()
 
@@ -35,4 +36,9 @@ app.notFound(async (context) => {
   return context.env.ASSETS.fetch(context.req.raw)
 })
 
-export default app
+export default {
+  fetch: app.fetch,
+  async scheduled(_controller, env: Bindings, ctx) {
+    ctx.waitUntil(runCleanup(env))
+  },
+} satisfies ExportedHandler<Bindings>
