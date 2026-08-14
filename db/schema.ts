@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 // Phase 01: owner authentication sessions. Only the SHA-256 hash of the raw
 // session token is stored; the raw token exists solely in the owner's cookie.
@@ -36,6 +36,24 @@ export const files = sqliteTable(
     index('idx_files_created_at').on(table.createdAt),
     index('idx_files_expires_at').on(table.expiresAt),
     index('idx_files_deleted_at').on(table.deletedAt),
+  ],
+)
+
+// Phase 03: uploaded multipart parts. UPSERTed per part so retries are
+// idempotent; completion orders them by part_number. The composite primary key
+// mirrors the R2 multipart part identity.
+export const uploadParts = sqliteTable(
+  'upload_parts',
+  {
+    uploadSessionId: text('upload_session_id').notNull(),
+    partNumber: integer('part_number').notNull(),
+    etag: text('etag').notNull(),
+    size: integer('size').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.uploadSessionId, table.partNumber] }),
+    index('idx_upload_parts_session').on(table.uploadSessionId),
   ],
 )
 

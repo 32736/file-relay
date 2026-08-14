@@ -67,7 +67,6 @@ development over `http://localhost` uses `drop_session` because browsers reject
 ## Phase 02
 
 Owner-only file uploads up to 32 MiB, file listing, and logical deletion.
-Requests above the chunk size return `413` until Phase 03 adds multipart.
 All routes require owner authentication; state-changing routes additionally
 validate `Origin`.
 
@@ -78,7 +77,8 @@ are reduced to a bare basename; `size` must be an integer within
 `[1, MAX_FILE_SIZE]`.
 
 - Invalid body → `400 VALIDATION_ERROR`.
-- Size above `MAX_FILE_SIZE` or above the chunk size → `413 PAYLOAD_TOO_LARGE`.
+- Size above `MAX_FILE_SIZE` → `413 PAYLOAD_TOO_LARGE`. Sizes above the chunk
+  size use multipart (Phase 03).
 - Success → `200` with `{ "uploadId", "mode": "single", "chunkSize",
   "totalParts": 1 }`. The `files` row is created when the content upload
   succeeds, so listings never expose half-uploaded files.
@@ -93,8 +93,8 @@ object is deleted and `400 SIZE_MISMATCH` returned. Success → `200` with
 
 ### `GET /api/uploads/:uploadId`
 
-Session state: `{ "status", "mode", "chunkSize", "totalParts" }` (the resume
-surface Phase 03 extends). Unknown → `404`.
+Session state: `{ "status", "mode", "chunkSize", "totalParts" }` (multipart
+sessions also return `completedParts`, see Phase 03). Unknown → `404`.
 
 ### `POST /api/uploads/:uploadId/complete`
 
@@ -104,7 +104,7 @@ anything else → `409 CONFLICT`.
 ### `DELETE /api/uploads/:uploadId`
 
 Marks a pending session `aborted` (`204`; idempotent). Completed uploads →
-`409`.
+`409`. Multipart sessions abort their R2 multipart first (Phase 03).
 
 ### `GET /api/files`
 
@@ -122,9 +122,54 @@ Internal fields such as `object_key` are never exposed.
 Logical deletion (`deleted_at` set; R2 physical removal is a Phase 06 cron
 responsibility). `204`, idempotent; unknown ids → `404`.
 
+## Phase 03
+
+Multipart uploads for files above the chunk size (32 MiB), up to
+`MAX_FILE_SIZE`. Parts stream to R2 with a declared `Content-Length`
+(workerd requires a known-length body), retries UPSERT idempotently, and
+completion verifies the assembled size.
+
+### `POST /api/uploads`
+
+- Size ≤ chunk size → `mode: "single"` as in Phase 02.
+- Chunk size < size ≤ `MAX_FILE_SIZE` → `200` with `{ "uploadId", "mode":
+  "multipart", "chunkSize", "totalParts" }` (`totalParts = ceil(size /
+  chunkSize)`); the R2 multipart upload is created eagerly and its id is kept
+  server-side only.
+- Above `MAX_FILE_SIZE`, or requiring more than 10,000 parts → `413`.
+
+### `PUT /api/uploads/:uploadId/parts/:partNumber`
+
+- `partNumber` must be an integer in `[1, totalParts]` → else `400
+  VALIDATION_ERROR`.
+- The part body must declare `Content-Length`; missing → `400`. Size must be
+  ≤ `chunkSize`, and every part except the last must be ≥ 5 MiB (R2 floor) →
+  else `400`.
+- Streams the body to R2; retries UPSERT the part row. Success → `200
+  { "partNumber", "etag" }`. First part flips the session to `uploading`.
+
+### `GET /api/uploads/:uploadId`
+
+Multipart sessions additionally return `completedParts`:
+`[{ "partNumber", "etag" }]` ordered ascending (the resume surface).
+
+### `POST /api/uploads/:uploadId/complete`
+
+- `multipart`: requires all `totalParts` parts → else `409`; completes the R2
+  multipart; verifies the assembled object size equals the declared size →
+  mismatch deletes the object and returns `400 SIZE_MISMATCH`; writes the
+  `files` row and marks the session completed. Idempotent: a completed session
+  returns the file record; if R2 completion succeeded but D1 failed, the retry
+  detects the object via `head` and repairs D1 only.
+- `single`: unchanged from Phase 02.
+
+### `DELETE /api/uploads/:uploadId`
+
+Multipart sessions abort the R2 multipart before marking `aborted` (`204`,
+idempotent). Completed uploads → `409`.
+
 ## Future phases
 
-- Phases 02-03: upload session and single/multipart upload endpoints.
 - Phase 04: owner streaming and range downloads.
 - Phase 05: owner share management and public share downloads.
 - Phase 06: scheduled cleanup, with no public route required.

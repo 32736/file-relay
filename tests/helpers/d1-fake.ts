@@ -30,7 +30,7 @@ interface OrderByClause {
 }
 
 type Query =
-  | { kind: 'insert'; table: string; columns: string[]; values: unknown[] }
+  | { kind: 'insert'; table: string; columns: string[]; values: unknown[]; orReplace: boolean }
   | {
       kind: 'select'
       columns: string[]
@@ -101,7 +101,9 @@ function parseQuery(sql: string, params: unknown[]): Query {
   const normalized = sql.replace(/\s+/g, ' ').trim()
   const cursor = { index: 0 }
 
-  const insertMatch = /^INSERT INTO (\w+) \(([^)]+)\) VALUES \(([^)]+)\)/i.exec(normalized)
+  const insertMatch = /^INSERT(?: OR REPLACE)? INTO (\w+) \(([^)]+)\) VALUES \(([^)]+)\)/i.exec(
+    normalized,
+  )
   if (insertMatch) {
     const columns = insertMatch[2].split(',').map((name) => name.trim())
     const placeholders = insertMatch[3].split(',').map((name) => name.trim())
@@ -109,7 +111,13 @@ function parseQuery(sql: string, params: unknown[]): Query {
       if (placeholder !== '?') throw new Error(`unsupported INSERT literal: ${placeholder}`)
       return params[cursor.index++]
     })
-    return { kind: 'insert', table: insertMatch[1], columns, values }
+    return {
+      kind: 'insert',
+      table: insertMatch[1],
+      columns,
+      values,
+      orReplace: /^INSERT OR REPLACE INTO/i.test(normalized),
+    }
   }
 
   const selectMatch = /^SELECT (.+) FROM (\w+)(.*)$/i.exec(normalized)
@@ -167,7 +175,12 @@ function matchesWhere(row: Row, where: WhereClause[]): boolean {
 export class D1Fake {
   private tables = new Map<string, TableState>()
 
-  constructor(seed: { sessions?: Row[]; files?: Row[]; upload_sessions?: Row[] } = {}) {
+  constructor(seed: {
+    sessions?: Row[]
+    files?: Row[]
+    upload_sessions?: Row[]
+    upload_parts?: Row[]
+  } = {}) {
     this.tables.set('sessions', {
       columns: [
         { name: 'id' },
@@ -192,6 +205,16 @@ export class D1Fake {
         { name: 'deleted_at' },
       ],
       rows: seed.files ? seed.files.map((row) => ({ ...row })) : [],
+    })
+    this.tables.set('upload_parts', {
+      columns: [
+        { name: 'upload_session_id' },
+        { name: 'part_number' },
+        { name: 'etag' },
+        { name: 'size' },
+        { name: 'created_at' },
+      ],
+      rows: seed.upload_parts ? seed.upload_parts.map((row) => ({ ...row })) : [],
     })
     this.tables.set('upload_sessions', {
       columns: [
@@ -304,6 +327,18 @@ class FakeStatement {
       query.columns.forEach((column, index) => {
         row[column] = query.values[index]
       })
+      if (query.table === 'upload_parts') {
+        const existingIndex = table.rows.findIndex(
+          (existing) =>
+            existing.upload_session_id === row.upload_session_id &&
+            existing.part_number === row.part_number,
+        )
+        if (existingIndex >= 0) {
+          if (!query.orReplace) throw new Error('PRIMARY KEY constraint failed: upload_parts')
+          table.rows[existingIndex] = row
+          return { success: true, meta: { changes: 1 } }
+        }
+      }
       if (
         query.table === 'sessions' &&
         table.rows.some((existing) => existing.token_hash === row.token_hash)

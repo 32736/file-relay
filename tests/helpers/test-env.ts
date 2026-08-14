@@ -5,7 +5,11 @@ import type { R2Fake } from './r2-fake'
 
 export const OWNER_ID = '123456'
 
-export function makeTestEnv(db: D1Fake, bucket: R2Fake): Bindings {
+export function makeTestEnv(
+  db: D1Fake,
+  bucket: R2Fake,
+  overrides: Partial<Bindings> = {},
+): Bindings {
   return {
     DB: db as unknown as D1Database,
     BUCKET: bucket as unknown as R2Bucket,
@@ -18,6 +22,7 @@ export function makeTestEnv(db: D1Fake, bucket: R2Fake): Bindings {
     MAX_FILE_SIZE: '2147483648',
     SESSION_TTL_SECONDS: '2592000',
     DEFAULT_RETENTION_DAYS: '30',
+    ...overrides,
   }
 }
 
