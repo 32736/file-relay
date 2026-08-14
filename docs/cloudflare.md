@@ -14,6 +14,18 @@ so local code can be bootstrapped without committing an account identifier.
 Replace it with the ID returned when the production database is created; do not
 commit credentials or secrets.
 
+## Static assets routing
+
+The Worker runs first (`assets.run_worker_first: true`) and serves `/api/*`
+itself; all other paths are forwarded to the `ASSETS` binding
+(`assets.binding: "ASSETS"`, declared explicitly — without it `env.ASSETS` is
+undefined). This keeps API routes — including navigation-style requests such as
+GitHub OAuth — in the Worker, while `not_found_handling:
+"single-page-application"` preserves SPA deep-link refreshes through
+`env.ASSETS.fetch()`. Without `run_worker_first`, navigation requests
+(`Sec-Fetch-Mode: navigate`) that miss an asset are answered with `index.html`
+by the assets service and never reach the Worker.
+
 ## Production resource creation
 
 Run production-changing commands only after explicit review:
@@ -23,9 +35,15 @@ pnpm wrangler d1 create drop-db
 pnpm wrangler r2 bucket create drop-files
 ```
 
-Future phases configure secrets through `wrangler secret put`, including
-`GITHUB_CLIENT_SECRET`, `SESSION_SECRET`, `TOKEN_HMAC_SECRET`, and (for incoming
-uploads) `TURNSTILE_SECRET_KEY`.
+Phase 01 adds owner authentication. `OWNER_GITHUB_ID` (numeric GitHub user ID)
+and `GITHUB_CLIENT_ID` are non-secret vars configured in `wrangler.jsonc`
+(empty placeholders by default; a missing value denies logins). The secret
+`GITHUB_CLIENT_SECRET` is configured through `wrangler secret put`, and
+locally through `.dev.vars`.
+
+Future phases configure additional secrets through `wrangler secret put`,
+including `SESSION_SECRET`, `TOKEN_HMAC_SECRET`, and (for incoming uploads)
+`TURNSTILE_SECRET_KEY`.
 
 ## Local development
 

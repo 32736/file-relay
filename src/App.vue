@@ -1,5 +1,19 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
+
 const foundations = ["Vue 3", "Cloudflare Worker", "D1 metadata", "Private R2"];
+
+type AuthState = "loading" | "anonymous" | "owner";
+const auth = ref<AuthState>("loading");
+
+onMounted(async () => {
+  try {
+    const response = await fetch("/api/auth/me");
+    auth.value = response.ok ? "owner" : "anonymous";
+  } catch {
+    auth.value = "anonymous";
+  }
+});
 </script>
 
 <template>
@@ -15,7 +29,7 @@ const foundations = ["Vue 3", "Cloudflare Worker", "D1 metadata", "Private R2"];
 
       <div class="status" role="status">
         <span class="status-dot" aria-hidden="true"></span>
-        Phase 00 foundation ready
+        Phase 01 auth ready
       </div>
 
       <ul class="foundations" aria-label="Service foundations">
@@ -23,6 +37,12 @@ const foundations = ["Vue 3", "Cloudflare Worker", "D1 metadata", "Private R2"];
           {{ foundation }}
         </li>
       </ul>
+
+      <div class="auth" role="status">
+        <a v-if="auth === 'anonymous'" href="/api/auth/github">Sign in with GitHub</a>
+        <span v-else-if="auth === 'owner'">Signed in as owner</span>
+        <span v-else>Checking session…</span>
+      </div>
     </section>
 
     <footer>

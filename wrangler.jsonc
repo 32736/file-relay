@@ -4,7 +4,9 @@
   "main": "server/index.ts",
   "compatibility_date": "2026-08-12",
   "assets": {
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true,
+    "binding": "ASSETS"
   },
   "d1_databases": [
     {
@@ -22,6 +24,8 @@
   ],
   "vars": {
     "APP_ORIGIN": "https://drop.28207.cc",
+    "OWNER_GITHUB_ID": "",
+    "GITHUB_CLIENT_ID": "",
     "UPLOAD_CHUNK_SIZE": "33554432",
     "MAX_FILE_SIZE": "2147483648",
     "SESSION_TTL_SECONDS": "2592000",

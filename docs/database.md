@@ -20,9 +20,12 @@ Drizzle schema entry point and migrations directory. Each later phase owns its
 schema additions so its migration, implementation, and tests can be reviewed
 together.
 
+## Implemented ownership
+
+- Phase 01: `sessions` (token hashes only; raw session tokens never stored).
+
 ## Planned ownership
 
-- Phase 01: `sessions`.
 - Phase 02: `files` and `upload_sessions` needed for single uploads.
 - Phase 03: multipart fields and `upload_parts`.
 - Phase 05: `shares`.

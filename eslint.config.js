@@ -15,6 +15,9 @@ export default tseslint.config(
       parserOptions: {
         parser: tseslint.parser,
       },
+      globals: {
+        fetch: 'readonly',
+      },
     },
   },
   {

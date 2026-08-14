@@ -5,8 +5,9 @@ Drop is a private, owner-operated file transfer service designed for
 on one origin, with D1 for application state and a private R2 bucket for file
 content.
 
-Phase 00 provides the repository foundation and a health endpoint. File upload,
-download, authentication, and sharing are intentionally not implemented yet.
+Phase 00 provides the repository foundation and a health endpoint. Phase 01
+adds owner-only GitHub OAuth. File upload, download, and sharing are
+intentionally not implemented yet.
 
 ## Requirements
 

@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "types": ["@cloudflare/workers-types"]
   },
-  "include": ["server/**/*.ts", "db/**/*.ts", "tests/server/health.test.ts"]
+  "include": ["server/**/*.ts", "db/**/*.ts", "tests/server/**/*.ts", "tests/helpers/**/*.ts"]
 }
