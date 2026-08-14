@@ -70,6 +70,7 @@ resource and secret checklist.
 - [Cloudflare configuration](docs/cloudflare.md)
 - [API](docs/api.md)
 - [Database](docs/database.md)
+- [Operations](docs/operations.md)
 - [Implementation plan](docs/cloudflare_private_file_drop_codex_implementation_plan.md)
 - [Phase tasks](tasks/)
 
