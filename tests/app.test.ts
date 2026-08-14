@@ -11,8 +11,26 @@ function stubMe(status: number): void {
       if (url.includes('/api/auth/me')) {
         return new Response('{}', { status })
       }
+      if (url.includes('/api/stats')) {
+        return new Response(JSON.stringify({ fileCount: 3, totalBytes: 102400 }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
       if (url.includes('/api/files')) {
         return new Response(JSON.stringify({ files: [], nextCursor: null }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      if (url.includes('/api/shares')) {
+        return new Response(JSON.stringify({ shares: [] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      if (url.includes('/api/incoming-requests')) {
+        return new Response(JSON.stringify({ requests: [] }), {
           status: 200,
           headers: { 'content-type': 'application/json' },
         })
@@ -41,13 +59,30 @@ describe('App', () => {
     expect(wrapper.get('a[href="/api/auth/github"]').text()).toBe('Sign in with GitHub')
   })
 
-  it('shows the owner workspace when authenticated', async () => {
+  it('shows the owner workspace, stats, and tab navigation', async () => {
     stubMe(200)
     const wrapper = mount(App)
     await flushPromises()
 
     expect(wrapper.text()).toContain('Signed in as owner')
-    expect(wrapper.get('.workspace')).toBeDefined()
+    expect(wrapper.text()).toContain('3 个文件')
     expect(wrapper.text()).toContain('拖放文件到这里')
+    expect(wrapper.text()).toContain('文件')
+    expect(wrapper.text()).toContain('分享')
+    expect(wrapper.text()).toContain('上传请求')
+  })
+
+  it('switches to the share management tab', async () => {
+    stubMe(200)
+    const wrapper = mount(App)
+    await flushPromises()
+
+    const buttons = wrapper.findAll('nav.tabs button')
+    const shareTab = buttons.find((b) => b.text() === '分享')
+    expect(shareTab).toBeDefined()
+    await shareTab?.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('分享管理')
   })
 })

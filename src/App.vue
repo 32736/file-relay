@@ -2,13 +2,21 @@
 import { computed, onMounted, ref } from 'vue'
 
 import FileList from './components/FileList.vue'
+import IncomingList from './components/IncomingList.vue'
 import IncomingUpload from './components/IncomingUpload.vue'
+import ShareList from './components/ShareList.vue'
 import SharePage from './components/SharePage.vue'
 import UploadZone from './components/UploadZone.vue'
+import { api } from './lib/api'
+import { formatBytes } from './lib/format'
 
 type AuthState = 'loading' | 'anonymous' | 'owner'
+type WorkspaceTab = 'files' | 'shares' | 'incoming'
+
 const auth = ref<AuthState>('loading')
+const tab = ref<WorkspaceTab>('files')
 const fileList = ref<InstanceType<typeof FileList> | null>(null)
+const stats = ref<{ fileCount: number; totalBytes: number } | null>(null)
 
 // Public pages are routed by pathname (no router in this phase):
 //   /u/<token>  → incoming upload page
@@ -24,15 +32,30 @@ onMounted(async () => {
   try {
     const response = await fetch('/api/auth/me')
     auth.value = response.ok ? 'owner' : 'anonymous'
+    if (auth.value === 'owner') void loadStats()
   } catch {
     auth.value = 'anonymous'
   }
 })
 
-// Refresh the file list in place (no remount) so open dialogs survive uploads
-// and share creation.
+async function loadStats(): Promise<void> {
+  try {
+    stats.value = await api<{ fileCount: number; totalBytes: number }>('/api/stats')
+  } catch {
+    stats.value = null
+  }
+}
+
+// Refresh the file list and stats in place (no remount) so open dialogs and
+// the current tab survive uploads and share creation.
 function refresh(): void {
   void fileList.value?.load(true)
+  void loadStats()
+}
+
+function switchTab(next: WorkspaceTab): void {
+  tab.value = next
+  if (next === 'files') void loadStats()
 }
 </script>
 
@@ -77,6 +100,14 @@ function refresh(): void {
         <span v-else-if="auth === 'owner'">Signed in as owner</span>
         <span v-else>Checking session…</span>
       </div>
+
+      <p
+        v-if="auth === 'owner' && stats"
+        class="stats"
+        role="status"
+      >
+        {{ stats.fileCount }} 个文件 · 已用 {{ formatBytes(stats.totalBytes) }}
+      </p>
     </section>
 
     <IncomingUpload
@@ -94,11 +125,42 @@ function refresh(): void {
       class="workspace"
       aria-label="文件工作区"
     >
-      <UploadZone @uploaded="refresh" />
-      <FileList
-        ref="fileList"
-        @shared="refresh"
-      />
+      <nav
+        class="tabs"
+        aria-label="工作区导航"
+      >
+        <button
+          :class="{ active: tab === 'files' }"
+          type="button"
+          @click="switchTab('files')"
+        >
+          文件
+        </button>
+        <button
+          :class="{ active: tab === 'shares' }"
+          type="button"
+          @click="switchTab('shares')"
+        >
+          分享
+        </button>
+        <button
+          :class="{ active: tab === 'incoming' }"
+          type="button"
+          @click="switchTab('incoming')"
+        >
+          上传请求
+        </button>
+      </nav>
+
+      <template v-if="tab === 'files'">
+        <UploadZone @uploaded="refresh" />
+        <FileList
+          ref="fileList"
+          @shared="refresh"
+        />
+      </template>
+      <ShareList v-else-if="tab === 'shares'" />
+      <IncomingList v-else-if="tab === 'incoming'" />
     </section>
 
     <footer>
@@ -107,3 +169,31 @@ function refresh(): void {
     </footer>
   </main>
 </template>
+
+<style scoped>
+.tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border, #eee);
+}
+.tabs button {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #666;
+}
+.tabs button.active {
+  color: var(--accent, #3b82f6);
+  border-bottom-color: var(--accent, #3b82f6);
+  font-weight: 600;
+}
+.stats {
+  margin-top: 0.4rem;
+  color: #888;
+  font-size: 0.85rem;
+}
+</style>

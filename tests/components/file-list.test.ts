@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import FileList from '../../src/components/FileList.vue'
+import FilePreview from '../../src/components/FilePreview.vue'
 import ShareDialog from '../../src/components/ShareDialog.vue'
 
 vi.mock('qrcode', () => ({
@@ -19,6 +20,7 @@ function stubFiles(): void {
             files: [
               { id: 'f1', name: '报告.pdf', size: 2048, mimeType: 'application/pdf', createdAt: 1700000000 },
               { id: 'f2', name: '照片.png', size: 4096, mimeType: 'image/png', createdAt: 1700000001 },
+              { id: 'f3', name: '页面.html', size: 1024, mimeType: 'text/html', createdAt: 1700000002 },
             ],
             nextCursor: null,
           }),
@@ -46,6 +48,20 @@ describe('FileList', () => {
 
     await wrapper.findAll('button').find((b) => b.text() === '分享')?.trigger('click')
     expect(wrapper.findComponent(ShareDialog).exists()).toBe(true)
+  })
+
+  it('offers preview only for whitelisted types and opens the viewer', async () => {
+    stubFiles()
+    const wrapper = mount(FileList)
+    await flushPromises()
+
+    const buttons = wrapper.findAll('button')
+    expect(buttons.filter((b) => b.text() === '预览')).toHaveLength(2) // pdf + png
+    // text/html never previews
+    expect(wrapper.text()).toContain('页面.html')
+
+    await buttons.find((b) => b.text() === '预览')?.trigger('click')
+    expect(wrapper.findComponent(FilePreview).exists()).toBe(true)
   })
 })
 
