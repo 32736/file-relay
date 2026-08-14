@@ -27,6 +27,24 @@ pnpm build
 pnpm run deploy        # NOT `pnpm deploy` (pnpm built-in)
 ```
 
+### Deploy with the minimal-permission API token
+
+A minimal-permission token (`drop-deploy`: Workers Scripts Edit, D1 Edit,
+Account Settings Read) is stored in the git-ignored `.vars` file as
+`CLOUDFLARE_API_TOKEN`. Use it for scripted/CI deployments:
+
+```powershell
+$vars = @{}
+Get-Content .vars | ForEach-Object { if ($_ -match '^([A-Z_]+)=(.*)$') { $vars[$matches[1]] = $matches[2] } }
+$env:CLOUDFLARE_API_TOKEN = $vars['CLOUDFLARE_API_TOKEN']
+pnpm run deploy
+```
+
+Account ID: `82bdd11ec9921fe04af95ca034feb790`. To enable the manual CD
+workflow (`.github/workflows/deploy.yml`), add repository secrets
+`CLOUDFLARE_API_TOKEN` (the same value) and `CLOUDFLARE_ACCOUNT_ID`, then run
+Actions → Deploy → Run workflow.
+
 Production D1 migrations are applied manually (review gate):
 
 ```bash
