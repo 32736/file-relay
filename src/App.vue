@@ -2,17 +2,16 @@
 import { computed, onMounted, ref } from 'vue'
 
 import FileList from './components/FileList.vue'
-import IncomingList from './components/IncomingList.vue'
-import IncomingUpload from './components/IncomingUpload.vue'
 import ShareList from './components/ShareList.vue'
 import SharePage from './components/SharePage.vue'
 import UploadZone from './components/UploadZone.vue'
+
 import { api } from './lib/api'
 import { formatBytes } from './lib/format'
 import { clearSharePayload, readSharePayload } from './lib/share-target'
 
 type AuthState = 'loading' | 'anonymous' | 'owner'
-type WorkspaceTab = 'files' | 'shares' | 'incoming'
+type WorkspaceTab = 'files' | 'shares'
 
 const auth = ref<AuthState>('loading')
 const tab = ref<WorkspaceTab>('files')
@@ -22,14 +21,11 @@ const stats = ref<{ fileCount: number; totalBytes: number } | null>(null)
 const sharedNotice = ref(false)
 
 // Public pages are routed by pathname (no router in this phase):
-//   /u/<token>  → incoming upload page
 //   /s/<token>  → public share page
 // otherwise the owner workspace.
-const incomingMatch = /^\/u\/([A-Za-z0-9_-]+)\/?$/.exec(window.location.pathname)
 const shareMatch = /^\/s\/([A-Za-z0-9_-]+)\/?$/.exec(window.location.pathname)
-const incomingToken = incomingMatch?.[1] ?? null
 const shareToken = shareMatch?.[1] ?? null
-const isPublicPage = computed(() => incomingToken !== null || shareToken !== null)
+const isPublicPage = computed(() => shareToken !== null)
 
 onMounted(async () => {
   try {
@@ -133,13 +129,8 @@ function switchTab(next: WorkspaceTab): void {
       </p>
     </section>
 
-    <IncomingUpload
-      v-if="incomingToken"
-      :token="incomingToken"
-    />
-
     <SharePage
-      v-else-if="shareToken"
+      v-if="shareToken"
       :token="shareToken"
     />
 
@@ -166,13 +157,6 @@ function switchTab(next: WorkspaceTab): void {
         >
           分享
         </button>
-        <button
-          :class="{ active: tab === 'incoming' }"
-          type="button"
-          @click="switchTab('incoming')"
-        >
-          上传请求
-        </button>
       </nav>
 
       <template v-if="tab === 'files'">
@@ -193,7 +177,6 @@ function switchTab(next: WorkspaceTab): void {
         />
       </template>
       <ShareList v-else-if="tab === 'shares'" />
-      <IncomingList v-else-if="tab === 'incoming'" />
     </section>
 
     <footer>

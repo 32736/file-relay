@@ -1,19 +1,5 @@
 const DEFAULT_CONTENT_TYPE = 'application/octet-stream'
 
-/** MIME types that may render inline on the application origin (plan §33). */
-const PREVIEW_WHITELIST = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-  'image/gif',
-  'application/pdf',
-])
-
-/** `inline` only for the preview whitelist; everything else is `attachment`. */
-export function dispositionFor(mimeType: string | null): 'attachment' | 'inline' {
-  return mimeType !== null && PREVIEW_WHITELIST.has(mimeType) ? 'inline' : 'attachment'
-}
-
 /** Parsed `Range` header. `bytes` ranges are closed intervals [start, end]. */
 export type RangeSpec =
   | { kind: 'full' }
@@ -61,10 +47,7 @@ export function parseRange(header: string | null | undefined, size: number): Ran
  * quotes/backslashes so the header stays latin1-safe; non-ASCII names
  * additionally get an RFC 5987 `filename*=UTF-8''<percent-encoded>` value.
  */
-export function contentDisposition(
-  filename: string,
-  disposition: 'attachment' | 'inline' = 'attachment',
-): string {
+export function contentDisposition(filename: string): string {
   const clean = filename
     // eslint-disable-next-line no-control-regex
     .replace(/[\r\n\x00-\x1f\x7f]/g, ' ')
@@ -72,7 +55,7 @@ export function contentDisposition(
   const asciiSafe = clean.replace(/[^\x20-\x7e]/g, '_')
   const asciiFallback = asciiSafe.replace(/[\\"]/g, (char) => `\\${char}`)
 
-  let value = `${disposition}; filename="${asciiFallback}"`
+  let value = `attachment; filename="${asciiFallback}"`
   if (/[^\x20-\x7e]/.test(clean)) {
     value += `; filename*=UTF-8''${encodeURIComponent(clean)}`
   }
@@ -96,11 +79,10 @@ export function buildDownloadResponse(
   filename: string,
   mimeType: string | null,
   range: RangeSpec,
-  disposition: 'attachment' | 'inline' = 'attachment',
 ): Response {
   const headers = new Headers({
     'Content-Type': mimeType ?? DEFAULT_CONTENT_TYPE,
-    'Content-Disposition': contentDisposition(filename, disposition),
+    'Content-Disposition': contentDisposition(filename),
     'X-Content-Type-Options': 'nosniff',
     'Accept-Ranges': 'bytes',
   })

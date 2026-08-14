@@ -3,7 +3,6 @@ import { onMounted, ref } from 'vue'
 
 import { api } from '../lib/api'
 import { formatBytes, formatDate } from '../lib/format'
-import FilePreview from './FilePreview.vue'
 import ShareDialog from './ShareDialog.vue'
 
 export interface FileItem {
@@ -12,18 +11,6 @@ export interface FileItem {
   size: number
   mimeType: string | null
   createdAt: number
-}
-
-const PREVIEWABLE_TYPES = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-  'image/gif',
-  'application/pdf',
-])
-
-function isPreviewable(mimeType: string | null): boolean {
-  return mimeType !== null && PREVIEWABLE_TYPES.has(mimeType)
 }
 
 const emit = defineEmits<{ shared: [] }>()
@@ -35,7 +22,6 @@ const selected = ref<Set<string>>(new Set())
 const loading = ref(false)
 const error = ref<string | null>(null)
 const sharing = ref<FileItem | null>(null)
-const previewing = ref<FileItem | null>(null)
 
 async function load(reset = true): Promise<void> {
   loading.value = true
@@ -178,13 +164,6 @@ defineExpose({ load })
           <td>{{ formatDate(file.createdAt) }}</td>
           <td class="actions">
             <button
-              v-if="isPreviewable(file.mimeType)"
-              class="ghost"
-              @click="previewing = file"
-            >
-              预览
-            </button>
-            <button
               class="ghost"
               @click="download(file.id)"
             >
@@ -225,12 +204,6 @@ defineExpose({ load })
       :file="sharing"
       @close="sharing = null"
       @shared="emit('shared')"
-    />
-
-    <FilePreview
-      v-if="previewing"
-      :file="previewing"
-      @close="previewing = null"
     />
   </section>
 </template>

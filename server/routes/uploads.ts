@@ -68,8 +68,6 @@ function insertSessionStatement(
     mode: string
     r2UploadId: string | null
     now: number
-    authKind?: string
-    accessTokenHash?: string | null
   },
 ) {
   return env.DB.prepare(
@@ -89,15 +87,13 @@ function insertSessionStatement(
     params.totalParts,
     params.mode,
     params.r2UploadId,
-    params.authKind ?? 'owner',
-    params.accessTokenHash ?? null,
+    'owner',
+    null,
     'created',
     params.now,
     params.now + UPLOAD_SESSION_TTL_SECONDS,
   )
 }
-
-export { insertSessionStatement, UPLOAD_SESSION_TTL_SECONDS }
 
 function insertFileStatement(
   env: AppEnv['Bindings'],

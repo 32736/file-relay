@@ -130,6 +130,7 @@ export function createUploadSession(file: { name: string; size: number; type: st
   })
 }
 
+
 export function fetchSessionState(uploadId: string): Promise<UploadSessionState> {
   return api<UploadSessionState>(`/api/uploads/${uploadId}`)
 }
@@ -158,9 +159,15 @@ export interface UploadFileOptions {
   signal?: AbortSignal
 }
 
+// Implementation plan §19 suggests 3 parallel part uploads; the server
+// assembles parts by part_number at completion, so order of arrival is free.
+const PART_CONCURRENCY = 3
+
 /**
  * Streams a file through the session protocol with per-request retry. For
- * multipart it uploads parts in order, skipping already-completed parts.
+ * multipart it uploads parts with bounded concurrency, skipping
+ * already-completed parts. `onProgress` reports bytes written by this call
+ * (including the in-flight part); callers add any resumed bytes themselves.
  */
 export async function uploadFileCore(options: UploadFileOptions): Promise<void> {
   const { file, session, onProgress, signal } = options
@@ -181,30 +188,45 @@ export async function uploadFileCore(options: UploadFileOptions): Promise<void> 
   }
 
   const completed = options.skipParts ?? new Set<number>()
-  let transferred = 0
-  for (let partNumber = 1; partNumber <= session.totalParts; partNumber++) {
-    const thisPartSize = partSize(session, partNumber, file.size)
-    if (completed.has(partNumber)) {
-      transferred += thisPartSize
-      onProgress?.(transferred)
-      continue
-    }
-    const start = (partNumber - 1) * session.chunkSize
-    const partBlob = file.slice(start, start + thisPartSize)
-    await withRetry(async () => {
-      const result = await xhrPut(
-        `/api/uploads/${session.uploadId}/parts/${partNumber}`,
-        partBlob,
-        {},
-        (loaded) => onProgress?.(transferred + loaded),
-        signal,
-      )
-      if (result.status >= 400) throw new HttpError(result.status, result.text)
-      return result
-    })
-    transferred += thisPartSize
-    onProgress?.(transferred)
+  const partNumbers: number[] = []
+  for (let number = 1; number <= session.totalParts; number++) {
+    if (!completed.has(number)) partNumbers.push(number)
   }
+  const sizeOf = (number: number) => partSize(session, number, file.size)
+
+  // Shared progress base: bytes of fully uploaded parts. Each part reports
+  // `base + loaded` while in flight and adds its size to the base on success,
+  // so the final callback always reaches the total in-session byte count.
+  let progressBase = 0
+  let nextIndex = 0
+
+  async function uploadNext(): Promise<void> {
+    while (true) {
+      const index = nextIndex++
+      if (index >= partNumbers.length) return
+      const partNumber = partNumbers[index]
+      const thisPartSize = sizeOf(partNumber)
+      const start = (partNumber - 1) * session.chunkSize
+      const partBlob = file.slice(start, start + thisPartSize)
+      await withRetry(async () => {
+        const result = await xhrPut(
+          `/api/uploads/${session.uploadId}/parts/${partNumber}`,
+          partBlob,
+          {},
+          (loaded) => onProgress?.(progressBase + loaded),
+          signal,
+        )
+        if (result.status >= 400) throw new HttpError(result.status, result.text)
+        return result
+      })
+      progressBase += thisPartSize
+      onProgress?.(progressBase)
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(PART_CONCURRENCY, partNumbers.length) }, () => uploadNext()),
+  )
 }
 
 const STORAGE_KEY = 'drop-pending-uploads'

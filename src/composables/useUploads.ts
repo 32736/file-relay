@@ -85,7 +85,10 @@ export function useUploads(onListRefresh: () => void) {
     try {
       if (task.status === 'canceled') return
 
-      // Resolve current server progress (resume after pause or refresh).
+      // Resolve current server progress (resume after pause or refresh). The
+      // session bytes reported by uploadFileCore are added to resumedBytes so
+      // a resumed transfer shows monotonic progress (roadmap decision D4).
+      let resumedBytes = 0
       let skipParts = new Set<number>()
       let session: UploadSessionInfo = {
         uploadId: task.uploadId,
@@ -113,7 +116,7 @@ export function useUploads(onListRefresh: () => void) {
           totalParts: state.totalParts,
         }
         skipParts = new Set((state.completedParts ?? []).map((part) => part.partNumber))
-        const resumedBytes = Array.from(skipParts).reduce(
+        resumedBytes = Array.from(skipParts).reduce(
           (sum, number) => sum + Math.min(state.chunkSize, Math.max(0, task.size - (number - 1) * state.chunkSize)),
           0,
         )
@@ -135,7 +138,7 @@ export function useUploads(onListRefresh: () => void) {
           session,
           skipParts,
           signal: controller.signal,
-          onProgress: (transferred) => updateTask(task.uploadId, { transferred }),
+          onProgress: (transferred) => updateTask(task.uploadId, { transferred: resumedBytes + transferred }),
         })
         await completeUpload(task.uploadId)
         updateTask(task.uploadId, { status: 'completed', transferred: task.size })

@@ -139,29 +139,29 @@ describe('Phase 06 cleanup', () => {
     // Old enough: exhausted, last download long ago
     await db
       .prepare(
-        `INSERT INTO shares (id, file_id, token_hash, password_mac, expires_at, max_downloads,
+        `INSERT INTO shares (id, file_id, token_hash, expires_at, max_downloads,
           download_count, last_download_at, delete_file_after_exhausted, created_at, revoked_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .bind('s-old', 'burn-old', 'h-old', null, null, 1, 1, now - 2 * HOUR, 1, now, null)
+      .bind('s-old', 'burn-old', 'h-old', null, 1, 1, now - 2 * HOUR, 1, now, null)
       .run()
     // Too fresh: inside the safety window
     await db
       .prepare(
-        `INSERT INTO shares (id, file_id, token_hash, password_mac, expires_at, max_downloads,
+        `INSERT INTO shares (id, file_id, token_hash, expires_at, max_downloads,
           download_count, last_download_at, delete_file_after_exhausted, created_at, revoked_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .bind('s-fresh', 'burn-fresh', 'h-fresh', null, null, 1, 1, now - 10, 1, now, null)
+      .bind('s-fresh', 'burn-fresh', 'h-fresh', null, 1, 1, now - 10, 1, now, null)
       .run()
     // Not exhausted
     await db
       .prepare(
-        `INSERT INTO shares (id, file_id, token_hash, password_mac, expires_at, max_downloads,
+        `INSERT INTO shares (id, file_id, token_hash, expires_at, max_downloads,
           download_count, last_download_at, delete_file_after_exhausted, created_at, revoked_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .bind('s-not', 'not-exhausted', 'h-not', null, null, 1, 0, now, 1, now, null)
+      .bind('s-not', 'not-exhausted', 'h-not', null, 1, 0, now, 1, now, null)
       .run()
 
     await runCleanup(env)
@@ -208,11 +208,11 @@ describe('Phase 06 cleanup', () => {
     ] as [string, string, number | null, number | null][]) {
       await db
         .prepare(
-          `INSERT INTO shares (id, file_id, token_hash, password_mac, expires_at, max_downloads,
+          `INSERT INTO shares (id, file_id, token_hash, expires_at, max_downloads,
             download_count, last_download_at, delete_file_after_exhausted, created_at, revoked_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .bind(id, `file-${id}`, tokenHash, null, expiresAt, null, 0, null, 0, now, revokedAt)
+        .bind(id, `file-${id}`, tokenHash, expiresAt, null, 0, null, 0, now, revokedAt)
         .run()
     }
 
@@ -249,27 +249,5 @@ describe('Phase 06 cleanup', () => {
     expect(bucket.keys()).toHaveLength(0)
   })
 
-  it('deletes revoked and expired incoming requests', async () => {
-    const now = Math.floor(Date.now() / 1000)
-    for (const [id, tokenHash, revokedAt, expiresAt] of [
-      ['inc-revoked', 'h-inc-rev', now - 100, now + DAY],
-      ['inc-expired', 'h-inc-exp', null, now - 100],
-      ['inc-live', 'h-inc-live', null, now + DAY],
-    ] as [string, string, number | null, number | null][]) {
-      await db
-        .prepare(
-          `INSERT INTO incoming_requests
-           (id, token_hash, title, expires_at, max_file_size, max_files,
-            uploaded_count, created_at, revoked_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .bind(id, tokenHash, null, expiresAt, 1024, 1, 0, now, revokedAt)
-        .run()
-    }
 
-    await runCleanup(env)
-
-    const remaining = db.rows('incoming_requests').map((row) => row.id)
-    expect(remaining).toEqual(['inc-live'])
-  })
 })

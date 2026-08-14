@@ -12,13 +12,9 @@ interface ShareMeta {
   mimeType: string | null
   expiresAt: number | null
   remainingDownloads: number | null
-  passwordRequired: boolean
 }
 
 const meta = ref<ShareMeta | null>(null)
-const password = ref('')
-const unlocking = ref(false)
-const unlocked = ref(false)
 const error = ref<string | null>(null)
 const busy = ref(false)
 const done = ref(false)
@@ -29,25 +25,6 @@ async function load(): Promise<void> {
     error.value = null
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '该分享不存在或已失效'
-  }
-}
-
-async function unlock(): Promise<void> {
-  unlocking.value = true
-  error.value = null
-  try {
-    await fetch(`/api/public/shares/${props.token}/unlock`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: password.value }),
-    }).then((response) => {
-      if (!response.ok) throw new Error('密码错误')
-    })
-    unlocked.value = true
-  } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : String(cause)
-  } finally {
-    unlocking.value = false
   }
 }
 
@@ -121,29 +98,7 @@ onMounted(() => void load())
         </div>
       </dl>
 
-      <form
-        v-if="meta.passwordRequired && !unlocked"
-        class="password"
-        @submit.prevent="unlock"
-      >
-        <label>
-          此分享受密码保护
-          <input
-            v-model="password"
-            type="password"
-            autocomplete="current-password"
-          >
-        </label>
-        <button
-          type="submit"
-          :disabled="unlocking"
-        >
-          {{ unlocking ? '验证中…' : '解锁' }}
-        </button>
-      </form>
-
       <button
-        v-else
         class="download"
         :disabled="busy || (meta.remainingDownloads !== null && meta.remainingDownloads <= 0)"
         @click="download"
@@ -173,16 +128,6 @@ onMounted(() => void load())
 }
 .meta dt {
   color: #666;
-}
-.password label {
-  display: block;
-  margin-bottom: 0.6rem;
-}
-.password input {
-  display: block;
-  width: 100%;
-  margin-top: 0.25rem;
-  padding: 0.4rem 0.5rem;
 }
 button {
   padding: 0.5rem 1.1rem;

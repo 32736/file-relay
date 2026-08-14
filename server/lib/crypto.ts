@@ -16,19 +16,6 @@ export async function sha256Hex(input: string): Promise<string> {
   return bytesToHex(new Uint8Array(digest))
 }
 
-/** HMAC-SHA-256 of a UTF-8 message under a secret, hex encoded. */
-export async function hmacSha256Hex(secret: string, message: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  )
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(message))
-  return bytesToHex(new Uint8Array(signature))
-}
-
 /** Constant-time string comparison for OAuth state and similar secrets. */
 export function constantTimeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false

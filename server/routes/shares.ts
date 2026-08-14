@@ -8,19 +8,15 @@ import { requireAuth, requireSameOrigin } from '../middleware/auth'
 const DEFAULT_LIMIT = 30
 const MAX_LIMIT = 100
 
-// Password protection is enabled in Phase 07: `password` (optional) is stored
-// as HMAC-SHA-256(TOKEN_HMAC_SECRET, shareId + "\0" + password).
 const createShareSchema = z.object({
   expiresIn: z.number().int().positive().nullish(),
   maxDownloads: z.number().int().positive().nullish(),
   deleteFileAfterExhausted: z.boolean().nullish(),
-  password: z.string().min(1).max(128).nullish(),
 })
 
 export interface ShareRow {
   id: string
   file_id: string
-  password_mac: string | null
   expires_at: number | null
   max_downloads: number | null
   download_count: number
@@ -35,7 +31,7 @@ async function findShareByHash(
 ): Promise<ShareRow | null> {
   return (
     (await env.DB.prepare(
-      `SELECT id, file_id, password_mac, expires_at, max_downloads, download_count,
+      `SELECT id, file_id, expires_at, max_downloads, download_count,
               delete_file_after_exhausted, created_at, revoked_at
        FROM shares WHERE token_hash = ?`,
     )

@@ -128,19 +128,42 @@ describe('uploader lib', () => {
     expect(progress).toContain(512)
   })
 
-  it('uploads multipart parts in order with progress', async () => {
+  it('uploads multipart parts with 3-way concurrency and progress', async () => {
     stubXhr(200)
+    MockXhr.autoRespond = false
     const file = blobOf(100)
     const session: UploadSessionInfo = { uploadId: 's2', mode: 'multipart', chunkSize: 40, totalParts: 3 }
     const progress: number[] = []
 
-    await uploadFileCore({ file, session, onProgress: (n) => progress.push(n) })
+    const promise = uploadFileCore({ file, session, onProgress: (n) => progress.push(n) })
+    // All three parts are in flight at once (concurrency = 3).
+    expect(MockXhr.instances).toHaveLength(3)
+    const urls = MockXhr.instances
+      .map((xhr) => (xhr.open.mock.calls[0] as [string, string])[1])
+      .sort()
+    expect(urls).toEqual(['/api/uploads/s2/parts/1', '/api/uploads/s2/parts/2', '/api/uploads/s2/parts/3'])
+
+    // Complete them out of order; the final progress still reaches the total.
+    MockXhr.instances[1].fireLoad(200)
+    MockXhr.instances[0].fireLoad(200)
+    MockXhr.instances[2].fireLoad(200)
+    await promise
+    expect(progress[progress.length - 1]).toBe(100)
+  })
+
+  it('caps concurrent parts at 3', async () => {
+    stubXhr(200)
+    MockXhr.autoRespond = false
+    const file = blobOf(160)
+    const session: UploadSessionInfo = { uploadId: 's5', mode: 'multipart', chunkSize: 40, totalParts: 4 }
+    const promise = uploadFileCore({ file, session })
 
     expect(MockXhr.instances).toHaveLength(3)
-    expect(MockXhr.instances[0].open).toHaveBeenCalledWith('PUT', '/api/uploads/s2/parts/1')
-    expect(MockXhr.instances[1].open).toHaveBeenCalledWith('PUT', '/api/uploads/s2/parts/2')
-    expect(MockXhr.instances[2].open).toHaveBeenCalledWith('PUT', '/api/uploads/s2/parts/3')
-    expect(progress[progress.length - 1]).toBe(100)
+    MockXhr.instances[0].fireLoad(200)
+    await vi.waitFor(() => expect(MockXhr.instances).toHaveLength(4))
+
+    for (const xhr of MockXhr.instances.slice(1)) xhr.fireLoad(200)
+    await promise
   })
 
   it('skips already-completed parts on resume', async () => {

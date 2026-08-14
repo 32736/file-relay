@@ -36,6 +36,27 @@
       "when": 1786688246780,
       "tag": "0004_chief_peter_quill",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1786718582528,
+      "tag": "0005_modern_scrambler",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1786718987088,
+      "tag": "0006_dusty_adam_warlock",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1786720049628,
+      "tag": "0007_brief_supreme_intelligence",
+      "breakpoints": true
     }
   ]
 }

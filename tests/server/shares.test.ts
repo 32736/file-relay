@@ -116,18 +116,6 @@ describe('Phase 05 sharing', () => {
     expect(rows[0].token_hash).toBe(await sha256Hex(token))
   })
 
-  it('accepts a password and stores only its MAC', async () => {
-    const fileId = await seedFile()
-    const response = await createShare(fileId, { password: 'secret' })
-    expect(response.status).toBe(200)
-    const body = (await response.json()) as { passwordProtected: boolean }
-    expect(body.passwordProtected).toBe(true)
-
-    const rows = db.rows('shares')
-    expect(rows[0].password_mac).toBeTruthy()
-    expect(rows[0].password_mac).not.toBe('secret')
-  })
-
   it('rejects shares for missing or deleted files', async () => {
     const missing = await createShare('does-not-exist')
     expect(missing.status).toBe(404)
@@ -154,13 +142,11 @@ describe('Phase 05 sharing', () => {
       mimeType: 'text/plain',
       expiresAt: null,
       remainingDownloads: 3,
-      passwordRequired: false,
     })
     expect(Object.keys(body).sort()).toEqual([
       'expiresAt',
       'mimeType',
       'name',
-      'passwordRequired',
       'remainingDownloads',
       'size',
     ])

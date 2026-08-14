@@ -2,8 +2,8 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import type { AppEnv } from '../env'
-import { buildDownloadResponse, dispositionFor, parseRange } from '../lib/download'
-import { randomToken, hmacSha256Hex, sha256Hex } from '../lib/crypto'
+import { buildDownloadResponse, parseRange } from '../lib/download'
+import { randomToken, sha256Hex } from '../lib/crypto'
 import { apiError } from '../lib/errors'
 import { requireAuth, requireSameOrigin } from '../middleware/auth'
 import { createShareSchema } from './shares'
@@ -147,13 +147,7 @@ export const fileRoutes = new Hono<AppEnv>()
       return apiError(c, 404, 'NOT_FOUND', 'File content is missing')
     }
 
-    return buildDownloadResponse(
-      object,
-      row.original_name,
-      row.mime_type,
-      range,
-      dispositionFor(row.mime_type),
-    )
+    return buildDownloadResponse(object, row.original_name, row.mime_type, range)
   })
   .post('/:id/shares', requireAuth, requireSameOrigin, async (c) => {
     const fileId = c.req.param('id')
@@ -169,28 +163,24 @@ export const fileRoutes = new Hono<AppEnv>()
     if (!parsed.success) {
       return apiError(c, 400, 'VALIDATION_ERROR', 'Invalid share request')
     }
-    const { expiresIn, maxDownloads, deleteFileAfterExhausted, password } = parsed.data
+    const { expiresIn, maxDownloads, deleteFileAfterExhausted } = parsed.data
 
     const token = randomToken(32)
     const tokenHash = await sha256Hex(token)
     const shareId = crypto.randomUUID()
     const now = Math.floor(Date.now() / 1000)
     const expiresAt = expiresIn ? now + expiresIn : null
-    const passwordMac = password
-      ? await hmacSha256Hex(c.env.TOKEN_HMAC_SECRET, `${shareId}\0${password}`)
-      : null
 
     await c.env.DB.prepare(
       `INSERT INTO shares
-       (id, file_id, token_hash, password_mac, expires_at, max_downloads,
-        download_count, delete_file_after_exhausted, created_at, revoked_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, file_id, token_hash, expires_at, max_downloads, download_count,
+        delete_file_after_exhausted, created_at, revoked_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         shareId,
         fileId,
         tokenHash,
-        passwordMac,
         expiresAt,
         maxDownloads ?? null,
         0,
@@ -207,7 +197,6 @@ export const fileRoutes = new Hono<AppEnv>()
       expiresAt,
       maxDownloads: maxDownloads ?? null,
       deleteFileAfterExhausted: deleteFileAfterExhausted ?? false,
-      passwordProtected: passwordMac !== null,
     })
   })
   .delete('/:id', requireAuth, requireSameOrigin, async (c) => {

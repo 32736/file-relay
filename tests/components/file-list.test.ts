@@ -2,7 +2,6 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import FileList from '../../src/components/FileList.vue'
-import FilePreview from '../../src/components/FilePreview.vue'
 import ShareDialog from '../../src/components/ShareDialog.vue'
 
 vi.mock('qrcode', () => ({
@@ -50,25 +49,6 @@ describe('FileList', () => {
     expect(wrapper.findComponent(ShareDialog).exists()).toBe(true)
   })
 
-  it('offers preview only for whitelisted types and opens the viewer', async () => {
-    stubFiles()
-    const wrapper = mount(FileList)
-    await flushPromises()
-
-    const buttons = wrapper.findAll('button')
-    expect(buttons.filter((b) => b.text() === '预览')).toHaveLength(2) // pdf + png
-    // text/html never previews
-    expect(wrapper.text()).toContain('页面.html')
-
-    await buttons.find((b) => b.text() === '预览')?.trigger('click')
-    expect(wrapper.findComponent(FilePreview).exists()).toBe(true)
-  })
-})
-
-describe('ShareDialog', () => {
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
 
   it('creates a share and renders the URL and QR canvas', async () => {
     vi.stubGlobal(
@@ -84,7 +64,6 @@ describe('ShareDialog', () => {
               expiresAt: null,
               maxDownloads: body.maxDownloads ?? null,
               deleteFileAfterExhausted: false,
-              passwordProtected: Boolean(body.password),
             }),
             { status: 200, headers: { 'content-type': 'application/json' } },
           )

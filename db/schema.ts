@@ -86,25 +86,6 @@ export const shares = sqliteTable(
   ],
 )
 
-// Phase 08: incoming upload requests. The URL token is hashed; the upload
-// credential is a separate short-lived token issued after Turnstile passes.
-// `uploaded_count` is claimed atomically against `max_files`.
-export const incomingRequests = sqliteTable(
-  'incoming_requests',
-  {
-    id: text('id').primaryKey(),
-    tokenHash: text('token_hash').notNull().unique(),
-    title: text('title'),
-    expiresAt: integer('expires_at').notNull(),
-    maxFileSize: integer('max_file_size').notNull(),
-    maxFiles: integer('max_files').notNull(),
-    uploadedCount: integer('uploaded_count').notNull().default(0),
-    createdAt: integer('created_at').notNull(),
-    revokedAt: integer('revoked_at'),
-  },
-  (table) => [index('idx_incoming_expires_at').on(table.expiresAt)],
-)
-
 export const uploadSessions = sqliteTable(
   'upload_sessions',
   {

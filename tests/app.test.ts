@@ -29,12 +29,6 @@ function stubMe(status: number): void {
           headers: { 'content-type': 'application/json' },
         })
       }
-      if (url.includes('/api/incoming-requests')) {
-        return new Response(JSON.stringify({ requests: [] }), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        })
-      }
       return new Response('not found', { status: 404 })
     }),
   )
@@ -69,7 +63,6 @@ describe('App', () => {
     expect(wrapper.text()).toContain('拖放文件到这里')
     expect(wrapper.text()).toContain('文件')
     expect(wrapper.text()).toContain('分享')
-    expect(wrapper.text()).toContain('上传请求')
   })
 
   it('switches to the share management tab', async () => {

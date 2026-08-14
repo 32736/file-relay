@@ -14,12 +14,10 @@ interface ShareResult {
   expiresAt: number | null
   maxDownloads: number | null
   deleteFileAfterExhausted: boolean
-  passwordProtected: boolean
 }
 
 const expiresHours = ref<number | null>(null)
 const maxDownloads = ref<number | null>(null)
-const password = ref('')
 const burnAfterReading = ref(false)
 const busy = ref(false)
 const error = ref<string | null>(null)
@@ -34,7 +32,6 @@ async function createShare(): Promise<void> {
     const body: Record<string, unknown> = {}
     if (expiresHours.value) body.expiresIn = expiresHours.value * 3600
     if (maxDownloads.value) body.maxDownloads = maxDownloads.value
-    if (password.value) body.password = password.value
     if (burnAfterReading.value) {
       body.maxDownloads = 1
       body.deleteFileAfterExhausted = true
@@ -103,14 +100,6 @@ onMounted(() => undefined)
             min="1"
           >
         </label>
-        <label>
-          访问密码（可选）
-          <input
-            v-model="password"
-            type="password"
-            autocomplete="new-password"
-          >
-        </label>
         <label class="check">
           <input
             v-model="burnAfterReading"
@@ -159,12 +148,6 @@ onMounted(() => undefined)
         />
         <p class="url">
           {{ result.url }}
-        </p>
-        <p
-          v-if="result.passwordProtected"
-          class="hint"
-        >
-          此分享受密码保护。
         </p>
         <p
           v-if="result.expiresAt"
