@@ -86,6 +86,8 @@ function onPickResume(event: Event): void {
   ;(event.target as HTMLInputElement).value = ''
   if (files.length > 0) void handleFiles(files)
 }
+
+defineExpose({ addFiles })
 </script>
 
 <template>

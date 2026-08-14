@@ -9,6 +9,7 @@ import SharePage from './components/SharePage.vue'
 import UploadZone from './components/UploadZone.vue'
 import { api } from './lib/api'
 import { formatBytes } from './lib/format'
+import { clearSharePayload, readSharePayload } from './lib/share-target'
 
 type AuthState = 'loading' | 'anonymous' | 'owner'
 type WorkspaceTab = 'files' | 'shares' | 'incoming'
@@ -16,7 +17,9 @@ type WorkspaceTab = 'files' | 'shares' | 'incoming'
 const auth = ref<AuthState>('loading')
 const tab = ref<WorkspaceTab>('files')
 const fileList = ref<InstanceType<typeof FileList> | null>(null)
+const uploadZone = ref<InstanceType<typeof UploadZone> | null>(null)
 const stats = ref<{ fileCount: number; totalBytes: number } | null>(null)
+const sharedNotice = ref(false)
 
 // Public pages are routed by pathname (no router in this phase):
 //   /u/<token>  → incoming upload page
@@ -32,11 +35,31 @@ onMounted(async () => {
   try {
     const response = await fetch('/api/auth/me')
     auth.value = response.ok ? 'owner' : 'anonymous'
-    if (auth.value === 'owner') void loadStats()
+    if (auth.value === 'owner') {
+      void loadStats()
+      void consumeShareTarget()
+    }
   } catch {
     auth.value = 'anonymous'
   }
 })
+
+// Web Share Target: the service worker stashed shared files in IndexedDB and
+// redirected here with ?shared=1; feed them into the upload queue.
+async function consumeShareTarget(): Promise<void> {
+  if (window.location.search !== '?shared=1') return
+  try {
+    const payload = await readSharePayload()
+    if (payload && payload.files.length > 0) {
+      uploadZone.value?.addFiles(payload.files)
+      sharedNotice.value = true
+      setTimeout(() => (sharedNotice.value = false), 4000)
+    }
+    await clearSharePayload()
+  } catch {
+    // Ignore storage failures; the payload simply won't be imported.
+  }
+}
 
 async function loadStats(): Promise<void> {
   try {
@@ -153,7 +176,17 @@ function switchTab(next: WorkspaceTab): void {
       </nav>
 
       <template v-if="tab === 'files'">
-        <UploadZone @uploaded="refresh" />
+        <p
+          v-if="sharedNotice"
+          class="shared-notice"
+          role="status"
+        >
+          已收到分享的文件，正在加入上传队列
+        </p>
+        <UploadZone
+          ref="uploadZone"
+          @uploaded="refresh"
+        />
         <FileList
           ref="fileList"
           @shared="refresh"
@@ -195,5 +228,9 @@ function switchTab(next: WorkspaceTab): void {
   margin-top: 0.4rem;
   color: #888;
   font-size: 0.85rem;
+}
+.shared-notice {
+  color: #16a34a;
+  margin-bottom: 0.6rem;
 }
 </style>

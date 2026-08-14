@@ -48,7 +48,14 @@ describe('Phase 09 PWA', () => {
   it('sw.js exists with the API passthrough and shell cache', async () => {
     const sw = (await import('../public/sw.js?raw')).default
     expect(sw).toContain("startsWith('/api/')")
-    expect(sw).toContain("SHELL_CACHE")
+    expect(sw).toContain('SHELL_CACHE')
     expect(sw).toContain('network-first')
+  })
+
+  it('sw.js handles the share-target POST', async () => {
+    const sw = (await import('../public/sw.js?raw')).default
+    expect(sw).toContain("request.method === 'POST'")
+    expect(sw).toContain('handleShareTarget')
+    expect(sw).toContain("Response.redirect('/?shared=1', 303)")
   })
 })
