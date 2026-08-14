@@ -1,5 +1,12 @@
 # Phase 07 - Share Enhancements
 
+
+## Status
+
+Implemented in its phase, then the share passwords portion was **removed by decision
+D14 (2026-08-14)**. This task is kept for reference; the current behavior is
+plaintext-only and password-free. See `docs/roadmap.md` D14.
+
 ## Goal
 
 After MVP approval, add password-protected shares, safe inline previews,

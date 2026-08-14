@@ -45,16 +45,8 @@ Phase 06 adds an hourly cron trigger (`17 * * * *`). The Worker's `scheduled`
 handler runs the bounded cleanup pass in `server/services/cleanup.ts`: expired
 sessions, stale upload sessions (aborting R2 multiparts), expired files,
 exhausted burn-after-reading files (after a 1-hour safety window), physically
-deleted logically-deleted files, and revoked/expired shares. Each task is
-capped at 50 rows per run.
-
-Phase 07 adds share passwords. `TOKEN_HMAC_SECRET` keys the password MACs
-(HMAC-SHA-256) and is a Wrangler secret (`.dev.vars` locally).
-
-Phase 08 adds incoming uploads. `TURNSTILE_SECRET_KEY` is a Wrangler secret;
-`TURNSTILE_SITE_KEY` is a public var in `wrangler.jsonc` (served by the
-metadata endpoint for the widget). Without a configured secret, Turnstile
-verification always fails closed (`403`).
+deleted logically-deleted files, revoked/expired shares, and revoked/expired
+incoming requests. Each task is capped at 50 rows per run.
 
 Phase 09 adds PWA installability: `public/manifest.webmanifest`, `icon.svg`,
 and a network-first `sw.js` (app-shell caching only; `/api/*` is never

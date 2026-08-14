@@ -28,9 +28,7 @@ together.
 - Phase 03: `upload_parts` (multipart part records, UPSERTed per part).
 - Phase 05: `shares` (token hashes only; atomic download claims via
   `UPDATE ... RETURNING`; `password_mac` reserved for Phase 07).
-- Phase 08: `incoming_requests` (URL token hashes; atomic file-count quota).
 
 ## Planned ownership
 
-- Phase 09+ (PWA/Tauri/E2EE) add no storage; E2EE would need a dedicated
-  design before any schema impact.
+- Phase 09 (PWA) adds no storage.

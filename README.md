@@ -11,10 +11,8 @@ content.
 - Uploads up to 2 GiB: single uploads ≤ 32 MiB, R2 multipart above, with
   part retry/resume on the server.
 - Streaming downloads with HTTP Range support (206/416).
-- Shares: expiring links, download limits (atomic claims), passwords,
+- Shares: expiring links, download limits (atomic claims),
   burn-after-reading, QR codes.
-- Incoming uploads: public `/u/<token>` links gated by Cloudflare Turnstile,
-  per-upload bearer tokens, atomic file quotas.
 - File listing, search, batch delete, storage stats.
 - Hourly scheduled cleanup (expired sessions/uploads/shares, deleted files).
 - Installable PWA with an offline app shell.
@@ -32,7 +30,7 @@ pnpm dev
 ```
 
 Open the URL printed by Vite. Create a `.dev.vars` file from the keys listed
-in `.env.example` (GitHub OAuth, `TOKEN_HMAC_SECRET`, Turnstile). The Worker
+in `.env.example` (GitHub OAuth). The Worker
 health endpoint is available at `GET /api/health` and returns `{ "ok": true }`.
 
 Local state lives under `.wrangler/`; `pnpm db:migrate:local` applies the D1
@@ -71,6 +69,7 @@ resource and secret checklist.
 - [API](docs/api.md)
 - [Database](docs/database.md)
 - [Operations](docs/operations.md)
+- [Roadmap](docs/roadmap.md)
 - [Implementation plan](docs/cloudflare_private_file_drop_codex_implementation_plan.md)
 - [Phase tasks](tasks/)
 

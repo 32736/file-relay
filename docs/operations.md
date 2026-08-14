@@ -8,17 +8,14 @@ R2 `drop-files`).
 - `wrangler login` (or `CLOUDFLARE_API_TOKEN`) for local commands.
 - GitHub production OAuth App registered with callback
   `https://drop.28207.cc/api/auth/github/callback`.
-- Turnstile widget for the domain; secrets below.
 
 ## Secrets (already set)
 
 - `GITHUB_CLIENT_SECRET` — GitHub OAuth App secret
-- `TOKEN_HMAC_SECRET` — share-password MAC key
-- `TURNSTILE_SECRET_KEY` — Turnstile secret
 
-Public vars live in `wrangler.jsonc` (`GITHUB_CLIENT_ID`, `TURNSTILE_SITE_KEY`,
-`OWNER_GITHUB_ID`, limits). Note: after changing `wrangler.jsonc`, rebuild
-first — `wrangler deploy` uses the built `dist/drop/wrangler.json`.
+Public vars live in `wrangler.jsonc` (`GITHUB_CLIENT_ID`, `OWNER_GITHUB_ID`,
+limits). Note: after changing `wrangler.jsonc`, rebuild first — `wrangler
+deploy` uses the built `dist/drop/wrangler.json`.
 
 ## Deploy
 
@@ -68,6 +65,37 @@ pnpm exec wrangler d1 migrations apply drop-db --remote
 4. If the callback errors, check the URL: a `500` is a server fault, while
    `403 FORBIDDEN` means the GitHub account is not the owner
    (`OWNER_GITHUB_ID`).
+
+## Functional verification checklist (roadmap R4.2)
+
+Manual browser sweep against `https://drop.28207.cc`. Tick each item; record
+any failure (status code + console error) in the roadmap.
+
+### 1. Owner authentication
+- [ ] Open the app → "Sign in with GitHub" → authorize → land back as
+      "Signed in as owner".
+- [ ] The header shows storage stats and the three tabs (文件 / 分享 / 上传请求)
+      and the three tabs (文件 / 分享 / 上传请求).
+
+### 2. Upload / download
+- [ ] Drag a small file (≤ 32 MiB) into the upload zone → completes → appears
+      in the list → download and verify bytes.
+- [ ] Upload a file > 32 MiB (multipart) → completes → download and verify.
+- [ ] Delete a file → disappears from the list; a second delete is idempotent.
+
+### 3. Sharing (plaintext)
+- [ ] Create a share with an expiry + max downloads → open the `/s/<token>` URL
+      in a new window → metadata correct → download works.
+- [ ] Revoke the share → the public URL returns 404/403.
+### 4. PWA
+- [ ] The browser offers "install" (manifest + SW present); offline reload of
+      the app shell works after one online visit.
+
+### 5. Cleanup sanity
+- [ ] An expired session/uploads/share you created earlier is gone the next
+      hour (cron) — or manually confirm via the D1 counts below.
+
+Record the outcome in `docs/roadmap.md` (R4.2 status).
 
 ## Notes
 

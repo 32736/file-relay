@@ -184,8 +184,8 @@ header-injection-safe (`filename="..."` ASCII fallback plus RFC 5987
   `206 Partial Content` with `Content-Range: bytes start-end/size`.
 - Unsatisfiable, malformed, or multi-range → `416 Range Not Satisfiable` with
   `Content-Range: bytes */size`.
-- `Content-Disposition: attachment; ...` always in this phase (inline previews
-  arrive in Phase 07).
+- `Content-Disposition: attachment` always (inline previews were removed by
+  decision D14).
 
 ## Phase 05
 
@@ -199,10 +199,10 @@ counts (accepted for MVP).
 ### `POST /api/files/:fileId/shares` (owner)
 
 Body: `{ "expiresIn"?: seconds, "maxDownloads"?: number,
-"deleteFileAfterExhausted"?: boolean }`; a `password` field → `400` until
-Phase 07. Returns `{ "id", "url", "expiresAt", "maxDownloads",
-"deleteFileAfterExhausted" }` — `url` is `${APP_ORIGIN}/s/<raw token>` and is
-the only response containing the raw token. Missing/deleted file → `404`.
+"deleteFileAfterExhausted"?: boolean }`. Returns `{ "id", "url", "expiresAt",
+"maxDownloads", "deleteFileAfterExhausted" }` — `url` is
+`${APP_ORIGIN}/s/<raw token>` and is the only response containing the raw
+token. Missing/deleted file → `404`.
 
 ### `GET /api/shares` (owner)
 
@@ -217,8 +217,8 @@ Revokes (`revoked_at`), `204`; idempotent; unknown → `404`.
 ### `GET /api/public/shares/:token`
 
 Public metadata: `{ "name", "size", "mimeType", "expiresAt",
-"remainingDownloads", "passwordRequired": false }`. Unknown, revoked, expired,
-or file-deleted shares → `404` (never reveals which).
+"remainingDownloads" }`. Unknown, revoked, expired, or file-deleted shares →
+`404` (never reveals which).
 
 ### `GET /api/public/shares/:token/download`
 
@@ -227,35 +227,8 @@ one download first; expired/revoked/exhausted → `403 FORBIDDEN`.
 
 ## Phase 07
 
-Share enhancements and the first usable owner UI. Passwords are stored as
-HMAC-SHA-256 MACs under `TOKEN_HMAC_SECRET`; downloads of protected shares
-require a short-lived stateless unlock cookie.
-
-### `POST /api/files/:fileId/shares` (owner)
-
-Body gains optional `"password": string` (1–128). Response adds
-`"passwordProtected": true` when set.
-
-### `GET /api/public/shares/:token`
-
-`passwordRequired` reflects the stored password MAC.
-
-### `POST /api/public/shares/:token/unlock`
-
-Body `{ "password": string }`. Wrong password → `403 FORBIDDEN`; match → sets
-the HttpOnly `share_unlock_<shareId>` cookie (30 min, value = the MAC) and
-`200 { "ok": true }`.
-
-### `GET /api/public/shares/:token/download`
-
-Password-protected shares require the unlock cookie (checked before the atomic
-claim, so failed unlocks never consume a download).
-
-### Preview whitelist (owner + public downloads)
-
-`Content-Disposition: inline` only for `image/png`, `image/jpeg`,
-`image/webp`, `image/gif`, `application/pdf`; everything else (including
-HTML/SVG/XHTML) stays `attachment`.
+Share enhancements and the first usable owner UI: storage stats, batch
+delete, and filename search.
 
 ### `GET /api/stats` (owner)
 
@@ -271,41 +244,9 @@ number }`.
 Case-insensitive filename search (`LIKE` with escaped wildcards); empty `q`
 ignored; pagination unchanged.
 
-## Phase 08
+## Phases with no public API surface
 
-Incoming uploads: anyone with a `/u/<token>` link can upload files without
-logging in, gated by Cloudflare Turnstile and a per-upload bearer
-upload-access token, with an atomic file-count quota.
-
-### `POST /api/incoming-requests` (owner)
-
-Body `{ "title"?, "expiresIn": seconds, "maxFiles": 1–100, "maxFileSize"? }` →
-`200 { "id", "url", "expiresAt", "maxFiles", "maxFileSize", "uploadedCount" }`
-(`url` = `${APP_ORIGIN}/u/<token>`, raw token appears once).
-
-### `GET /api/incoming-requests` / `DELETE /api/incoming-requests/:id` (owner)
-
-Paginated list (no raw tokens); revoke → `204` idempotent, `404` unknown.
-
-### `GET /api/public/incoming/:token`
-
-Public metadata `{ "title", "expiresAt", "maxFiles", "maxFileSize",
-"uploadedCount", "siteKey" }`; unknown/revoked/expired → `404`.
-
-### `POST /api/public/incoming/:token/uploads`
-
-Body `{ "turnstileToken", "name", "size", "type"? }`. Validates Turnstile
-server-side (fail → `403`, no quota consumed), claims one file atomically
-against `max_files` (full → `403`), then returns `{ "uploadId", "mode",
-"chunkSize", "totalParts", "uploadToken" }`.
-
-### `/api/public/uploads/...` (bearer)
-
-`PUT /:id/content`, `PUT /:id/parts/:partNumber`, `POST /:id/complete`,
-`DELETE /:id` — same semantics as owner uploads, authenticated by
-`Authorization: Bearer <uploadToken>`; created files have `source =
-'incoming'`.
-
-## Future phases
-
-- Phase 06: scheduled cleanup, with no public route required.
+- Phase 06 delivered the scheduled cleanup pass (an hourly cron in the Worker),
+  with no new public route required.
+- Phase 09 (PWA) added the app shell manifest/service worker, with no API
+  change.
