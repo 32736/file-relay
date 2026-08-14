@@ -68,13 +68,16 @@ function insertSessionStatement(
     mode: string
     r2UploadId: string | null
     now: number
+    authKind?: string
+    accessTokenHash?: string | null
   },
 ) {
   return env.DB.prepare(
     `INSERT INTO upload_sessions
      (id, file_id, object_key, original_name, mime_type, total_size, chunk_size,
-      total_parts, mode, r2_upload_id, auth_kind, status, created_at, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      total_parts, mode, r2_upload_id, auth_kind, access_token_hash, status,
+      created_at, expires_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).bind(
     params.sessionId,
     params.fileId,
@@ -86,12 +89,15 @@ function insertSessionStatement(
     params.totalParts,
     params.mode,
     params.r2UploadId,
-    'owner',
+    params.authKind ?? 'owner',
+    params.accessTokenHash ?? null,
     'created',
     params.now,
     params.now + UPLOAD_SESSION_TTL_SECONDS,
   )
 }
+
+export { insertSessionStatement, UPLOAD_SESSION_TTL_SECONDS }
 
 function insertFileStatement(
   env: AppEnv['Bindings'],

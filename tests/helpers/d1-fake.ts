@@ -352,6 +352,7 @@ export class D1Fake {
     upload_sessions?: Row[]
     upload_parts?: Row[]
     shares?: Row[]
+    incoming_requests?: Row[]
   } = {}) {
     this.tables.set('sessions', {
       columns: [
@@ -387,6 +388,20 @@ export class D1Fake {
         { name: 'created_at' },
       ],
       rows: seed.upload_parts ? seed.upload_parts.map((row) => ({ ...row })) : [],
+    })
+    this.tables.set('incoming_requests', {
+      columns: [
+        { name: 'id' },
+        { name: 'token_hash' },
+        { name: 'title' },
+        { name: 'expires_at' },
+        { name: 'max_file_size' },
+        { name: 'max_files' },
+        { name: 'uploaded_count' },
+        { name: 'created_at' },
+        { name: 'revoked_at' },
+      ],
+      rows: seed.incoming_requests ? seed.incoming_requests.map((row) => ({ ...row })) : [],
     })
     this.tables.set('upload_sessions', {
       columns: [

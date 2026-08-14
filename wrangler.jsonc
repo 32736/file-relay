@@ -31,6 +31,7 @@
     "APP_ORIGIN": "https://drop.28207.cc",
     "OWNER_GITHUB_ID": "",
     "GITHUB_CLIENT_ID": "",
+    "TURNSTILE_SITE_KEY": "",
     "UPLOAD_CHUNK_SIZE": "33554432",
     "MAX_FILE_SIZE": "2147483648",
     "SESSION_TTL_SECONDS": "2592000",

@@ -3,6 +3,8 @@ import { Hono } from 'hono'
 import type { AppEnv, Bindings } from './env'
 import { authRoutes } from './routes/auth'
 import { fileRoutes } from './routes/files'
+import { incomingRoutes, publicIncomingRoutes } from './routes/incoming'
+import { publicUploadRoutes } from './routes/public-uploads'
 import { shareRoutes } from './routes/shares'
 import { publicShareRoutes } from './routes/shares-public'
 import { statsRoutes } from './routes/stats'
@@ -19,6 +21,9 @@ app.route('/api/uploads', uploadRoutes)
 app.route('/api/shares', shareRoutes)
 app.route('/api/public/shares', publicShareRoutes)
 app.route('/api/stats', statsRoutes)
+app.route('/api/incoming-requests', incomingRoutes)
+app.route('/api/public/incoming', publicIncomingRoutes)
+app.route('/api/public/uploads', publicUploadRoutes)
 
 app.notFound(async (context) => {
   if (context.req.path.startsWith('/api/')) {

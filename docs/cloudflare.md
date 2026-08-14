@@ -51,8 +51,10 @@ capped at 50 rows per run.
 Phase 07 adds share passwords. `TOKEN_HMAC_SECRET` keys the password MACs
 (HMAC-SHA-256) and is a Wrangler secret (`.dev.vars` locally).
 
-Future phases configure additional secrets through `wrangler secret put`,
-including `TURNSTILE_SECRET_KEY` (Phase 08 incoming uploads).
+Phase 08 adds incoming uploads. `TURNSTILE_SECRET_KEY` is a Wrangler secret;
+`TURNSTILE_SITE_KEY` is a public var in `wrangler.jsonc` (served by the
+metadata endpoint for the widget). Without a configured secret, Turnstile
+verification always fails closed (`403`).
 
 ## Local development
 

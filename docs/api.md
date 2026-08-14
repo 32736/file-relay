@@ -271,6 +271,41 @@ number }`.
 Case-insensitive filename search (`LIKE` with escaped wildcards); empty `q`
 ignored; pagination unchanged.
 
+## Phase 08
+
+Incoming uploads: anyone with a `/u/<token>` link can upload files without
+logging in, gated by Cloudflare Turnstile and a per-upload bearer
+upload-access token, with an atomic file-count quota.
+
+### `POST /api/incoming-requests` (owner)
+
+Body `{ "title"?, "expiresIn": seconds, "maxFiles": 1–100, "maxFileSize"? }` →
+`200 { "id", "url", "expiresAt", "maxFiles", "maxFileSize", "uploadedCount" }`
+(`url` = `${APP_ORIGIN}/u/<token>`, raw token appears once).
+
+### `GET /api/incoming-requests` / `DELETE /api/incoming-requests/:id` (owner)
+
+Paginated list (no raw tokens); revoke → `204` idempotent, `404` unknown.
+
+### `GET /api/public/incoming/:token`
+
+Public metadata `{ "title", "expiresAt", "maxFiles", "maxFileSize",
+"uploadedCount", "siteKey" }`; unknown/revoked/expired → `404`.
+
+### `POST /api/public/incoming/:token/uploads`
+
+Body `{ "turnstileToken", "name", "size", "type"? }`. Validates Turnstile
+server-side (fail → `403`, no quota consumed), claims one file atomically
+against `max_files` (full → `403`), then returns `{ "uploadId", "mode",
+"chunkSize", "totalParts", "uploadToken" }`.
+
+### `/api/public/uploads/...` (bearer)
+
+`PUT /:id/content`, `PUT /:id/parts/:partNumber`, `POST /:id/complete`,
+`DELETE /:id` — same semantics as owner uploads, authenticated by
+`Authorization: Bearer <uploadToken>`; created files have `source =
+'incoming'`.
+
 ## Future phases
 
 - Phase 06: scheduled cleanup, with no public route required.

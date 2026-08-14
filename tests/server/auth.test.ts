@@ -21,6 +21,8 @@ function testEnv(db: D1Fake): Bindings {
     GITHUB_CLIENT_ID: 'test-client-id',
     GITHUB_CLIENT_SECRET: 'test-client-secret',
     TOKEN_HMAC_SECRET: 'test-hmac-secret',
+    TURNSTILE_SECRET_KEY: 'test-turnstile-secret',
+    TURNSTILE_SITE_KEY: 'test-turnstile-site',
     UPLOAD_CHUNK_SIZE: '33554432',
     MAX_FILE_SIZE: '2147483648',
     SESSION_TTL_SECONDS: '2592000',

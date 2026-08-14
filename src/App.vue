@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import FileList from './components/FileList.vue'
+import IncomingUpload from './components/IncomingUpload.vue'
 import UploadZone from './components/UploadZone.vue'
 
 type AuthState = 'loading' | 'anonymous' | 'owner'
 const auth = ref<AuthState>('loading')
 const listVersion = ref(0)
+
+// Public incoming-upload pages live at /u/<token>; the owner workspace is the
+// default. No router is introduced in this phase.
+const incomingMatch = /^\/u\/([A-Za-z0-9_-]+)\/?$/.exec(window.location.pathname)
+const incomingToken = incomingMatch?.[1] ?? null
+const isIncomingPage = computed(() => incomingToken !== null)
 
 onMounted(async () => {
   try {
@@ -46,6 +53,7 @@ function refresh(): void {
       </p>
 
       <div
+        v-if="!isIncomingPage"
         class="status"
         role="status"
       >
@@ -56,14 +64,21 @@ function refresh(): void {
         <a
           v-if="auth === 'anonymous'"
           href="/api/auth/github"
-        >Sign in with GitHub</a>
+        >
+          Sign in with GitHub
+        </a>
         <span v-else-if="auth === 'owner'">Signed in as owner</span>
         <span v-else>Checking session…</span>
       </div>
     </section>
 
+    <IncomingUpload
+      v-if="isIncomingPage"
+      :token="incomingToken ?? ''"
+    />
+
     <section
-      v-if="auth === 'owner'"
+      v-else-if="auth === 'owner'"
       class="workspace"
       aria-label="文件工作区"
     >
