@@ -35,7 +35,12 @@ export function setSessionCookie(c: Context<AppEnv>, token: string): void {
 }
 
 export function clearSessionCookie(c: Context<AppEnv>): void {
-  deleteCookie(c, sessionCookieName(c.req.url), { path: '/' })
+  deleteCookie(c, sessionCookieName(c.req.url), {
+    path: '/',
+    // `__Host-` prefixed names require the Secure attribute; without it the
+    // cookie serializer rejects the header.
+    secure: isHttps(c.req.url),
+  })
 }
 
 /** Sets the short-lived OAuth state cookie (HttpOnly, SameSite=Lax). */
@@ -50,5 +55,8 @@ export function setStateCookie(c: Context<AppEnv>, state: string, maxAgeSeconds:
 }
 
 export function clearStateCookie(c: Context<AppEnv>): void {
-  deleteCookie(c, stateCookieName(c.req.url), { path: '/' })
+  deleteCookie(c, stateCookieName(c.req.url), {
+    path: '/',
+    secure: isHttps(c.req.url),
+  })
 }

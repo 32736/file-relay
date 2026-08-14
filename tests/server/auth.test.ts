@@ -115,6 +115,23 @@ describe('Phase 01 auth', () => {
     })
   })
 
+  it('clears __Host- cookies safely over https (regression)', async () => {
+    // Production (https) uses `__Host-` cookie names; deleting them requires
+    // the Secure attribute or the cookie serializer throws (500). This guards
+    // the unauthenticated /me and failed-OAuth paths.
+    const env = testEnv(new D1Fake())
+
+    const me = await app.request('https://drop.28207.cc/api/auth/me', {}, env)
+    expect(me.status).toBe(401)
+
+    const callback = await app.request(
+      'https://drop.28207.cc/api/auth/github/callback?code=x&state=st',
+      { headers: { Cookie: '__Host-drop_oauth_state=other' } },
+      env,
+    )
+    expect(callback.status).toBe(400)
+  })
+
   it('starts OAuth with state cookie and GitHub authorize redirect', async () => {
     const env = testEnv(new D1Fake())
     const response = await app.request('/api/auth/github', {}, env)
