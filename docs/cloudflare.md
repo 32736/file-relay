@@ -58,7 +58,19 @@ verification always fails closed (`403`).
 
 Phase 09 adds PWA installability: `public/manifest.webmanifest`, `icon.svg`,
 and a network-first `sw.js` (app-shell caching only; `/api/*` is never
-cached). The service worker registers in production builds only.
+cached). The service worker registers in production builds only; it also
+receives Web Share Target payloads (Chromium) and routes them into the upload
+queue.
+
+## CI / deployment
+
+`.github/workflows/ci.yml` runs typecheck/lint/test/build on every push/PR.
+`.github/workflows/deploy.yml` deploys on manual trigger
+(`workflow_dispatch`) using the `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID` repository secrets. The token should be minimal
+permission: Workers Scripts Edit, D1 Edit, Account Settings Read. Production
+D1 migrations stay manual (`pnpm exec wrangler d1 migrations apply drop-db
+--remote`). `workers.dev` and preview URLs are disabled in production.
 
 ## Local development
 
