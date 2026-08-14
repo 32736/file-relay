@@ -3,17 +3,22 @@ import { computed, onMounted, ref } from 'vue'
 
 import FileList from './components/FileList.vue'
 import IncomingUpload from './components/IncomingUpload.vue'
+import SharePage from './components/SharePage.vue'
 import UploadZone from './components/UploadZone.vue'
 
 type AuthState = 'loading' | 'anonymous' | 'owner'
 const auth = ref<AuthState>('loading')
-const listVersion = ref(0)
+const fileList = ref<InstanceType<typeof FileList> | null>(null)
 
-// Public incoming-upload pages live at /u/<token>; the owner workspace is the
-// default. No router is introduced in this phase.
+// Public pages are routed by pathname (no router in this phase):
+//   /u/<token>  → incoming upload page
+//   /s/<token>  → public share page
+// otherwise the owner workspace.
 const incomingMatch = /^\/u\/([A-Za-z0-9_-]+)\/?$/.exec(window.location.pathname)
+const shareMatch = /^\/s\/([A-Za-z0-9_-]+)\/?$/.exec(window.location.pathname)
 const incomingToken = incomingMatch?.[1] ?? null
-const isIncomingPage = computed(() => incomingToken !== null)
+const shareToken = shareMatch?.[1] ?? null
+const isPublicPage = computed(() => incomingToken !== null || shareToken !== null)
 
 onMounted(async () => {
   try {
@@ -24,8 +29,10 @@ onMounted(async () => {
   }
 })
 
+// Refresh the file list in place (no remount) so open dialogs survive uploads
+// and share creation.
 function refresh(): void {
-  listVersion.value++
+  void fileList.value?.load(true)
 }
 </script>
 
@@ -53,7 +60,7 @@ function refresh(): void {
       </p>
 
       <div
-        v-if="!isIncomingPage"
+        v-if="!isPublicPage"
         class="status"
         role="status"
       >
@@ -73,8 +80,13 @@ function refresh(): void {
     </section>
 
     <IncomingUpload
-      v-if="isIncomingPage"
-      :token="incomingToken ?? ''"
+      v-if="incomingToken"
+      :token="incomingToken"
+    />
+
+    <SharePage
+      v-else-if="shareToken"
+      :token="shareToken"
     />
 
     <section
@@ -84,7 +96,7 @@ function refresh(): void {
     >
       <UploadZone @uploaded="refresh" />
       <FileList
-        :key="listVersion"
+        ref="fileList"
         @shared="refresh"
       />
     </section>
