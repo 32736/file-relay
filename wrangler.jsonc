@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "drop",
   "main": "server/index.ts",
@@ -12,7 +12,7 @@
     {
       "binding": "DB",
       "database_name": "drop-db",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "24210d6b-1195-4964-b861-954730e473f6",
       "migrations_dir": "db/migrations"
     }
   ],
@@ -29,9 +29,9 @@
   },
   "vars": {
     "APP_ORIGIN": "https://drop.28207.cc",
-    "OWNER_GITHUB_ID": "",
-    "GITHUB_CLIENT_ID": "",
-    "TURNSTILE_SITE_KEY": "",
+    "OWNER_GITHUB_ID": "33075299",
+    "GITHUB_CLIENT_ID": "Ov23lilL3UVb1yQJOXpc",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAEPpZb8bVP6zjyFR",
     "UPLOAD_CHUNK_SIZE": "33554432",
     "MAX_FILE_SIZE": "2147483648",
     "SESSION_TTL_SECONDS": "2592000",
