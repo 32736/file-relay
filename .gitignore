@@ -14,3 +14,5 @@ coverage/
 
 # Editor local-history snapshots may contain .dev.vars secrets
 .history/
+
+.body.bin
