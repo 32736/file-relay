@@ -1,4 +1,4 @@
-import { api } from './api'
+import { api, localizeErrorMessage } from './api'
 
 export type UploadMode = 'single' | 'multipart'
 
@@ -37,6 +37,19 @@ export class HttpError extends Error {
   ) {
     super(message)
   }
+}
+
+function uploadHttpError(status: number, responseText: string): HttpError {
+  let payload: { error?: { code?: string; message?: string } } | null = null
+  try {
+    payload = JSON.parse(responseText) as { error?: { code?: string; message?: string } }
+  } catch {
+    // Non-JSON responses still receive a localized status-only message.
+  }
+  return new HttpError(
+    status,
+    localizeErrorMessage(payload?.error?.code, payload?.error?.message ?? `Request failed (${status})`),
+  )
 }
 
 export class AbortUploadError extends Error {
@@ -181,7 +194,7 @@ export async function uploadFileCore(options: UploadFileOptions): Promise<void> 
         (loaded) => onProgress?.(loaded),
         signal,
       )
-      if (result.status >= 400) throw new HttpError(result.status, result.text)
+      if (result.status >= 400) throw uploadHttpError(result.status, result.text)
       return result
     })
     return
@@ -216,7 +229,7 @@ export async function uploadFileCore(options: UploadFileOptions): Promise<void> 
           (loaded) => onProgress?.(progressBase + loaded),
           signal,
         )
-        if (result.status >= 400) throw new HttpError(result.status, result.text)
+        if (result.status >= 400) throw uploadHttpError(result.status, result.text)
         return result
       })
       progressBase += thisPartSize

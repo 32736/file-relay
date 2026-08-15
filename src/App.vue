@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import FileList from './components/FileList.vue'
 import ShareList from './components/ShareList.vue'
-import SharePage from './components/SharePage.vue'
 import UploadZone from './components/UploadZone.vue'
+
+const SharePage = defineAsyncComponent(() => import('./components/SharePage.vue'))
 
 import { api } from './lib/api'
 import { formatBytes } from './lib/format'
@@ -14,21 +13,18 @@ import { clearSharePayload, readSharePayload } from './lib/share-target'
 import { useToasts } from './lib/toast'
 
 type AuthState = 'loading' | 'anonymous' | 'owner'
-type WorkspaceTab = 'files' | 'shares'
-
 const auth = ref<AuthState>('loading')
-const tab = ref<WorkspaceTab>('files')
 const fileList = ref<InstanceType<typeof FileList> | null>(null)
 const uploadZone = ref<InstanceType<typeof UploadZone> | null>(null)
 const stats = ref<{ fileCount: number; totalBytes: number } | null>(null)
 const hasFiles = ref(false)
 const sharedNotice = ref(false)
+const pageDragging = ref(false)
 const toasts = useToasts()
-const workspaceRef = ref<HTMLElement | null>(null)
-let motionCleanup: (() => void) | undefined
-
-const canAnimate = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-if (canAnimate) gsap.registerPlugin(ScrollTrigger)
+const shareDialogRef = ref<HTMLDialogElement | null>(null)
+const shareDialogOpen = ref(false)
+const shareDialogMounted = ref(false)
+let shareCloseTimer: ReturnType<typeof setTimeout> | undefined
 
 // Public pages are routed by pathname (no router in this phase):
 //   /s/<token>  → public share page
@@ -49,56 +45,9 @@ onMounted(async () => {
   }
 })
 
-onMounted(() => {
-  if (!canAnimate || !workspaceRef.value) return
-  const context = gsap.context(() => {
-    gsap.from('.intro-copy', {
-      y: 36,
-      opacity: 0,
-      duration: 0.7,
-      ease: 'power3.out',
-    })
-    gsap.from('.motion-panel', {
-      y: 44,
-      opacity: 0,
-      duration: 0.7,
-      stagger: 0.1,
-      delay: 0.12,
-      ease: 'power3.out',
-      scrollTrigger: {
-        trigger: '.workspace-grid',
-        start: 'top 88%',
-        once: true,
-      },
-    })
-    gsap.to('.handoff-dot', {
-      x: 126,
-      duration: 2.4,
-      repeat: -1,
-      ease: 'sine.inOut',
-      yoyo: true,
-    })
-    gsap.to('.signal-card', {
-      y: -10,
-      duration: 1.8,
-      stagger: 0.22,
-      repeat: -1,
-      yoyo: true,
-      ease: 'sine.inOut',
-    })
-    ScrollTrigger.create({
-      trigger: '.workspace-intro',
-      start: 'top top+=96',
-      end: '+=360',
-      pin: '.intro-visual',
-      pinSpacing: false,
-      invalidateOnRefresh: true,
-    })
-  }, workspaceRef.value)
-  motionCleanup = () => context.revert()
+onBeforeUnmount(() => {
+  clearTimeout(shareCloseTimer)
 })
-
-onBeforeUnmount(() => motionCleanup?.())
 
 // Web Share Target: the service worker stashed shared files in IndexedDB and
 // redirected here with ?shared=1; feed them into the upload queue.
@@ -132,88 +81,88 @@ function refresh(): void {
   void loadStats()
 }
 
-function switchTab(next: WorkspaceTab): void {
-  tab.value = next
-  if (next === 'files') void loadStats()
+function toggleShareDialog(): void {
+  if (shareDialogOpen.value) {
+    closeShareDialog()
+    return
+  }
+  clearTimeout(shareCloseTimer)
+  shareDialogMounted.value = true
+  shareDialogOpen.value = true
+  void nextTick(() => {
+    const dialog = shareDialogRef.value
+    if (!dialog) return
+    dialog.show?.()
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => dialog.classList.add('is-visible'))
+    } else {
+      dialog.classList.add('is-visible')
+    }
+  })
+}
+
+function closeShareDialog(): void {
+  shareDialogOpen.value = false
+  shareDialogRef.value?.classList.remove('is-visible')
+  clearTimeout(shareCloseTimer)
+  shareCloseTimer = setTimeout(() => {
+    shareDialogRef.value?.close?.()
+    shareDialogMounted.value = false
+  }, 180)
+}
+
+function onPageDragOver(): void {
+  if (auth.value === 'owner' && !shareDialogOpen.value) pageDragging.value = true
+}
+
+function onPageDrop(event: DragEvent): void {
+  pageDragging.value = false
+  if (auth.value !== 'owner' || shareDialogOpen.value) return
+  const files = Array.from(event.dataTransfer?.files ?? [])
+  if (files.length > 0) uploadZone.value?.addFiles(files)
 }
 </script>
 
 <template>
-  <div class="shell">
+  <div
+    class="shell"
+    :class="{ 'page-dragging': pageDragging }"
+    @dragover.prevent="onPageDragOver"
+    @drop.prevent="onPageDrop"
+  >
     <!-- Public share page: slim header + download card -->
     <template v-if="shareToken">
       <header class="public-header">
-        <span
-          class="mark"
-          aria-hidden="true"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
+        <div class="brand-lockup">
+          <img
+            class="logo"
+            src="/logo.svg"
+            alt=""
             aria-hidden="true"
           >
-            <rect
-              x="1.5"
-              y="1.5"
-              width="21"
-              height="21"
-              rx="6.5"
-              fill="var(--primary)"
-            />
-            <path
-              d="M8.5 12h6.5m0 0-2.6-2.6M15 12l-2.6 2.6"
-              stroke="#fff"
-              stroke-width="2.1"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </span>
-        <h1 class="wordmark">
-          Dr<span class="o">o</span>p
-        </h1>
+          <h1 class="wordmark">
+            Dr<span class="o">o</span>p
+          </h1>
+        </div>
       </header>
-      <main class="shell">
+      <main class="page-content">
         <SharePage :token="shareToken" />
-        <footer>
-          <span>Drop · drop.28207.cc</span>
-        </footer>
       </main>
     </template>
 
     <!-- Signed-out: calm brand panel -->
     <template v-else-if="auth !== 'owner'">
-      <main class="shell">
+      <main class="page-content">
         <section
           class="brand-panel"
           aria-labelledby="page-title"
         >
-          <span
-            class="mark"
+          <img
+            class="logo"
+            src="/logo.svg"
+            alt=""
             aria-hidden="true"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden="true"
-            >
-              <rect
-                x="1.5"
-                y="1.5"
-                width="21"
-                height="21"
-                rx="6.5"
-                fill="var(--primary)"
-              />
-              <path
-                d="M8.5 12h6.5m0 0-2.6-2.6M15 12l-2.6 2.6"
-                stroke="#fff"
-                stroke-width="2.1"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </span>
           <h1
             id="page-title"
             class="wordmark"
@@ -221,61 +170,40 @@ function switchTab(next: WorkspaceTab): void {
             Dr<span class="o">o</span>p
           </h1>
           <p class="promise">
-            Drop a file, pick it up anywhere. A private handoff point for your devices.
+            放下一份文件，在任何设备上接住它。为你的设备准备的私人中转站。
           </p>
           <span
             v-if="auth === 'loading'"
             class="promise"
             role="status"
           >
-            Checking session…
+            正在检查登录状态…
           </span>
           <a
             v-else
             class="signin"
             href="/api/auth/github"
           >
-            Sign in with GitHub
+            使用 GitHub 登录
           </a>
         </section>
-        <footer>
-          <span>Drop · drop.28207.cc</span>
-        </footer>
       </main>
     </template>
 
     <!-- Owner workspace: compact top bar + tabs -->
     <template v-else>
       <header class="topbar">
-        <span
-          class="mark"
-          aria-hidden="true"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
+        <div class="brand-lockup">
+          <img
+            class="logo"
+            src="/logo.svg"
+            alt=""
             aria-hidden="true"
           >
-            <rect
-              x="1.5"
-              y="1.5"
-              width="21"
-              height="21"
-              rx="6.5"
-              fill="var(--primary)"
-            />
-            <path
-              d="M8.5 12h6.5m0 0-2.6-2.6M15 12l-2.6 2.6"
-              stroke="#fff"
-              stroke-width="2.1"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </span>
-        <h1 class="wordmark">
-          Dr<span class="o">o</span>p
-        </h1>
+          <h1 class="wordmark">
+            Dr<span class="o">o</span>p
+          </h1>
+        </div>
         <span
           v-if="stats"
           class="stats"
@@ -283,34 +211,33 @@ function switchTab(next: WorkspaceTab): void {
         >
           {{ stats.fileCount }} 个文件 · 已用 {{ formatBytes(stats.totalBytes) }}
         </span>
-      </header>
-
-      <main class="shell">
         <nav
-          class="tabs"
+          class="tabs top-tabs"
           aria-label="工作区导航"
         >
           <button
-            :class="{ active: tab === 'files' }"
-            :aria-current="tab === 'files' ? 'page' : undefined"
+            :class="{ active: shareDialogOpen }"
+            :aria-expanded="shareDialogOpen"
             type="button"
-            @click="switchTab('files')"
-          >
-            文件
-          </button>
-          <button
-            :class="{ active: tab === 'shares' }"
-            :aria-current="tab === 'shares' ? 'page' : undefined"
-            type="button"
-            @click="switchTab('shares')"
+            @click="toggleShareDialog"
           >
             分享
           </button>
         </nav>
+      </header>
 
+      <dialog
+        v-if="shareDialogMounted"
+        ref="shareDialogRef"
+        class="share-management-dialog"
+        aria-label="分享管理"
+        @cancel.prevent="closeShareDialog"
+      >
+        <ShareList />
+      </dialog>
+
+      <main class="page-content">
         <section
-          v-if="tab === 'files'"
-          ref="workspaceRef"
           aria-label="文件工作区"
         >
           <p
@@ -320,39 +247,10 @@ function switchTab(next: WorkspaceTab): void {
           >
             已收到分享的文件，正在加入上传队列
           </p>
-          <div class="workspace-intro">
-            <div class="intro-copy">
-              <p class="eyebrow">
-                PRIVATE HANDOFF
-              </p>
-              <h2>Move a file from here to there.</h2>
-              <p class="intro-lede">
-                A quiet transfer desk for the files that need to arrive somewhere else.
-              </p>
-            </div>
-            <div
-              class="intro-visual"
-              aria-hidden="true"
-            >
-              <div class="signal-card signal-card-origin">
-                THIS DEVICE
-              </div>
-              <div class="handoff-rail">
-                <span class="handoff-line" /><span class="handoff-dot" />
-              </div>
-              <div class="signal-card signal-card-destination">
-                ANOTHER PLACE
-              </div>
-            </div>
-          </div>
           <div class="workspace-grid">
-            <article class="workspace-panel upload-panel motion-panel">
+            <article class="workspace-panel upload-panel">
               <div class="panel-head">
-                <div>
-                  <span class="panel-kicker">TRANSFER QUEUE</span>
-                  <h3>Send something forward</h3>
-                </div>
-                <span class="panel-limit">2 GB max</span>
+                <span class="panel-kicker">上传队列</span>
               </div>
               <UploadZone
                 ref="uploadZone"
@@ -360,29 +258,29 @@ function switchTab(next: WorkspaceTab): void {
                 @uploaded="refresh"
               />
             </article>
-            <article class="workspace-panel files-panel motion-panel">
+            <article class="workspace-panel files-panel">
               <div class="panel-head">
-                <div>
-                  <span class="panel-kicker">ON THE DESK</span>
-                  <h3>Your files</h3>
-                </div>
-                <span class="panel-limit">stream-ready</span>
+                <span class="panel-kicker">文件台</span>
               </div>
               <FileList
                 ref="fileList"
                 @shared="refresh"
                 @hasfiles="hasFiles = $event"
+                @changed="loadStats"
               />
             </article>
           </div>
         </section>
-        <ShareList v-else-if="tab === 'shares'" />
-
-        <footer>
-          <span>Drop · drop.28207.cc</span>
-        </footer>
       </main>
     </template>
+
+    <div
+      v-if="pageDragging"
+      class="page-drop-overlay"
+      aria-hidden="true"
+    >
+      <span>松开即可上传</span>
+    </div>
 
     <!-- Global toasts -->
     <div

@@ -74,13 +74,6 @@ defineExpose({ load })
   <section class="share-list">
     <div class="toolbar">
       <h2>分享管理</h2>
-      <button
-        class="ghost"
-        :disabled="loading"
-        @click="load"
-      >
-        刷新
-      </button>
     </div>
 
     <p
@@ -238,6 +231,8 @@ td {
 }
 th { color: var(--text-faint); font-size: .72rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 .share-list table { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+.share-list { min-height: 100%; display: flex; flex-direction: column; }
+.share-list > .empty { flex: 1; display: grid; place-items: center; margin: 0; text-align: center; }
 .name {
   max-width: 20rem;
   overflow: hidden;

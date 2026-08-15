@@ -88,6 +88,6 @@ describe('SharePage', () => {
     const wrapper = mount(SharePage, { props: { token: 'bad' } })
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Share not found')
+    expect(wrapper.text()).toContain('分享不存在或已失效')
   })
 })

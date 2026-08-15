@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref } from 'vue'
-import QRCode from 'qrcode'
 
-const dialogRef = ref<HTMLDivElement | null>(null)
+const dialogRef = ref<HTMLDialogElement | null>(null)
 
 import { api } from '../lib/api'
+import { formatDate } from '../lib/format'
 import { saveShareUrl } from '../lib/share-urls'
 import { toast } from '../lib/toast'
 import type { FileItem } from './FileList.vue'
@@ -49,6 +49,7 @@ async function createShare(): Promise<void> {
     emit('shared')
     await nextTick()
     if (qrCanvas.value) {
+      const { default: QRCode } = await import('qrcode')
       await QRCode.toCanvas(qrCanvas.value, result.value.url, { width: 160 })
     }
   } catch (cause) {
@@ -67,138 +68,124 @@ async function copyUrl(): Promise<void> {
 }
 
 onMounted(() => {
-  // Move focus into the dialog so keyboard users land inside, not on the page.
-  nextTick(() => dialogRef.value?.focus())
+  nextTick(() => {
+    if (dialogRef.value && !dialogRef.value.open) dialogRef.value.showModal?.()
+  })
 })
 </script>
 
 <template>
-  <div
-    class="overlay"
+  <dialog
+    ref="dialogRef"
+    class="dialog"
+    aria-label="分享文件"
+    @cancel.prevent="emit('close')"
     @click.self="emit('close')"
   >
-    <div
-      ref="dialogRef"
-      class="dialog"
-      role="dialog"
-      aria-modal="true"
-      aria-label="分享文件"
-      tabindex="-1"
-      @keydown.esc="emit('close')"
+    <h3>分享 {{ file.name }}</h3>
+
+    <form
+      v-if="!result"
+      @submit.prevent="createShare"
     >
-      <h3>分享 {{ file.name }}</h3>
-
-      <form
-        v-if="!result"
-        @submit.prevent="createShare"
+      <label>
+        有效期（小时，留空为永久）
+        <input
+          v-model.number="expiresHours"
+          type="number"
+          min="1"
+        >
+      </label>
+      <label>
+        下载次数上限（留空不限）
+        <input
+          v-model.number="maxDownloads"
+          type="number"
+          min="1"
+        >
+      </label>
+      <label class="check">
+        <input
+          v-model="burnAfterReading"
+          type="checkbox"
+        >
+        阅后即焚（下载 1 次后失效并删除）
+      </label>
+      <p
+        v-if="error"
+        class="error"
+        role="alert"
       >
-        <label>
-          有效期（小时，留空为永久）
-          <input
-            v-model.number="expiresHours"
-            type="number"
-            min="1"
-          >
-        </label>
-        <label>
-          下载次数上限（留空不限）
-          <input
-            v-model.number="maxDownloads"
-            type="number"
-            min="1"
-          >
-        </label>
-        <label class="check">
-          <input
-            v-model="burnAfterReading"
-            type="checkbox"
-          >
-          阅后即焚（下载 1 次后失效并删除）
-        </label>
-        <p
-          v-if="error"
-          class="error"
-          role="alert"
+        {{ error }}
+      </p>
+      <div class="buttons">
+        <button
+          type="button"
+          class="ghost"
+          @click="emit('close')"
         >
-          {{ error }}
-        </p>
-        <div class="buttons">
-          <button
-            type="button"
-            class="ghost"
-            @click="emit('close')"
-          >
-            取消
-          </button>
-          <button
-            class="btn-primary"
-            type="submit"
-            :disabled="busy"
-          >
-            {{ busy ? '创建中…' : '创建分享' }}
-          </button>
-        </div>
-      </form>
-
-      <div
-        v-else
-        class="result"
-      >
-        <p
-          class="ok"
-          role="status"
+          取消
+        </button>
+        <button
+          class="btn-primary"
+          type="submit"
+          :disabled="busy"
         >
-          分享已创建
-        </p>
-        <canvas
-          ref="qrCanvas"
-          class="qr"
-          aria-label="分享二维码"
-        />
-        <p class="url">
-          {{ result.url }}
-        </p>
-        <p
-          v-if="result.expiresAt"
-          class="hint"
-        >
-          有效期至 {{ new Date(result.expiresAt * 1000).toLocaleString() }}
-        </p>
-        <div class="buttons">
-          <button
-            type="button"
-            class="ghost"
-            @click="copyUrl"
-          >
-            {{ copied ? '已复制' : '复制链接' }}
-          </button>
-          <button
-            type="button"
-            class="ghost"
-            @click="emit('close')"
-          >
-            完成
-          </button>
-        </div>
-        <p class="hint">
-          链接已保存到分享页（本设备），关闭后仍可复制。
-        </p>
+          {{ busy ? '创建中…' : '创建分享' }}
+        </button>
       </div>
+    </form>
+
+    <div
+      v-else
+      class="result"
+    >
+      <p
+        class="ok"
+        role="status"
+      >
+        分享已创建
+      </p>
+      <canvas
+        ref="qrCanvas"
+        class="qr"
+        aria-label="分享二维码"
+      />
+      <p class="url">
+        {{ result.url }}
+      </p>
+      <p
+        v-if="result.expiresAt"
+        class="hint"
+      >
+        有效期至 {{ formatDate(result.expiresAt) }}
+      </p>
+      <div class="buttons">
+        <button
+          type="button"
+          class="ghost"
+          @click="copyUrl"
+        >
+          {{ copied ? '已复制' : '复制链接' }}
+        </button>
+        <button
+          type="button"
+          class="ghost"
+          @click="emit('close')"
+        >
+          完成
+        </button>
+      </div>
+      <p class="hint">
+        链接已保存到分享页（本设备），关闭后仍可复制。
+      </p>
     </div>
-  </div>
+  </dialog>
 </template>
 
 <style scoped>
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(24, 26, 25, 0.52);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-}
 .dialog {
+  margin: auto;
   background: var(--surface);
   border: 2px solid var(--text);
   border-radius: var(--radius-md);
@@ -206,6 +193,9 @@ onMounted(() => {
   max-width: 26rem;
   width: 90%;
   box-shadow: var(--shadow-hard);
+}
+.dialog::backdrop {
+  background: rgba(24, 26, 25, 0.52);
 }
 label {
   display: block;

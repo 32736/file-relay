@@ -123,56 +123,26 @@ defineExpose({ addFiles })
       :class="{ compact }"
       role="button"
       tabindex="0"
-      @dragenter.prevent="dragging = true"
-      @dragover.prevent="dragging = true"
-      @dragleave.prevent="dragging = false"
-      @drop.prevent="onDrop"
+      @dragenter.prevent.stop="dragging = true"
+      @dragover.prevent.stop="dragging = true"
+      @dragleave.prevent.stop="dragging = false"
+      @drop.prevent.stop="onDrop"
       @keydown.enter.prevent="pickInput?.click()"
       @click="pickInput?.click()"
     >
-      <svg
-        class="drop-art"
-        viewBox="0 0 120 72"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M14 44h52"
-          stroke="var(--primary)"
-          stroke-width="4"
-          stroke-linecap="round"
-          opacity="0.45"
-        />
-        <circle
-          cx="88"
-          cy="44"
-          r="10"
-          fill="var(--primary)"
-        />
-        <path
-          class="ripple"
-          d="M88 22a22 22 0 0 1 0 44"
-          stroke="var(--primary)"
-          stroke-width="3"
-          stroke-linecap="round"
-          opacity="0.35"
-        />
-      </svg>
       <p class="drop-title">
-        把文件放到这里
+        选择文件上传
       </p>
       <p class="drop-sub">
-        或
-        <label class="pick">
-          选择文件
-          <input
-            type="file"
-            multiple
-            @change="onPickFiles"
-          >
-        </label>
-        · 单文件最大 2 GB
+        也可拖入页面任意位置 · 单文件最大 2 GB
       </p>
+      <input
+        ref="pickInput"
+        class="standalone-input"
+        type="file"
+        multiple
+        @change="onPickFiles"
+      >
     </div>
 
     <ul
@@ -196,18 +166,11 @@ defineExpose({ addFiles })
           <span class="meta">{{ formatBytes(task.size) }}</span>
           <span class="status">{{ statusLabel(task) }}</span>
         </div>
-        <div
-          class="bar"
-          aria-hidden="true"
-        >
-          <div
-            class="fill"
-            :style="{ '--progress': percent(task) / 100 }"
-            aria-hidden="true"
-          />
-        </div>
-        <div class="row sub">
-          <span v-if="task.status === 'uploading'">
+        <div class="progress-row">
+          <span
+            v-if="task.status === 'uploading'"
+            class="progress-info"
+          >
             {{ percent(task) }}% · {{ formatBytes(speeds[task.uploadId] ?? 0) }}/s
             <template v-if="speeds[task.uploadId] && task.transferred < task.size">
               · 剩余约 {{ etaSeconds(task) }} 秒
@@ -215,52 +178,71 @@ defineExpose({ addFiles })
           </span>
           <span
             v-else-if="task.status === 'failed'"
-            class="error"
+            class="progress-info error"
             role="alert"
           >
             {{ task.error }}
           </span>
-          <span v-else-if="task.status === 'paused' && !hasFile(task.uploadId)">
-            刷新后文件已丢失，重新选择同一文件可继续
-          </span>
-        </div>
-        <div class="actions">
-          <button
-            v-if="task.status === 'uploading'"
-            type="button"
-            @click="pause(task.uploadId)"
-          >
-            暂停
-          </button>
-          <button
-            v-else-if="task.status === 'paused' && hasFile(task.uploadId)"
-            type="button"
-            @click="resume(task.uploadId)"
-          >
-            继续
-          </button>
-          <button
+          <span
             v-else-if="task.status === 'paused' && !hasFile(task.uploadId)"
-            type="button"
-            @click="pickForResume"
+            class="progress-info"
           >
-            选择文件续传
-          </button>
-          <button
-            v-if="task.status === 'failed' || task.status === 'canceled'"
-            type="button"
-            @click="retry(task.uploadId)"
+            刷新后需重新选择同一文件
+          </span>
+          <span
+            v-else
+            class="progress-info"
           >
-            重试
-          </button>
-          <button
-            v-if="task.status !== 'completed' && task.status !== 'canceled'"
-            type="button"
-            class="danger"
-            @click="cancel(task.uploadId)"
+            {{ percent(task) }}%
+          </span>
+          <div
+            class="bar"
+            aria-hidden="true"
           >
-            取消
-          </button>
+            <div
+              class="fill"
+              :style="{ '--progress': percent(task) / 100 }"
+              aria-hidden="true"
+            />
+          </div>
+          <div class="actions">
+            <button
+              v-if="task.status === 'uploading'"
+              type="button"
+              @click="pause(task.uploadId)"
+            >
+              暂停
+            </button>
+            <button
+              v-else-if="task.status === 'paused' && hasFile(task.uploadId)"
+              type="button"
+              @click="resume(task.uploadId)"
+            >
+              继续
+            </button>
+            <button
+              v-else-if="task.status === 'paused' && !hasFile(task.uploadId)"
+              type="button"
+              @click="pickForResume"
+            >
+              选择文件续传
+            </button>
+            <button
+              v-if="task.status === 'failed' || task.status === 'canceled'"
+              type="button"
+              @click="retry(task.uploadId)"
+            >
+              重试
+            </button>
+            <button
+              v-if="task.status !== 'completed' && task.status !== 'canceled'"
+              type="button"
+              class="danger"
+              @click="cancel(task.uploadId)"
+            >
+              取消
+            </button>
+          </div>
         </div>
       </li>
     </ul>
@@ -302,11 +284,6 @@ defineExpose({ addFiles })
   box-shadow: var(--shadow-hard-sm), inset 0 -4px 0 var(--primary);
   transform: translate(-1px, -1px);
 }
-.drop-art {
-  width: 9rem;
-  height: auto;
-  margin-bottom: 0.5rem;
-}
 .drop-title {
   margin: 0;
   font-size: 1.35rem;
@@ -315,14 +292,10 @@ defineExpose({ addFiles })
 }
 /* Compact when files already exist: smaller area, art hidden */
 .upload-zone .drop-area.compact {
-  padding: 1.25rem 1rem;
-  flex-direction: row;
+  padding: 1.1rem 1rem;
+  flex-direction: column;
   justify-content: center;
-  gap: 0.75rem;
-}
-.upload-zone .drop-area.compact .drop-art {
-  width: 3.5rem;
-  margin: 0;
+  gap: 0.25rem;
 }
 .upload-zone .drop-area.compact .drop-title {
   font-size: 1rem;
@@ -332,19 +305,8 @@ defineExpose({ addFiles })
   color: var(--text-muted);
   font-size: 0.9rem;
 }
-.drop-sub::before { content: "READY / "; color: var(--primary); font-size: .7rem; font-weight: 800; letter-spacing: .08em; }
-@media (prefers-reduced-motion: no-preference) {
-  .upload-zone.dragging .drop-art .ripple {
-    animation: ripple-in 0.6s ease-out;
-  }
-}
-.pick input {
+.standalone-input {
   display: none;
-}
-.pick {
-  cursor: pointer;
-  color: var(--primary);
-  text-decoration: underline;
 }
 .tasks {
   list-style: none;
@@ -397,6 +359,7 @@ defineExpose({ addFiles })
   gap: 0.6rem;
   align-items: center;
 }
+.task > .row:first-child { min-width: 0; }
 .name {
   flex: 1;
   overflow: hidden;
@@ -418,6 +381,22 @@ defineExpose({ addFiles })
   color: var(--text-muted);
   min-height: 1.1rem;
 }
+.progress-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) minmax(5rem, 1fr) auto;
+  gap: .7rem;
+  align-items: center;
+  min-width: 0;
+  margin-top: .55rem;
+}
+.progress-info {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: .78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .bar {
   height: 6px;
   background: var(--surface-muted);
@@ -435,6 +414,7 @@ defineExpose({ addFiles })
 .actions {
   display: flex;
   gap: 0.4rem;
+  justify-content: flex-end;
 }
 .actions button {
   background: transparent;
@@ -462,5 +442,11 @@ defineExpose({ addFiles })
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+@media (max-width: 720px) {
+  .progress-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .progress-info { grid-column: 1 / -1; }
+  .progress-row .bar { grid-column: 1; }
+  .progress-row .actions { grid-column: 2; }
 }
 </style>

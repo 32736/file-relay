@@ -50,7 +50,7 @@ describe('App', () => {
     const wrapper = mount(App)
     await flushPromises()
 
-    expect(wrapper.get('a[href="/api/auth/github"]').text()).toBe('Sign in with GitHub')
+    expect(wrapper.get('a[href="/api/auth/github"]').text()).toBe('使用 GitHub 登录')
   })
 
   it('shows the owner workspace, stats, and tab navigation', async () => {
@@ -59,7 +59,10 @@ describe('App', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('3 个文件')
-    expect(wrapper.text()).toContain('把文件放到这里')
+    expect(wrapper.text()).toContain('选择文件上传')
+    expect(wrapper.text()).not.toContain('发出一个文件')
+    expect(wrapper.text()).not.toContain('我的文件')
+    expect(wrapper.text()).not.toContain('拖入任意位置即可上传文件')
     expect(wrapper.text()).toContain('文件')
     expect(wrapper.text()).toContain('分享')
   })
@@ -73,6 +76,7 @@ describe('App', () => {
     const shareTab = buttons.find((b) => b.text() === '分享')
     expect(shareTab).toBeDefined()
     await shareTab?.trigger('click')
+    await flushPromises()
     await flushPromises()
 
     expect(wrapper.text()).toContain('分享管理')

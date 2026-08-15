@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 
 import { api } from '../lib/api'
-import { formatBytes } from '../lib/format'
+import { formatBytes, formatDate } from '../lib/format'
 
 const props = defineProps<{ token: string }>()
 
@@ -95,7 +95,7 @@ onMounted(() => void load())
         </div>
         <div v-if="meta.expiresAt">
           <dt>有效期至</dt>
-          <dd>{{ new Date(meta.expiresAt * 1000).toLocaleString() }}</dd>
+          <dd>{{ formatDate(meta.expiresAt) }}</dd>
         </div>
         <div v-if="meta.remainingDownloads !== null">
           <dt>剩余下载次数</dt>

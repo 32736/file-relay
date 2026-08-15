@@ -87,7 +87,8 @@ describe('FileList', () => {
       .findAll('button')
       .find((b) => b.attributes('aria-label') === '分享')
       ?.trigger('click')
-    expect(wrapper.findComponent(ShareDialog).exists()).toBe(true)
+    await flushPromises()
+    expect(wrapper.find('dialog.dialog').exists()).toBe(true)
   })
 
 
@@ -96,10 +97,10 @@ describe('FileList', () => {
     const wrapper = mount(FileList)
     await flushPromises()
 
-    // Select two rows via the row checkboxes.
-    const checkboxes = wrapper.findAll('input[type="checkbox"]')
-    await checkboxes[1].setValue(true)
-    await checkboxes[2].setValue(true)
+    // Select two rows via the right-side selection buttons.
+    const selectButtons = wrapper.findAll('button.select-btn')
+    await selectButtons[0].trigger('click')
+    await selectButtons[1].trigger('click')
     await wrapper.find('button.danger').trigger('click')
     await flushPromises()
 
@@ -118,19 +119,17 @@ describe('FileList', () => {
     expect(calls.some((url) => url.includes('/batch-restore'))).toBe(true)
   })
 
-  it('marks the select-all checkbox indeterminate on partial selection', async () => {
+  it('marks selected rows and selection buttons', async () => {
     stubFiles()
     const wrapper = mount(FileList)
     await flushPromises()
 
-    const checkboxes = wrapper.findAll('input[type="checkbox"]')
-    expect(checkboxes[0].element as HTMLInputElement).not.toHaveProperty('indeterminate', true)
-
-    await checkboxes[1].setValue(true)
+    const selectButton = wrapper.find('button.select-btn')
+    await selectButton.trigger('click')
     await flushPromises()
 
-    const selectAll = wrapper.find('input[type="checkbox"]').element as HTMLInputElement
-    expect(selectAll.indeterminate).toBe(true)
+    expect(wrapper.find('tbody tr').classes()).toContain('selected')
+    expect(selectButton.attributes('aria-pressed')).toBe('true')
   })
 
   it('creates a share and renders the URL and QR canvas', async () => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, ref } from 'vue'
 
 import { api } from '../lib/api'
 import { formatBytes, formatDate } from '../lib/format'
@@ -15,7 +15,7 @@ export interface FileItem {
   createdAt: number
 }
 
-const emit = defineEmits<{ shared: []; hasfiles: [value: boolean] }>()
+const emit = defineEmits<{ shared: []; hasfiles: [value: boolean]; changed: [] }>()
 
 const files = ref<FileItem[]>([])
 const nextCursor = ref<string | null>(null)
@@ -25,20 +25,8 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const sharing = ref<FileItem | null>(null)
 const confirming = ref<string[] | null>(null)
-const selectAllRef = ref<HTMLInputElement | null>(null)
 const undo = ref<{ ids: string[] } | null>(null)
 let undoTimer: ReturnType<typeof setTimeout> | undefined
-
-// Reflect partial selection so screen readers aren't lied to.
-watch(
-  () => selected.value.size,
-  () => {
-    if (selectAllRef.value) {
-      selectAllRef.value.indeterminate =
-        selected.value.size > 0 && selected.value.size < files.value.length
-    }
-  },
-)
 
 async function load(reset = true): Promise<void> {
   loading.value = true
@@ -73,13 +61,6 @@ function toggle(id: string): void {
   selected.value = next
 }
 
-function toggleAll(): void {
-  selected.value =
-    selected.value.size === files.value.length
-      ? new Set()
-      : new Set(files.value.map((file) => file.id))
-}
-
 function askDelete(): void {
   const ids = [...selected.value]
   if (ids.length === 0) return
@@ -102,6 +83,7 @@ async function confirmDelete(): Promise<void> {
     undoTimer = setTimeout(() => (undo.value = null), 5000)
     toast(`已删除 ${ids.length} 个文件`, 'success')
     await load(true)
+    emit('changed')
   } catch (cause) {
     toast(cause instanceof Error ? cause.message : String(cause), 'error')
   }
@@ -143,6 +125,7 @@ defineExpose({ load })
         @input="onSearch"
       >
       <button
+        v-if="selected.size > 0"
         class="ghost danger"
         :disabled="selected.size === 0"
         @click="askDelete"
@@ -195,43 +178,12 @@ defineExpose({ load })
       v-else-if="files.length === 0"
       class="empty"
     >
-      <svg
-        class="empty-art"
-        viewBox="0 0 120 72"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M14 44h52"
-          stroke="var(--primary)"
-          stroke-width="4"
-          stroke-linecap="round"
-          opacity="0.35"
-        />
-        <circle
-          cx="88"
-          cy="44"
-          r="10"
-          fill="var(--primary)"
-        />
-      </svg>
-      <p>还没有文件</p>
-      <p class="empty-sub">
-        拖放或选择文件开始上传
-      </p>
+      <p>暂无文件</p>
     </div>
 
     <table v-else>
       <thead>
         <tr>
-          <th>
-            <input
-              ref="selectAllRef"
-              type="checkbox"
-              aria-label="全选"
-              @change="toggleAll"
-            >
-          </th>
           <th>名称</th>
           <th>操作</th>
         </tr>
@@ -240,15 +192,8 @@ defineExpose({ load })
         <tr
           v-for="file in files"
           :key="file.id"
+          :class="{ selected: selected.has(file.id) }"
         >
-          <td>
-            <input
-              type="checkbox"
-              :checked="selected.has(file.id)"
-              :aria-label="`选择 ${file.name}`"
-              @change="toggle(file.id)"
-            >
-          </td>
           <td
             class="name"
             :title="file.name"
@@ -257,7 +202,10 @@ defineExpose({ load })
               <FileTypeIcon :mime="file.mimeType" />
               <span class="file-name">{{ file.name }}</span>
             </span>
-            <span class="file-meta">{{ formatBytes(file.size) }} · {{ formatDate(file.createdAt) }}</span>
+            <span class="file-meta">
+              <span>{{ formatBytes(file.size) }}</span>
+              <span>{{ formatDate(file.createdAt) }}</span>
+            </span>
           </td>
           <td class="actions">
             <button
@@ -327,9 +275,11 @@ defineExpose({ load })
               </svg>
             </button>
             <button
-              class="icon-btn"
-              title="选择"
-              aria-label="选择"
+              class="icon-btn select-btn"
+              :class="{ selected: selected.has(file.id) }"
+              :title="selected.has(file.id) ? '取消选择' : '选择'"
+              :aria-label="selected.has(file.id) ? `取消选择 ${file.name}` : `选择 ${file.name}`"
+              :aria-pressed="selected.has(file.id)"
               @click="toggle(file.id)"
             >
               <svg
@@ -347,10 +297,11 @@ defineExpose({ load })
                   stroke-width="2"
                 />
                 <path
-                  d="M12 8.5v7m-3.5-3.5h7"
+                  d="m8 12.5 2.7 2.7L16.5 9"
                   stroke="currentColor"
                   stroke-width="2"
                   stroke-linecap="round"
+                  stroke-linejoin="round"
                 />
               </svg>
             </button>
@@ -455,19 +406,30 @@ tbody tr { transition: background-color .18s ease; }
   color: var(--text);
 }
 .file-meta {
-  display: block;
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
   margin-top: 0.1rem;
   font-size: 0.78rem;
   color: var(--text-faint);
 }
-.file-list table { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+.file-meta span:last-child { text-align: right; white-space: nowrap; }
+.file-list table { width: 100%; table-layout: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+.file-list th:last-child, .file-list td:last-child { width: 9rem; }
+.file-list th { text-align: center; }
+.file-list td.actions { display: table-cell; min-height: 3.6rem; vertical-align: middle; text-align: right; white-space: nowrap; }
+.file-list td.actions .icon-btn { margin-left: .35rem; vertical-align: middle; }
 /* Actions fade in on hover/focus on desktop; always visible on touch. */
 .actions .icon-btn {
-  opacity: 0;
+  opacity: 1;
 }
 tbody tr:hover .actions .icon-btn,
 .actions .icon-btn:focus-visible {
   opacity: 1;
+}
+tbody tr.selected {
+  background: var(--primary-soft);
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 @media (max-width: 520px) {
   .actions .icon-btn {
@@ -494,13 +456,18 @@ tbody tr:hover .actions .icon-btn,
   color: var(--primary-dark);
   border-color: var(--border-strong);
 }
+.icon-btn.select-btn.selected {
+  color: var(--primary-dark);
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
 .empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.35rem;
   padding: 4rem 1rem;
-  border: 1px dashed var(--border-strong);
+  border: 0;
   border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text-muted);
@@ -515,11 +482,6 @@ tbody tr:hover .actions .icon-btn,
   font-weight: 400 !important;
   color: var(--text-muted) !important;
   font-size: 0.9rem;
-}
-.empty-art {
-  width: 7rem;
-  height: auto;
-  margin-bottom: 0.4rem;
 }
 .name-inner {
   display: flex;

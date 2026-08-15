@@ -38,7 +38,7 @@ async function handleShareTarget(request) {
   const form = await request.formData()
   const files = form.getAll('files').filter((entry) => entry instanceof File)
   if (files.length === 0) {
-    return new Response('No files shared', { status: 400 })
+    return new Response('没有可分享的文件', { status: 400 })
   }
   await storeSharePayload({
     files,
@@ -95,7 +95,7 @@ self.addEventListener('fetch', (event) => {
         const cache = await caches.open(SHELL_CACHE)
         const cached = await cache.match('/')
         if (cached) return cached
-        return new Response('Offline', { status: 503, statusText: 'Offline' })
+        return new Response('当前处于离线状态', { status: 503, statusText: '当前处于离线状态' })
       }
     })(),
   )

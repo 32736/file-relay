@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="96" fill="#FFFDF8"/>
+  <!-- Portal D -->
+  <path fill-rule="evenodd" clip-rule="evenodd"
+    d="M146 80H255C343 80 406 145 406 256C406 367 343 432 255 432H146V80ZM196 137V375H250C305 375 348 334 348 256C348 178 305 137 250 137H196Z"
+    fill="#1F1F1F"/>
+
+  <!-- File -->
+  <path d="M208 208C208 198.059 216.059 190 226 190H270L304 224V304C304 313.941 295.941 322 286 322H226C216.059 322 208 313.941 208 304V208Z" fill="#FF5A36"/>
+  <path d="M270 190V214C270 219.523 274.477 224 280 224H304L270 190Z" fill="#FFD0C3" fill-opacity="0.7"/>
+
+  <!-- Motion lines -->
+  <rect x="96" y="220" width="86" height="18" rx="9" fill="#FF5A36"/>
+  <rect x="96" y="254" width="110" height="18" rx="9" fill="#FF5A36"/>
+  <rect x="96" y="288" width="86" height="18" rx="9" fill="#FF5A36"/>
+  <circle cx="76" cy="229" r="10" fill="#FF5A36"/>
+  <circle cx="76" cy="263" r="10" fill="#FF5A36"/>
+  <circle cx="76" cy="297" r="10" fill="#FF5A36"/>
+</svg>
