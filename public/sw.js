@@ -4,7 +4,9 @@
 // where the app feeds them into the upload queue.
 // API requests (/api/*) are never cached.
 
-const SHELL_CACHE = 'drop-shell-v1'
+const SHELL_CACHE = 'drop-shell-v2'
+const STATIC_ASSET_PATHS = new Set(['/logo.svg', '/manifest.webmanifest'])
+const PRECACHE_URLS = ['/', '/logo.svg', '/manifest.webmanifest']
 const SHARE_DB = 'drop-share'
 const SHARE_STORE = 'payload'
 const SHARE_KEY = 'pending'
@@ -50,8 +52,15 @@ async function handleShareTarget(request) {
 }
 
 self.addEventListener('install', (event) => {
-  // Take over as soon as possible so the shell is ready for the next load.
-  event.waitUntil(self.skipWaiting())
+  // Cache the minimal shell before taking control so offline startup does not
+  // need a second network round trip for the brand and PWA metadata.
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(SHELL_CACHE)
+      await cache.addAll(PRECACHE_URLS)
+      await self.skipWaiting()
+    })(),
+  )
 })
 
 self.addEventListener('activate', (event) => {
@@ -79,6 +88,21 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (request.method !== 'GET') return
+
+  const isStaticAsset = url.pathname.startsWith('/assets/') || STATIC_ASSET_PATHS.has(url.pathname)
+  if (isStaticAsset) {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(SHELL_CACHE)
+        const cached = await cache.match(request)
+        if (cached) return cached
+        const response = await fetch(request)
+        if (response.ok) await cache.put(request, response.clone())
+        return response
+      })(),
+    )
+    return
+  }
 
   event.respondWith(
     (async () => {

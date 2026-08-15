@@ -2,9 +2,9 @@
 import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import FileList from './components/FileList.vue'
-import ShareList from './components/ShareList.vue'
 import UploadZone from './components/UploadZone.vue'
 
+const ShareList = defineAsyncComponent(() => import('./components/ShareList.vue'))
 const SharePage = defineAsyncComponent(() => import('./components/SharePage.vue'))
 
 import { api } from './lib/api'

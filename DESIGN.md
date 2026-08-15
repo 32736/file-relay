@@ -131,7 +131,7 @@ Pass 1 (this redesign):
 - Components (`UploadZone`, `FileList`, `ShareDialog`, `ShareList`,
   `SharePage`): apply token classes (radius/shadow/hover), restyle drop area
   and task cards, dot-mark progress states.
-- `public/icon.svg` + `public/manifest.webmanifest`: new drop-ripple mark and
+- `public/logo.svg` + `public/manifest.webmanifest`: new drop-ripple mark and
   accent colors.
 - Accessibility and copy stay as-is (fixed in the previous pass).
 

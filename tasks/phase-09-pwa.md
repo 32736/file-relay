@@ -21,7 +21,7 @@ capability-gated Web Share Target declaration. No offline upload queue.
   (navigation requests) with network-first fallback; API (`/api/*`) and
   `/s/`-like asset paths are never cached.
 - Service-worker registration in `src/main.ts` (production only).
-- `public/icon.svg` (plus manifest icons referencing it; PWA install
+- `public/logo.svg` (plus manifest icons referencing it; PWA install
   requires at least one icon — SVG is accepted by Chromium).
 - Mobile UX: responsive polish in `src/styles.css` (compact layout, safe
   touch targets) — no behavioral change.
@@ -38,17 +38,16 @@ capability-gated Web Share Target declaration. No offline upload queue.
 
 ## Design Decisions (confirmed)
 
-1. **Offline shell, not offline data.** The SW caches the navigation shell
-   (the built `index.html`) and serves it offline; static assets referenced by
-   the shell are cached on first fetch. `fetch` is network-first: a fresh
-   response updates the cache, a network failure falls back to the cached
-   shell. API requests are passed through untouched (never cached).
+1. **Offline shell, not offline data.** The SW precaches the minimal
+   navigation shell (`index.html`, Logo, and manifest) and serves it offline;
+   hashed static assets are cached on first fetch. API requests are passed
+   through untouched (never cached).
 2. **Production-only registration.** The SW is registered only when
    `import.meta.env.PROD` — dev workerd/HMR must not fight a cache-first
    worker.
 3. **Manifest + icons in `public/`.** `manifest.webmanifest` (name "Drop",
    `display: standalone`, theme color matching the UI) references
-   `icon.svg` and a `maskable` icon. `index.html` links the manifest and sets
+   `logo.svg` and a `maskable` icon. `index.html` links the manifest and sets
    `theme-color`.
 4. **Share Target is declared, not consumed.** The manifest declares
    `share_target` for files; on Chromium the browser may offer "Drop" as a
@@ -62,7 +61,7 @@ capability-gated Web Share Target declaration. No offline upload queue.
 ## Implementation
 
 - `public/manifest.webmanifest`
-- `public/icon.svg`
+- `public/logo.svg`
 - `public/sw.js` (network-first shell caching, API passthrough)
 - `index.html`: `<link rel="manifest">`, `theme-color`, `apple-touch-icon`
 - `src/main.ts`: `if (import.meta.env.PROD && 'serviceWorker' in navigator)`
@@ -102,7 +101,7 @@ pnpm build
 ## Completion
 
 1. Summarize changed files (expected: `public/manifest.webmanifest`,
-   `public/icon.svg`, `public/sw.js`, `index.html`, `src/main.ts`,
+   `public/logo.svg`, `public/sw.js`, `index.html`, `src/main.ts`,
    `src/styles.css`, `tests/pwa.test.ts`, docs).
 2. State key design decisions and any deviation from the implementation plan.
 3. Report validation command results.

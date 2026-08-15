@@ -48,8 +48,8 @@ exhausted burn-after-reading files (after a 1-hour safety window), physically
 deleted logically-deleted files, revoked/expired shares, and revoked/expired
 incoming requests. Each task is capped at 50 rows per run.
 
-Phase 09 adds PWA installability: `public/manifest.webmanifest`, `icon.svg`,
-and a network-first `sw.js` (app-shell caching only; `/api/*` is never
+Phase 09 adds PWA installability: `public/manifest.webmanifest`, `logo.svg`,
+and a network-first `sw.js` with a small precached shell (`/api/*` is never
 cached). The service worker registers in production builds only; it also
 receives Web Share Target payloads (Chromium) and routes them into the upload
 queue.

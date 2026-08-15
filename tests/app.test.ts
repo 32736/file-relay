@@ -79,6 +79,6 @@ describe('App', () => {
     await flushPromises()
     await flushPromises()
 
-    expect(wrapper.text()).toContain('分享管理')
+    expect(wrapper.find('dialog.share-management-dialog').exists()).toBe(true)
   })
 })

@@ -17,7 +17,7 @@ describe('Phase 09 PWA', () => {
     expect(parsed.start_url).toBe('/')
     expect(parsed.display).toBe('standalone')
     expect(parsed.icons.length).toBeGreaterThan(0)
-    expect(parsed.icons.some((icon) => icon.purpose === 'maskable')).toBe(true)
+    expect(parsed.icons.some((icon) => icon.purpose.split(/\s+/).includes('maskable'))).toBe(true)
     expect(parsed.theme_color).toBeTruthy()
     expect(parsed.share_target.action).toBe('/')
     expect(parsed.share_target.method).toBe('POST')

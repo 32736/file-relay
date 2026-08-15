@@ -11,14 +11,12 @@
   --primary: #e85b3f;
   --primary-dark: #b63d2c;
   --primary-soft: #fbe5dd;
-  --gradient-primary: var(--primary);
   --border: #d3d3ca;
   --border-strong: #181a19;
   --danger: #b42318;
   --danger-soft: #f8e2dc;
   --success: #27734b;
   --success-soft: #dcecdf;
-  --warning: #9a5d16;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
@@ -55,8 +53,6 @@ button:not(:disabled), a, input { transition: border-color .18s ease, background
 .page-content > section[aria-label="文件工作区"] { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .page-content::-webkit-scrollbar, .upload-panel > .upload-zone::-webkit-scrollbar, .files-panel > .file-list::-webkit-scrollbar { width: 10px; }
 .page-content::-webkit-scrollbar-thumb, .upload-panel > .upload-zone::-webkit-scrollbar-thumb, .files-panel > .file-list::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 999px; background: var(--border-strong); background-clip: content-box; }
-.mark { display: inline-grid; place-items: center; width: 2.35rem; height: 2.35rem; flex: none; border: 2px solid var(--text); border-radius: 9px; background: var(--primary); box-shadow: 3px 3px 0 var(--text); }
-.mark svg { width: 1.3rem; height: 1.3rem; display: block; }
 .logo { display: block; width: 2.65rem; height: 2.65rem; flex: none; object-fit: contain; }
 .wordmark { margin: 0; font-size: 1.25rem; font-weight: 800; letter-spacing: -.055em; }
 .wordmark .o { color: var(--primary); }
@@ -82,14 +78,12 @@ button:not(:disabled), a, input { transition: border-color .18s ease, background
 .public-header { position: static; }
 .public-header .logo { width: 2rem; height: 2rem; }
 
-footer { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 1.5rem; color: var(--text-faint); font-size: .75rem; }
 .shared-notice { margin: -1rem 0 1rem; padding: .7rem .85rem; border: 1px solid var(--success); background: var(--success-soft); color: var(--success); }
 .workspace-grid { flex: 1; min-height: 0; display: flex; gap: 1rem; align-items: stretch; }
 .workspace-panel { min-width: 0; flex: 1; height: auto; display: flex; flex-direction: column; border: 1px solid var(--border-strong); background: var(--surface); box-shadow: var(--shadow-soft); }
 .upload-panel, .files-panel { min-height: 0; }
 .panel-head { display: flex; justify-content: space-between; gap: 1rem; align-items: start; padding: 1.1rem 1.15rem .9rem; border-bottom: 1px solid var(--border); }
 .panel-kicker { display: block; margin-bottom: .35rem; color: var(--text); font-size: .95rem; font-weight: 800; letter-spacing: -.02em; }
-.panel-limit { color: var(--text-faint); font-size: .72rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .upload-panel > .upload-zone, .files-panel > .file-list { flex: 1; min-height: 0; max-height: none; overflow-x: hidden; overflow-y: auto; }
 .upload-panel > .upload-zone { padding: 1rem; }
 .files-panel > .file-list { padding: 1rem; }
@@ -105,11 +99,6 @@ footer { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem
 .toast.error { border-color: var(--danger); box-shadow: 3px 3px 0 var(--danger); }
 .error { color: var(--danger); }
 .ok { color: var(--success); }
-
-@media (prefers-reduced-motion: no-preference) {
-  .mark svg .ripple { transform-origin: 50% 50%; animation: ripple-in .6s ease-out; }
-  @keyframes ripple-in { from { opacity: .7; transform: scale(.7); } to { opacity: 0; transform: scale(1.25); } }
-}
 
 @media (max-width: 620px) {
   .page-content { padding: 1rem; }
@@ -127,7 +116,6 @@ footer { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem
   .workspace-panel + .workspace-panel { margin-top: 1rem; }
   .upload-panel > .upload-zone, .files-panel > .file-list { max-height: none; overflow: visible; }
   button { min-height: 2.75rem; }
-  footer { padding-inline: 1rem; }
   .toasts { right: .75rem; bottom: .75rem; left: .75rem; }
   .toast { max-width: none; }
 }
