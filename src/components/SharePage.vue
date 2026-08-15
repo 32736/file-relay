@@ -124,17 +124,17 @@ onMounted(() => void load())
 
 <style scoped>
 .share-page {
-  max-width: 30rem;
-  margin: 2rem auto;
-  padding: 2rem;
+  max-width: 38rem;
+  margin: 8vh auto 2rem;
+  padding: 2.5rem;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 2px solid var(--text);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-hard);
 }
 .file-title {
   margin: 0 0 0.25rem;
-  font-size: 1.4rem;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
@@ -143,25 +143,30 @@ onMounted(() => void load())
   font-size: 0.9rem;
 }
 .meta {
-  margin: 1rem 0;
+  margin: 1.5rem 0;
+  border-top: 1px solid var(--border);
 }
 .meta div {
   display: flex;
   gap: 0.75rem;
   justify-content: space-between;
-  padding: 0.3rem 0;
+  padding: .7rem 0;
+  border-bottom: 1px solid var(--border);
 }
 .meta dt {
   color: var(--text-muted);
 }
 button {
-  padding: 0.5rem 1.1rem;
+  width: 100%;
+  padding: 0.8rem 1.1rem;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--primary-dark);
+  border: 2px solid var(--text);
+  background: var(--primary);
   color: #fff;
   cursor: pointer;
+  box-shadow: var(--shadow-hard-sm);
 }
+button:not(:disabled):hover { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--text); background: var(--primary-dark); }
 button:disabled {
   opacity: 0.55;
   cursor: default;

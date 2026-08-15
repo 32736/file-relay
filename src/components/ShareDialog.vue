@@ -192,19 +192,20 @@ onMounted(() => {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(24, 26, 25, 0.52);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
 }
 .dialog {
-  background: #fff;
+  background: var(--surface);
+  border: 2px solid var(--text);
   border-radius: var(--radius-md);
   padding: 1.25rem 1.5rem;
   max-width: 26rem;
   width: 90%;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-hard);
 }
 label {
   display: block;
@@ -216,7 +217,11 @@ label input[type='password'] {
   display: block;
   width: 100%;
   margin-top: 0.25rem;
-  padding: 0.35rem 0.5rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
 }
 .check {
   display: flex;
@@ -230,16 +235,19 @@ label input[type='password'] {
   margin-top: 0.75rem;
 }
 button {
-  padding: 0.4rem 0.9rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.9rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   cursor: pointer;
 }
 button[type='submit'] {
-  background: var(--primary-dark);
+  background: var(--primary);
   color: #fff;
-  border-color: var(--primary);
+  border: 2px solid var(--text);
+  box-shadow: var(--shadow-hard-sm);
 }
+button[type='submit']:not(:disabled):hover { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--text); background: var(--primary-dark); }
 button.ghost {
   background: transparent;
 }

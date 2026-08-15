@@ -277,15 +277,17 @@ defineExpose({ addFiles })
 
 <style scoped>
 .upload-zone .drop-area {
+  position: relative;
   border: 2px dashed var(--text);
   border-radius: var(--radius-lg);
-  padding: 3rem 1.5rem;
+  padding: 2.75rem 1.5rem 2.25rem;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.6rem;
   background: var(--surface);
+  box-shadow: inset 0 -4px 0 var(--surface-muted);
   transition:
     border-color 0.2s ease,
     background-color 0.2s ease,
@@ -297,8 +299,8 @@ defineExpose({ addFiles })
   border-style: solid;
   border-color: var(--text);
   background: var(--bg-warm);
-  box-shadow: var(--shadow-hard-sm);
-  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-hard-sm), inset 0 -4px 0 var(--primary);
+  transform: translate(-1px, -1px);
 }
 .drop-art {
   width: 9rem;
@@ -307,7 +309,7 @@ defineExpose({ addFiles })
 }
 .drop-title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--text);
 }
@@ -330,6 +332,7 @@ defineExpose({ addFiles })
   color: var(--text-muted);
   font-size: 0.9rem;
 }
+.drop-sub::before { content: "READY / "; color: var(--primary); font-size: .7rem; font-weight: 800; letter-spacing: .08em; }
 @media (prefers-reduced-motion: no-preference) {
   .upload-zone.dragging .drop-art .ripple {
     animation: ripple-in 0.6s ease-out;
@@ -354,7 +357,8 @@ defineExpose({ addFiles })
 .task {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 0.6rem 0.8rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--surface);
 }
 .task.completed {
   opacity: 0.85;
@@ -407,6 +411,8 @@ defineExpose({ addFiles })
   color: var(--text-muted);
   font-size: 0.8rem;
 }
+.task.uploading .status { color: var(--primary-dark); }
+.task.failed .status { color: var(--danger); }
 .sub {
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -414,7 +420,7 @@ defineExpose({ addFiles })
 }
 .bar {
   height: 6px;
-  background: #eee;
+  background: var(--surface-muted);
   border-radius: 3px;
   margin: 0.4rem 0;
   overflow: hidden;
@@ -434,10 +440,11 @@ defineExpose({ addFiles })
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 0.2rem 0.6rem;
+  padding: 0.3rem 0.65rem;
   font-size: 0.8rem;
   cursor: pointer;
 }
+.actions button:hover { border-color: var(--text); background: var(--surface-muted); }
 .actions button.danger {
   color: var(--danger);
 }

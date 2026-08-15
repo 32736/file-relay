@@ -1,26 +1,25 @@
-# DESIGN.md — Drop visual world (Editorial Neo-Brutalist)
+# DESIGN.md — Drop visual world (Handoff Terminal)
 
-Brand system for the Drop interface, modeled on the uupm.cc restaurant demo
-(editorial layout + neo-brutalist hard shadows + gradient accents). This
-document is the authority for UI implementation. It replaces the previous
-consumer-app / drop-ripple world (kept in git history).
+Brand system for the Drop interface: a calm operational file handoff desk with
+editorial structure, hard ink borders, warm paper surfaces, and one signal
+accent. This document is the authority for UI implementation.
 
 ## 1. Brand strategy
 
 - **Category**: personal file-transfer tool (consumer utility).
 - **Audience**: the owner on desktop/mobile; recipients of share links.
 - **Emotional promise**: lightweight, trustworthy, frictionless — "drop it and go".
-- **Cultural position**: a friendly utility, not a developer tool, not a cloud
-  console. Approachable to a non-technical recipient.
-- **Core metaphor**: **handoff arrow** — a file moves from one place to another
-  (gradient square + white arrow), the moment of transfer.
-- **Avoid**: soft consumer pastels, the previous sky-blue/green palette, and
-  the drop-ripple mark (replaced).
+- **Cultural position**: a friendly utility with the confidence of a small
+  dispatch terminal, not a developer console or marketing site.
+- **Core metaphor**: **handoff terminal** — a file moves along a clear path
+  from one device to another (signal-orange square + white arrow).
+- **Avoid**: purple/pink AI gradients, decorative marketing sections, stock
+  imagery, and motion that slows down file operations.
 
 ## 2. Symbol system (handoff arrow)
 
-- **Primary mark**: a rounded gradient square (indigo → pink) with a white
-  bold handoff arrow (double-headed chevron). 2 px hard shadow offset.
+- **Primary mark**: a rounded signal-orange square with a white bold handoff
+  arrow and a 2 px ink outline/shadow.
 - **Variants**: mark alone (favicon/app icon), mark + wordmark ("Drop" in
   Space Grotesk).
 - **Motion**: the upload completion shows a small success dot with one ripple
@@ -30,32 +29,31 @@ consumer-app / drop-ripple world (kept in git history).
 
 ## 3. Color
 
-Editorial neo-brutalist palette, light-first. Dark mode is token-ready but
-not implemented this pass.
+Warm paper-and-ink palette, light-first. Dark mode is token-ready but not
+implemented this pass.
 
 ### Tokens (light)
 
 | Token | Value | Use |
 |---|---|---|
-| `--bg` | `#f5f5f5` | page background |
-| `--surface` | `#ffffff` | cards, dialogs, inputs |
-| `--surface-muted` | `#f1f5f9` | hover rows, chip fills |
-| `--bg-warm` | `#faf5ed` | badge / hover fills |
-| `--text` | `#111827` | primary text (also the hard-border color) |
-| `--text-muted` | `#6b7280` | secondary text (≥4.5:1 on bg) |
-| `--text-faint` | `#9ca3af` | captions, footer |
-| `--primary` | `#6366f1` | links, focus ring, mark fill |
-| `--primary-dark` | `#4f46e5` | active/hover accents |
-| `--gradient-primary` | `linear-gradient(135deg,#6366f1,#ec4899)` | primary button + mark fill |
-| `--border` | `#e2e8f0` | hairline borders |
-| `--border-strong` | `#111827` | 2px hard borders (nav, badges, tabs) |
-| `--danger` | `#dc2626` | destructive (≥4.5:1) |
-| `--danger-soft` | `#fdeeee` | destructive chip fills |
-| `--success` | `#15803d` | success text (≥4.5:1) |
-| `--success-soft` | `#e6f4ea` | success chip fills |
+| `--bg` | `#eeece6` | page background |
+| `--surface` | `#fffdf8` | cards, dialogs, inputs |
+| `--surface-muted` | `#e6e4dc` | hover rows, progress tracks |
+| `--bg-warm` | `#f7f3eb` | hover surfaces |
+| `--text` | `#181a19` | primary text and hard borders |
+| `--text-muted` | `#646862` | secondary text |
+| `--text-faint` | `#92968f` | captions and footer |
+| `--primary` | `#e85b3f` | signal accent, focus ring, mark fill |
+| `--primary-dark` | `#b63d2c` | active/hover accent |
+| `--border` | `#d3d3ca` | hairline borders |
+| `--border-strong` | `#181a19` | structural borders |
+| `--danger` | `#b42318` | destructive actions |
+| `--danger-soft` | `#f8e2dc` | destructive surfaces |
+| `--success` | `#27734b` | success text |
+| `--success-soft` | `#dcecdf` | success surfaces |
 
-- Primary interactive elements use `--gradient-primary`; links/focus use
-  `--primary`. Hard borders use `--text` (2 px). Focus ring: 2 px `--primary`
+- Primary interactive elements use `--primary`; links/focus use the same signal
+  color. Hard borders use `--text` (2 px). Focus ring: 2 px `--primary`
   outline with 2 px offset.
 
 ### Elevation
@@ -67,9 +65,9 @@ not implemented this pass.
 
 ## 4. Typography
 
-- **Wordmark**: Inter (already loaded) 800, `-0.02em`, 20–24 px; the "o" in
+- **Wordmark**: Satoshi/Avenir Next/system fallback 800, `-0.02em`, 20–24 px; the "o" in
   "Drop" is the accent dot (brand detail). No serif anywhere.
-- **Type scale** (Inter, system fallback):
+- **Type scale** (Satoshi/Avenir Next, system fallback):
 
 | Role | Size / weight | Use |
 |---|---|---|

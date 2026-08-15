@@ -220,11 +220,11 @@ defineExpose({ load })
   display: flex;
   gap: 0.75rem;
   align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
 }
 .toolbar h2 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.35rem;
 }
 table {
   width: 100%;
@@ -233,9 +233,11 @@ table {
 th,
 td {
   text-align: left;
-  padding: 0.45rem 0.6rem;
+  padding: 0.75rem 0.7rem;
   border-bottom: 1px solid var(--border);
 }
+th { color: var(--text-faint); font-size: .72rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.share-list table { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
 .name {
   max-width: 20rem;
   overflow: hidden;
@@ -245,7 +247,8 @@ td {
 .state {
   font-size: 0.8rem;
   padding: 0.1rem 0.45rem;
-  border-radius: var(--radius-md);
+  border-radius: 4px;
+  font-weight: 700;
 }
 .state.有效 {
   background: var(--success-soft);
@@ -282,10 +285,10 @@ td {
   }
 }
 button.ghost {
-  background: transparent;
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  padding: 0.25rem 0.6rem;
+  padding: 0.45rem 0.7rem;
   cursor: pointer;
 }
 button.ghost:disabled {

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 import FileList from './components/FileList.vue'
 import ShareList from './components/ShareList.vue'
@@ -22,6 +24,11 @@ const stats = ref<{ fileCount: number; totalBytes: number } | null>(null)
 const hasFiles = ref(false)
 const sharedNotice = ref(false)
 const toasts = useToasts()
+const workspaceRef = ref<HTMLElement | null>(null)
+let motionCleanup: (() => void) | undefined
+
+const canAnimate = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+if (canAnimate) gsap.registerPlugin(ScrollTrigger)
 
 // Public pages are routed by pathname (no router in this phase):
 //   /s/<token>  → public share page
@@ -41,6 +48,57 @@ onMounted(async () => {
     auth.value = 'anonymous'
   }
 })
+
+onMounted(() => {
+  if (!canAnimate || !workspaceRef.value) return
+  const context = gsap.context(() => {
+    gsap.from('.intro-copy', {
+      y: 36,
+      opacity: 0,
+      duration: 0.7,
+      ease: 'power3.out',
+    })
+    gsap.from('.motion-panel', {
+      y: 44,
+      opacity: 0,
+      duration: 0.7,
+      stagger: 0.1,
+      delay: 0.12,
+      ease: 'power3.out',
+      scrollTrigger: {
+        trigger: '.workspace-grid',
+        start: 'top 88%',
+        once: true,
+      },
+    })
+    gsap.to('.handoff-dot', {
+      x: 126,
+      duration: 2.4,
+      repeat: -1,
+      ease: 'sine.inOut',
+      yoyo: true,
+    })
+    gsap.to('.signal-card', {
+      y: -10,
+      duration: 1.8,
+      stagger: 0.22,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut',
+    })
+    ScrollTrigger.create({
+      trigger: '.workspace-intro',
+      start: 'top top+=96',
+      end: '+=360',
+      pin: '.intro-visual',
+      pinSpacing: false,
+      invalidateOnRefresh: true,
+    })
+  }, workspaceRef.value)
+  motionCleanup = () => context.revert()
+})
+
+onBeforeUnmount(() => motionCleanup?.())
 
 // Web Share Target: the service worker stashed shared files in IndexedDB and
 // redirected here with ?shared=1; feed them into the upload queue.
@@ -252,6 +310,7 @@ function switchTab(next: WorkspaceTab): void {
 
         <section
           v-if="tab === 'files'"
+          ref="workspaceRef"
           aria-label="文件工作区"
         >
           <p
@@ -261,16 +320,61 @@ function switchTab(next: WorkspaceTab): void {
           >
             已收到分享的文件，正在加入上传队列
           </p>
-          <UploadZone
-            ref="uploadZone"
-            :compact="hasFiles"
-            @uploaded="refresh"
-          />
-          <FileList
-            ref="fileList"
-            @shared="refresh"
-            @hasfiles="hasFiles = $event"
-          />
+          <div class="workspace-intro">
+            <div class="intro-copy">
+              <p class="eyebrow">
+                PRIVATE HANDOFF
+              </p>
+              <h2>Move a file from here to there.</h2>
+              <p class="intro-lede">
+                A quiet transfer desk for the files that need to arrive somewhere else.
+              </p>
+            </div>
+            <div
+              class="intro-visual"
+              aria-hidden="true"
+            >
+              <div class="signal-card signal-card-origin">
+                THIS DEVICE
+              </div>
+              <div class="handoff-rail">
+                <span class="handoff-line" /><span class="handoff-dot" />
+              </div>
+              <div class="signal-card signal-card-destination">
+                ANOTHER PLACE
+              </div>
+            </div>
+          </div>
+          <div class="workspace-grid">
+            <article class="workspace-panel upload-panel motion-panel">
+              <div class="panel-head">
+                <div>
+                  <span class="panel-kicker">TRANSFER QUEUE</span>
+                  <h3>Send something forward</h3>
+                </div>
+                <span class="panel-limit">2 GB max</span>
+              </div>
+              <UploadZone
+                ref="uploadZone"
+                :compact="hasFiles"
+                @uploaded="refresh"
+              />
+            </article>
+            <article class="workspace-panel files-panel motion-panel">
+              <div class="panel-head">
+                <div>
+                  <span class="panel-kicker">ON THE DESK</span>
+                  <h3>Your files</h3>
+                </div>
+                <span class="panel-limit">stream-ready</span>
+              </div>
+              <FileList
+                ref="fileList"
+                @shared="refresh"
+                @hasfiles="hasFiles = $event"
+              />
+            </article>
+          </div>
         </section>
         <ShareList v-else-if="tab === 'shares'" />
 

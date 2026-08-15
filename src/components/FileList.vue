@@ -420,11 +420,16 @@ defineExpose({ load })
   display: flex;
   gap: 0.75rem;
   align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
 }
 .search {
   flex: 1;
-  padding: 0.4rem 0.6rem;
+  min-height: 2.55rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
 }
 table {
   width: 100%;
@@ -433,9 +438,11 @@ table {
 th,
 td {
   text-align: left;
-  padding: 0.45rem 0.6rem;
+  padding: 0.75rem 0.7rem;
   border-bottom: 1px solid var(--border);
 }
+th { color: var(--text-faint); font-size: .72rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+tbody tr { transition: background-color .18s ease; }
 .name {
   max-width: 30rem;
 }
@@ -453,6 +460,7 @@ td {
   font-size: 0.78rem;
   color: var(--text-faint);
 }
+.file-list table { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
 /* Actions fade in on hover/focus on desktop; always visible on touch. */
 .actions .icon-btn {
   opacity: 0;
@@ -491,7 +499,10 @@ tbody tr:hover .actions .icon-btn,
   flex-direction: column;
   align-items: center;
   gap: 0.35rem;
-  padding: 3rem 1rem;
+  padding: 4rem 1rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
   color: var(--text-muted);
   text-align: center;
 }
@@ -520,7 +531,10 @@ tbody tr:hover .actions .icon-btn,
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  padding: 0.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
 }
 .skeleton-row {
   display: flex;
@@ -594,10 +608,10 @@ tbody tr:hover {
   background: var(--surface-muted);
 }
 button.ghost {
-  background: transparent;
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  padding: 0.25rem 0.6rem;
+  padding: 0.45rem 0.7rem;
   cursor: pointer;
 }
 button.ghost:disabled {
