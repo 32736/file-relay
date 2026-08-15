@@ -136,18 +136,58 @@ defineExpose({ load })
           <td class="actions">
             <button
               v-if="shareUrls[share.id]"
-              class="ghost"
+              class="icon-btn"
+              :title="copiedId === share.id ? '已复制' : '复制链接'"
+              :aria-label="copiedId === share.id ? '已复制' : '复制链接'"
               @click="copyUrl(share.id)"
             >
-              {{ copiedId === share.id ? '已复制' : '复制链接' }}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <rect
+                  x="9"
+                  y="9"
+                  width="11"
+                  height="11"
+                  rx="3"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="M15 9V6a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3v6a3 3 0 0 0 3 3h3"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+              <span
+                v-if="copiedId === share.id"
+                class="copied-tag"
+              >已复制</span>
             </button>
             <button
               v-if="share.revokedAt === null"
-              class="ghost danger"
+              class="icon-btn danger"
               :disabled="busyId === share.id"
+              :title="busyId === share.id ? '撤销中…' : '撤销'"
+              :aria-label="busyId === share.id ? '撤销中…' : '撤销'"
               @click="revoke(share.id)"
             >
-              {{ busyId === share.id ? '撤销中…' : '撤销' }}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M5 7h14M9 7V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2m-8 0 1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
             </button>
           </td>
         </tr>
@@ -211,6 +251,57 @@ button.ghost:disabled {
 }
 button.danger {
   color: var(--danger);
+}
+.actions {
+  display: flex;
+  gap: 0.4rem;
+}
+.actions .icon-btn {
+  opacity: 0;
+}
+tbody tr:hover .actions .icon-btn,
+.actions .icon-btn:focus-visible {
+  opacity: 1;
+}
+@media (max-width: 520px) {
+  .actions .icon-btn {
+    opacity: 1;
+  }
+}
+.icon-btn {
+  position: relative;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: inline-grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+.icon-btn svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+.icon-btn:hover {
+  color: var(--accent-strong);
+  border-color: var(--border-strong);
+}
+.icon-btn.danger:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.copied-tag {
+  position: absolute;
+  right: -0.4rem;
+  top: -0.6rem;
+  font-size: 0.65rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: var(--success);
+  color: #fff;
 }
 .empty {
   color: var(--text-muted);

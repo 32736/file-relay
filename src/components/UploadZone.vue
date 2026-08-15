@@ -106,8 +106,39 @@ defineExpose({ addFiles })
       @keydown.enter.prevent="pickInput?.click()"
       @click="pickInput?.click()"
     >
-      <p>
-        拖放文件到这里，或
+      <svg
+        class="drop-art"
+        viewBox="0 0 120 72"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M14 44h52"
+          stroke="var(--accent)"
+          stroke-width="4"
+          stroke-linecap="round"
+          opacity="0.45"
+        />
+        <circle
+          cx="88"
+          cy="44"
+          r="10"
+          fill="var(--accent)"
+        />
+        <path
+          class="ripple"
+          d="M88 22a22 22 0 0 1 0 44"
+          stroke="var(--accent)"
+          stroke-width="3"
+          stroke-linecap="round"
+          opacity="0.35"
+        />
+      </svg>
+      <p class="drop-title">
+        把文件放到这里
+      </p>
+      <p class="drop-sub">
+        或
         <label class="pick">
           选择文件
           <input
@@ -116,6 +147,7 @@ defineExpose({ addFiles })
             @change="onPickFiles"
           >
         </label>
+        · 单文件最大 2 GB
       </p>
     </div>
 
@@ -220,12 +252,44 @@ defineExpose({ addFiles })
 .upload-zone .drop-area {
   border: 2px dashed var(--border-strong);
   border-radius: var(--radius-lg);
-  padding: 2rem;
+  padding: 3rem 1.5rem;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--surface);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
+.upload-zone .drop-area:hover,
 .upload-zone.dragging .drop-area {
   border-color: var(--accent);
   background: var(--accent-soft);
+  box-shadow: var(--shadow-card);
+}
+.drop-art {
+  width: 9rem;
+  height: auto;
+  margin-bottom: 0.5rem;
+}
+.drop-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.drop-sub {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .upload-zone.dragging .drop-art .ripple {
+    animation: ripple-in 0.6s ease-out;
+  }
 }
 .pick input {
   display: none;

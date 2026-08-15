@@ -83,7 +83,10 @@ describe('FileList', () => {
     expect(wrapper.text()).toContain('照片.png')
     expect(wrapper.text()).toContain('2.0 KB')
 
-    await wrapper.findAll('button').find((b) => b.text() === '分享')?.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((b) => b.attributes('aria-label') === '分享')
+      ?.trigger('click')
     expect(wrapper.findComponent(ShareDialog).exists()).toBe(true)
   })
 

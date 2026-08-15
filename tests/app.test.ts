@@ -59,7 +59,7 @@ describe('App', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('3 个文件')
-    expect(wrapper.text()).toContain('拖放文件到这里')
+    expect(wrapper.text()).toContain('把文件放到这里')
     expect(wrapper.text()).toContain('文件')
     expect(wrapper.text()).toContain('分享')
   })

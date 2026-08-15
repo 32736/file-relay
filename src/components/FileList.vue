@@ -161,12 +161,35 @@ defineExpose({ load })
     >
       加载中…
     </p>
-    <p
+    <div
       v-else-if="files.length === 0"
       class="empty"
     >
-      还没有文件，拖放或选择文件开始上传。
-    </p>
+      <svg
+        class="empty-art"
+        viewBox="0 0 120 72"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M14 44h52"
+          stroke="var(--accent)"
+          stroke-width="4"
+          stroke-linecap="round"
+          opacity="0.35"
+        />
+        <circle
+          cx="88"
+          cy="44"
+          r="10"
+          fill="var(--accent)"
+        />
+      </svg>
+      <p>还没有文件</p>
+      <p class="empty-sub">
+        拖放或选择文件开始上传
+      </p>
+    </div>
 
     <table v-else>
       <thead>
@@ -180,8 +203,6 @@ defineExpose({ load })
             >
           </th>
           <th>名称</th>
-          <th>大小</th>
-          <th>上传时间</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -202,28 +223,103 @@ defineExpose({ load })
             class="name"
             :title="file.name"
           >
-            {{ file.name }}
+            <span class="file-name">{{ file.name }}</span>
+            <span class="file-meta">{{ formatBytes(file.size) }} · {{ formatDate(file.createdAt) }}</span>
           </td>
-          <td>{{ formatBytes(file.size) }}</td>
-          <td>{{ formatDate(file.createdAt) }}</td>
           <td class="actions">
             <button
-              class="ghost"
+              class="icon-btn"
+              title="下载"
+              aria-label="下载"
               @click="download(file.id)"
             >
-              下载
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M12 4v11m0 0 4.5-4.5M12 15 7.5 10.5"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M5 19h14"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
             </button>
             <button
-              class="ghost"
+              class="icon-btn"
+              title="分享"
+              aria-label="分享"
               @click="sharing = file"
             >
-              分享
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <circle
+                  cx="6"
+                  cy="12"
+                  r="2.4"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <circle
+                  cx="17.5"
+                  cy="6"
+                  r="2.4"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <circle
+                  cx="17.5"
+                  cy="18"
+                  r="2.4"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="m8.2 10.8 7-3.4m-7 5.8 7 3.4"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
             </button>
             <button
-              class="ghost"
+              class="icon-btn"
+              title="选择"
+              aria-label="选择"
               @click="toggle(file.id)"
             >
-              选择
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <rect
+                  x="4.5"
+                  y="4.5"
+                  width="15"
+                  height="15"
+                  rx="4"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="M12 8.5v7m-3.5-3.5h7"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
             </button>
           </td>
         </tr>
@@ -274,10 +370,78 @@ td {
   border-bottom: 1px solid var(--border);
 }
 .name {
-  max-width: 24rem;
+  max-width: 30rem;
+}
+.file-name {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 600;
+  color: var(--text);
+}
+.file-meta {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+/* Actions fade in on hover/focus on desktop; always visible on touch. */
+.actions .icon-btn {
+  opacity: 0;
+}
+tbody tr:hover .actions .icon-btn,
+.actions .icon-btn:focus-visible {
+  opacity: 1;
+}
+@media (max-width: 520px) {
+  .actions .icon-btn {
+    opacity: 1;
+  }
+}
+.icon-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: inline-grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+.icon-btn svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+.icon-btn:hover {
+  color: var(--accent-strong);
+  border-color: var(--border-strong);
+}
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+.empty p {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text);
+}
+.empty-sub {
+  font-weight: 400 !important;
+  color: var(--text-muted) !important;
+  font-size: 0.9rem;
+}
+.empty-art {
+  width: 7rem;
+  height: auto;
+  margin-bottom: 0.4rem;
 }
 .actions {
   display: flex;
