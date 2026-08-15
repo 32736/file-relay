@@ -89,27 +89,22 @@ function switchTab(next: WorkspaceTab): void {
           <svg
             viewBox="0 0 24 24"
             fill="none"
+            aria-hidden="true"
           >
-            <path
-              d="M4.5 12h9.5"
-              stroke="currentColor"
-              stroke-width="2.4"
-              stroke-linecap="round"
-              opacity="0.55"
-            />
-            <circle
-              cx="17.5"
-              cy="12"
-              r="3.2"
-              fill="currentColor"
+            <rect
+              x="1.5"
+              y="1.5"
+              width="21"
+              height="21"
+              rx="6.5"
+              fill="var(--primary)"
             />
             <path
-              class="ripple"
-              d="M17.5 6.2a5.8 5.8 0 0 1 0 11.6"
-              stroke="currentColor"
-              stroke-width="1.6"
+              d="M8.5 12h6.5m0 0-2.6-2.6M15 12l-2.6 2.6"
+              stroke="#fff"
+              stroke-width="2.1"
               stroke-linecap="round"
-              opacity="0.45"
+              stroke-linejoin="round"
             />
           </svg>
         </span>
@@ -139,27 +134,22 @@ function switchTab(next: WorkspaceTab): void {
             <svg
               viewBox="0 0 24 24"
               fill="none"
+              aria-hidden="true"
             >
-              <path
-                d="M4.5 12h9.5"
-                stroke="currentColor"
-                stroke-width="2.4"
-                stroke-linecap="round"
-                opacity="0.55"
-              />
-              <circle
-                cx="17.5"
-                cy="12"
-                r="3.2"
-                fill="currentColor"
+              <rect
+                x="1.5"
+                y="1.5"
+                width="21"
+                height="21"
+                rx="6.5"
+                fill="var(--primary)"
               />
               <path
-                class="ripple"
-                d="M17.5 6.2a5.8 5.8 0 0 1 0 11.6"
-                stroke="currentColor"
-                stroke-width="1.6"
+                d="M8.5 12h6.5m0 0-2.6-2.6M15 12l-2.6 2.6"
+                stroke="#fff"
+                stroke-width="2.1"
                 stroke-linecap="round"
-                opacity="0.45"
+                stroke-linejoin="round"
               />
             </svg>
           </span>
@@ -203,27 +193,22 @@ function switchTab(next: WorkspaceTab): void {
           <svg
             viewBox="0 0 24 24"
             fill="none"
+            aria-hidden="true"
           >
-            <path
-              d="M4.5 12h9.5"
-              stroke="currentColor"
-              stroke-width="2.4"
-              stroke-linecap="round"
-              opacity="0.55"
-            />
-            <circle
-              cx="17.5"
-              cy="12"
-              r="3.2"
-              fill="currentColor"
+            <rect
+              x="1.5"
+              y="1.5"
+              width="21"
+              height="21"
+              rx="6.5"
+              fill="var(--primary)"
             />
             <path
-              class="ripple"
-              d="M17.5 6.2a5.8 5.8 0 0 1 0 11.6"
-              stroke="currentColor"
-              stroke-width="1.6"
+              d="M8.5 12h6.5m0 0-2.6-2.6M15 12l-2.6 2.6"
+              stroke="#fff"
+              stroke-width="2.1"
               stroke-linecap="round"
-              opacity="0.45"
+              stroke-linejoin="round"
             />
           </svg>
         </span>

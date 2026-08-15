@@ -286,7 +286,7 @@ tbody tr:hover .actions .icon-btn,
   height: 1.05rem;
 }
 .icon-btn:hover {
-  color: var(--accent-strong);
+  color: var(--primary-dark);
   border-color: var(--border-strong);
 }
 .icon-btn.danger:hover {

@@ -112,7 +112,7 @@ onMounted(() => void load())
       </p>
       <button
         v-else
-        class="download"
+        class="btn-primary download"
         :disabled="busy"
         @click="download"
       >
@@ -126,9 +126,11 @@ onMounted(() => void load())
 .share-page {
   max-width: 30rem;
   margin: 2rem auto;
-  padding: 1.5rem;
+  padding: 2rem;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
 }
 .file-title {
   margin: 0 0 0.25rem;
@@ -156,7 +158,7 @@ button {
   padding: 0.5rem 1.1rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
-  background: var(--accent-strong);
+  background: var(--primary-dark);
   color: #fff;
   cursor: pointer;
 }

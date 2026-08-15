@@ -128,6 +128,7 @@ onMounted(() => {
             取消
           </button>
           <button
+            class="btn-primary"
             type="submit"
             :disabled="busy"
           >
@@ -232,9 +233,9 @@ button {
   cursor: pointer;
 }
 button[type='submit'] {
-  background: var(--accent-strong);
+  background: var(--primary-dark);
   color: #fff;
-  border-color: var(--accent);
+  border-color: var(--primary);
 }
 button.ghost {
   background: transparent;

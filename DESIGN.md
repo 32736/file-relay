@@ -1,9 +1,9 @@
-# DESIGN.md — Drop visual world (Consumer-app · Drop-ripple)
+# DESIGN.md — Drop visual world (Editorial Neo-Brutalist)
 
-Brand system for the Drop interface, derived from the brandkit methodology
-(brand strategy → metaphor → symbol → system → application). This document is
-the authority for the next UI implementation pass. It replaces the previous
-editorial/brand-green world.
+Brand system for the Drop interface, modeled on the uupm.cc restaurant demo
+(editorial layout + neo-brutalist hard shadows + gradient accents). This
+document is the authority for UI implementation. It replaces the previous
+consumer-app / drop-ripple world (kept in git history).
 
 ## 1. Brand strategy
 
@@ -12,58 +12,51 @@ editorial/brand-green world.
 - **Emotional promise**: lightweight, trustworthy, frictionless — "drop it and go".
 - **Cultural position**: a friendly utility, not a developer tool, not a cloud
   console. Approachable to a non-technical recipient.
-- **Core metaphor**: **drop ripple** — a point is dropped onto a path and sends
-  a soft ripple: the moment a file arrives at the handoff point.
-- **Avoid**: anything cold/technical (terminal aesthetics, dense grids of
-  numbers), corporate blue-suit flatness, or the previous editorial serif
-  grandeur.
+- **Core metaphor**: **handoff arrow** — a file moves from one place to another
+  (gradient square + white arrow), the moment of transfer.
+- **Avoid**: soft consumer pastels, the previous sky-blue/green palette, and
+  the drop-ripple mark (replaced).
 
-## 2. Symbol system (drop ripple)
+## 2. Symbol system (handoff arrow)
 
-- **Primary mark**: a filled accent dot sitting at the end of a short rounded
-  path, with one or two soft ripple arcs behind it (negative-space crescent,
-  not literal rings).
-- **Construction**: dot = radius 4 units; path = 3.5:1 rounded stroke;
-  ripple = 2 concentric arcs at 2.5× / 4× dot diameter, 1.5–2 pt, low-opacity
-  accent. Built on a 8-unit grid, keep margins ≥ 1 unit.
-- **Variants**: mark alone (favicon/app icon, rounded-square tile with the dot
-  centered), mark + wordmark ("Drop", see typography), mark + path extended
-  (empty-state / hero illustration).
-- **Motion (one authored moment)**: during an upload the dot slides along the
-  path and lands, releasing one ripple that fades out (~0.6 s, exponential
-  ease-out). Completion keeps the dot seated. Respect `prefers-reduced-motion`
-  (ripple becomes a static seat).
-- **Iconography**: 1.75 pt rounded strokes, 24 px grid, same accent; filled
-  only for the mark itself. No emoji as icons.
+- **Primary mark**: a rounded gradient square (indigo → pink) with a white
+  bold handoff arrow (double-headed chevron). 2 px hard shadow offset.
+- **Variants**: mark alone (favicon/app icon), mark + wordmark ("Drop" in
+  Space Grotesk).
+- **Motion**: the upload completion shows a small success dot with one ripple
+  (already implemented in the task card); page-level motion stays ≤200 ms.
+- **Iconography**: stroke SVG icons (download/share/select/copy/revoke),
+  24 px grid, `--text` color. No emoji as icons.
 
 ## 3. Color
 
-Muted-but-warm consumer palette, light-first. Dark mode is token-ready but not
-implemented this pass.
+Editorial neo-brutalist palette, light-first. Dark mode is token-ready but
+not implemented this pass.
 
 ### Tokens (light)
 
 | Token | Value | Use |
 |---|---|---|
-| `--bg` | `#f6f7f9` | page background (very light cool gray) |
+| `--bg` | `#f5f5f5` | page background |
 | `--surface` | `#ffffff` | cards, dialogs, inputs |
-| `--surface-muted` | `#eef1f4` | hover rows, chip fills |
-| `--text` | `#1b2430` | primary text |
-| `--text-muted` | `#55606d` | secondary text (≥4.5:1 on bg) |
-| `--text-faint` | `#79828c` | captions, footer (≥4.5:1 on bg) |
-| `--accent` | `#2f7fe0` | links, focus ring, active states, ripples |
-| `--accent-strong` | `#1f66c0` | primary button fill (white text ≥4.5:1) |
-| `--accent-soft` | `rgba(47,127,224,0.10)` | tinted fills, hover on accent surfaces |
-| `--border` | `#e2e6ea` | hairline borders |
-| `--border-strong` | `#c9d0d8` | input borders, hover borders |
-| `--danger` | `#c02c2c` | destructive text/buttons (≥4.5:1) |
+| `--surface-muted` | `#f1f5f9` | hover rows, chip fills |
+| `--bg-warm` | `#faf5ed` | badge / hover fills |
+| `--text` | `#111827` | primary text (also the hard-border color) |
+| `--text-muted` | `#6b7280` | secondary text (≥4.5:1 on bg) |
+| `--text-faint` | `#9ca3af` | captions, footer |
+| `--primary` | `#6366f1` | links, focus ring, mark fill |
+| `--primary-dark` | `#4f46e5` | active/hover accents |
+| `--gradient-primary` | `linear-gradient(135deg,#6366f1,#ec4899)` | primary button + mark fill |
+| `--border` | `#e2e8f0` | hairline borders |
+| `--border-strong` | `#111827` | 2px hard borders (nav, badges, tabs) |
+| `--danger` | `#dc2626` | destructive (≥4.5:1) |
 | `--danger-soft` | `#fdeeee` | destructive chip fills |
 | `--success` | `#15803d` | success text (≥4.5:1) |
 | `--success-soft` | `#e6f4ea` | success chip fills |
 
-- One accent family only. Never mix in a second hue for interactive elements.
-- Focus ring: 2 px `--accent` outline with 2 px offset; inputs get a
-  `--accent-soft` ring in addition when focused.
+- Primary interactive elements use `--gradient-primary`; links/focus use
+  `--primary`. Hard borders use `--text` (2 px). Focus ring: 2 px `--primary`
+  outline with 2 px offset.
 
 ### Elevation
 

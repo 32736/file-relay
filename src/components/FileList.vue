@@ -173,7 +173,7 @@ defineExpose({ load })
       >
         <path
           d="M14 44h52"
-          stroke="var(--accent)"
+          stroke="var(--primary)"
           stroke-width="4"
           stroke-linecap="round"
           opacity="0.35"
@@ -182,7 +182,7 @@ defineExpose({ load })
           cx="88"
           cy="44"
           r="10"
-          fill="var(--accent)"
+          fill="var(--primary)"
         />
       </svg>
       <p>还没有文件</p>
@@ -416,7 +416,7 @@ tbody tr:hover .actions .icon-btn,
   height: 1.05rem;
 }
 .icon-btn:hover {
-  color: var(--accent-strong);
+  color: var(--primary-dark);
   border-color: var(--border-strong);
 }
 .empty {

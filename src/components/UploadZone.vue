@@ -114,7 +114,7 @@ defineExpose({ addFiles })
       >
         <path
           d="M14 44h52"
-          stroke="var(--accent)"
+          stroke="var(--primary)"
           stroke-width="4"
           stroke-linecap="round"
           opacity="0.45"
@@ -123,12 +123,12 @@ defineExpose({ addFiles })
           cx="88"
           cy="44"
           r="10"
-          fill="var(--accent)"
+          fill="var(--primary)"
         />
         <path
           class="ripple"
           d="M88 22a22 22 0 0 1 0 44"
-          stroke="var(--accent)"
+          stroke="var(--primary)"
           stroke-width="3"
           stroke-linecap="round"
           opacity="0.35"
@@ -250,7 +250,7 @@ defineExpose({ addFiles })
 
 <style scoped>
 .upload-zone .drop-area {
-  border: 2px dashed var(--border-strong);
+  border: 2px dashed var(--text);
   border-radius: var(--radius-lg);
   padding: 3rem 1.5rem;
   text-align: center;
@@ -262,13 +262,16 @@ defineExpose({ addFiles })
   transition:
     border-color 0.2s ease,
     background-color 0.2s ease,
-    box-shadow 0.2s ease;
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
 }
 .upload-zone .drop-area:hover,
 .upload-zone.dragging .drop-area {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  box-shadow: var(--shadow-card);
+  border-style: solid;
+  border-color: var(--text);
+  background: var(--bg-warm);
+  box-shadow: var(--shadow-hard-sm);
+  transform: translate(-2px, -2px);
 }
 .drop-art {
   width: 9rem;
@@ -296,7 +299,7 @@ defineExpose({ addFiles })
 }
 .pick {
   cursor: pointer;
-  color: var(--accent);
+  color: var(--primary);
   text-decoration: underline;
 }
 .tasks {
@@ -377,7 +380,7 @@ defineExpose({ addFiles })
 }
 .fill {
   height: 100%;
-  background: var(--accent);
+  background: var(--primary);
   transform: scaleX(var(--progress, 0));
   transform-origin: left;
   transition: transform 0.2s ease-out;
