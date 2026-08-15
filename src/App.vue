@@ -286,7 +286,6 @@ function switchTab(next: WorkspaceTab): void {
 
         <footer>
           <span>Drop · drop.28207.cc</span>
-          <span>GET /api/health</span>
         </footer>
       </main>
     </template>

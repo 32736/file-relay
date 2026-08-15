@@ -49,6 +49,8 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.5;
 }
 
 button,
@@ -246,6 +248,85 @@ footer {
 
 /* ---- Motion ---- */
 
+
+/* ---- Mobile (≤520px): single column, thumb-friendly targets ---- */
+@media (max-width: 520px) {
+  .shell main {
+    padding: 1rem 0.9rem 2.5rem;
+  }
+
+  .topbar {
+    padding: 0.6rem 0.9rem;
+    flex-wrap: wrap;
+  }
+  .topbar .stats {
+    width: 100%;
+    margin-left: 0;
+    order: 3;
+  }
+
+  .tabs {
+    overflow-x: auto;
+    margin-top: 1rem;
+  }
+  .tabs button {
+    flex: none;
+    padding: 0.55rem 0.9rem;
+  }
+
+  .brand-panel {
+    margin-top: 8vh;
+    padding: 1.75rem 1.25rem;
+  }
+
+  button {
+    min-height: 2.5rem;
+  }
+
+  /* File + share tables become cards */
+  .file-list table,
+  .file-list thead,
+  .share-list table,
+  .share-list thead {
+    display: block;
+  }
+  .file-list tbody,
+  .share-list tbody {
+    display: block;
+  }
+  .file-list tr {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.25rem 0.6rem;
+    padding: 0.5rem 0;
+  }
+  .file-list td {
+    border-bottom: none;
+    padding: 0.2rem 0;
+  }
+  .file-list .actions {
+    grid-column: 2 / 4;
+    flex-wrap: wrap;
+  }
+  .share-list tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.25rem 0.6rem;
+    padding: 0.5rem 0;
+  }
+  .share-list td {
+    border-bottom: none;
+    padding: 0.2rem 0;
+  }
+  .share-list td:first-child,
+  .share-list td:nth-child(4) {
+    grid-column: 1 / 3;
+  }
+  .share-list .actions {
+    grid-column: 1 / 3;
+    flex-wrap: wrap;
+  }
+}
 @media (prefers-reduced-motion: no-preference) {
   .mark svg .ripple {
     transform-origin: 50% 50%;

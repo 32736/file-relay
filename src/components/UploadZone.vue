@@ -131,6 +131,11 @@ defineExpose({ addFiles })
         :class="task.status"
       >
         <div class="row">
+          <span
+            v-if="task.status === 'completed'"
+            class="done-dot"
+            aria-hidden="true"
+          />
           <span class="name">{{ task.name }}</span>
           <span class="meta">{{ formatBytes(task.size) }}</span>
           <span class="status">{{ statusLabel(task) }}</span>
@@ -244,7 +249,36 @@ defineExpose({ addFiles })
   padding: 0.6rem 0.8rem;
 }
 .task.completed {
-  opacity: 0.7;
+  opacity: 0.85;
+}
+/* Drop-ripple completion mark: the dot lands and ripples once. */
+.done-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--success);
+  position: relative;
+  flex: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .done-dot::after {
+    content: "";
+    position: absolute;
+    inset: -0.15rem;
+    border-radius: 50%;
+    border: 2px solid var(--success);
+    animation: done-ripple 0.6s ease-out;
+  }
+  @keyframes done-ripple {
+    from {
+      transform: scale(0.6);
+      opacity: 0.8;
+    }
+    to {
+      transform: scale(1.7);
+      opacity: 0;
+    }
+  }
 }
 .row {
   display: flex;
