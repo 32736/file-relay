@@ -156,7 +156,7 @@ button {
   padding: 0.5rem 1.1rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
-  background: var(--accent);
+  background: var(--accent-strong);
   color: #fff;
   cursor: pointer;
 }

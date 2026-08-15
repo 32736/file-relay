@@ -213,9 +213,9 @@ defineExpose({ addFiles })
 
 <style scoped>
 .upload-zone .drop-area {
-  border: 2px dashed var(--border);
-  border-radius: var(--radius-md);
-  padding: 1.5rem;
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
   text-align: center;
 }
 .upload-zone.dragging .drop-area {

@@ -283,6 +283,9 @@ td {
   display: flex;
   gap: 0.4rem;
 }
+tbody tr:hover {
+  background: var(--surface-muted);
+}
 button.ghost {
   background: transparent;
   border: 1px solid var(--border);

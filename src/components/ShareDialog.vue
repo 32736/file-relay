@@ -232,7 +232,7 @@ button {
   cursor: pointer;
 }
 button[type='submit'] {
-  background: var(--accent);
+  background: var(--accent-strong);
   color: #fff;
   border-color: var(--accent);
 }

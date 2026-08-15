@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
 import FileList from './components/FileList.vue'
 import ShareList from './components/ShareList.vue'
@@ -25,7 +25,6 @@ const sharedNotice = ref(false)
 // otherwise the owner workspace.
 const shareMatch = /^\/s\/([A-Za-z0-9_-]+)\/?$/.exec(window.location.pathname)
 const shareToken = shareMatch?.[1] ?? null
-const isPublicPage = computed(() => shareToken !== null)
 
 onMounted(async () => {
   try {
@@ -79,155 +78,222 @@ function switchTab(next: WorkspaceTab): void {
 </script>
 
 <template>
-  <main class="shell">
-    <section
-      class="hero"
-      aria-labelledby="page-title"
-    >
-      <p
-        v-if="!isPublicPage"
-        class="eyebrow"
-      >
-        Private file transfer
-      </p>
-      <div
-        v-if="!isPublicPage"
-        class="mark"
-        aria-hidden="true"
-      >
-        ↗
-      </div>
-      <h1
-        id="page-title"
-        :class="{ compact: isPublicPage }"
-      >
-        Drop
-      </h1>
-
-      <p
-        v-if="!isPublicPage"
-        class="summary"
-      >
-        A focused, owner-operated handoff point for files across your devices.
-      </p>
-
-      <div
-        v-if="!isPublicPage"
-        class="status"
-        role="status"
-      >
+  <div class="shell">
+    <!-- Public share page: slim header + download card -->
+    <template v-if="shareToken">
+      <header class="public-header">
         <span
-          class="status-dot"
+          class="mark"
           aria-hidden="true"
-        />
-        <a
-          v-if="auth === 'anonymous'"
-          href="/api/auth/github"
         >
-          Sign in with GitHub
-        </a>
-        <span v-else-if="auth === 'owner'">Signed in as owner</span>
-        <span v-else>Checking session…</span>
-      </div>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <path
+              d="M4.5 12h9.5"
+              stroke="currentColor"
+              stroke-width="2.4"
+              stroke-linecap="round"
+              opacity="0.55"
+            />
+            <circle
+              cx="17.5"
+              cy="12"
+              r="3.2"
+              fill="currentColor"
+            />
+            <path
+              class="ripple"
+              d="M17.5 6.2a5.8 5.8 0 0 1 0 11.6"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              opacity="0.45"
+            />
+          </svg>
+        </span>
+        <h1 class="wordmark">
+          Dr<span class="o">o</span>p
+        </h1>
+      </header>
+      <main class="shell">
+        <SharePage :token="shareToken" />
+        <footer>
+          <span>Drop · drop.28207.cc</span>
+        </footer>
+      </main>
+    </template>
 
-      <p
-        v-if="auth === 'owner' && stats"
-        class="stats"
-        role="status"
-      >
-        {{ stats.fileCount }} 个文件 · 已用 {{ formatBytes(stats.totalBytes) }}
-      </p>
-    </section>
-
-    <SharePage
-      v-if="shareToken"
-      :token="shareToken"
-    />
-
-    <section
-      v-else-if="auth === 'owner'"
-      class="workspace"
-      aria-label="文件工作区"
-    >
-      <nav
-        class="tabs"
-        aria-label="工作区导航"
-      >
-        <button
-          :class="{ active: tab === 'files' }"
-          :aria-current="tab === 'files' ? 'page' : undefined"
-          type="button"
-          @click="switchTab('files')"
+    <!-- Signed-out: calm brand panel -->
+    <template v-else-if="auth !== 'owner'">
+      <main class="shell">
+        <section
+          class="brand-panel"
+          aria-labelledby="page-title"
         >
-          文件
-        </button>
-        <button
-          :class="{ active: tab === 'shares' }"
-          :aria-current="tab === 'shares' ? 'page' : undefined"
-          type="button"
-          @click="switchTab('shares')"
-        >
-          分享
-        </button>
-      </nav>
+          <span
+            class="mark"
+            aria-hidden="true"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <path
+                d="M4.5 12h9.5"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                opacity="0.55"
+              />
+              <circle
+                cx="17.5"
+                cy="12"
+                r="3.2"
+                fill="currentColor"
+              />
+              <path
+                class="ripple"
+                d="M17.5 6.2a5.8 5.8 0 0 1 0 11.6"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                opacity="0.45"
+              />
+            </svg>
+          </span>
+          <h1
+            id="page-title"
+            class="wordmark"
+          >
+            Dr<span class="o">o</span>p
+          </h1>
+          <p class="promise">
+            Drop a file, pick it up anywhere. A private handoff point for your devices.
+          </p>
+          <span
+            v-if="auth === 'loading'"
+            class="promise"
+            role="status"
+          >
+            Checking session…
+          </span>
+          <a
+            v-else
+            class="signin"
+            href="/api/auth/github"
+          >
+            Sign in with GitHub
+          </a>
+        </section>
+        <footer>
+          <span>Drop · drop.28207.cc</span>
+        </footer>
+      </main>
+    </template>
 
-      <template v-if="tab === 'files'">
-        <p
-          v-if="sharedNotice"
-          class="shared-notice"
+    <!-- Owner workspace: compact top bar + tabs -->
+    <template v-else>
+      <header class="topbar">
+        <span
+          class="mark"
+          aria-hidden="true"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <path
+              d="M4.5 12h9.5"
+              stroke="currentColor"
+              stroke-width="2.4"
+              stroke-linecap="round"
+              opacity="0.55"
+            />
+            <circle
+              cx="17.5"
+              cy="12"
+              r="3.2"
+              fill="currentColor"
+            />
+            <path
+              class="ripple"
+              d="M17.5 6.2a5.8 5.8 0 0 1 0 11.6"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              opacity="0.45"
+            />
+          </svg>
+        </span>
+        <h1 class="wordmark">
+          Dr<span class="o">o</span>p
+        </h1>
+        <span
+          v-if="stats"
+          class="stats"
           role="status"
         >
-          已收到分享的文件，正在加入上传队列
-        </p>
-        <UploadZone
-          ref="uploadZone"
-          @uploaded="refresh"
-        />
-        <FileList
-          ref="fileList"
-          @shared="refresh"
-        />
-      </template>
-      <ShareList v-else-if="tab === 'shares'" />
-    </section>
+          {{ stats.fileCount }} 个文件 · 已用 {{ formatBytes(stats.totalBytes) }}
+        </span>
+      </header>
 
-    <footer>
-      <code>GET /api/health</code>
-      <span>drop.28207.cc</span>
-    </footer>
-  </main>
+      <main class="shell">
+        <nav
+          class="tabs"
+          aria-label="工作区导航"
+        >
+          <button
+            :class="{ active: tab === 'files' }"
+            :aria-current="tab === 'files' ? 'page' : undefined"
+            type="button"
+            @click="switchTab('files')"
+          >
+            文件
+          </button>
+          <button
+            :class="{ active: tab === 'shares' }"
+            :aria-current="tab === 'shares' ? 'page' : undefined"
+            type="button"
+            @click="switchTab('shares')"
+          >
+            分享
+          </button>
+        </nav>
+
+        <section
+          v-if="tab === 'files'"
+          aria-label="文件工作区"
+        >
+          <p
+            v-if="sharedNotice"
+            class="shared-notice"
+            role="status"
+          >
+            已收到分享的文件，正在加入上传队列
+          </p>
+          <UploadZone
+            ref="uploadZone"
+            @uploaded="refresh"
+          />
+          <FileList
+            ref="fileList"
+            @shared="refresh"
+          />
+        </section>
+        <ShareList v-else-if="tab === 'shares'" />
+
+        <footer>
+          <span>Drop · drop.28207.cc</span>
+          <span>GET /api/health</span>
+        </footer>
+      </main>
+    </template>
+  </div>
 </template>
 
 <style scoped>
-.hero h1.compact {
-  font-size: clamp(2rem, 6vw, 3.5rem);
-  letter-spacing: -0.03em;
-}
-.tabs {
-  display: flex;
-  gap: 0.4rem;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
-}
-.tabs button {
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-size: 0.95rem;
-  color: var(--text-muted);
-}
-.tabs button.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-  font-weight: 600;
-}
-.stats {
-  margin-top: 0.4rem;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
 .shared-notice {
   color: var(--success);
   margin-bottom: 0.6rem;
