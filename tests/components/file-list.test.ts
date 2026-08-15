@@ -93,7 +93,6 @@ describe('FileList', () => {
 
   it('confirms batch delete and offers an undo window that restores', async () => {
     stubWithDelete()
-    vi.stubGlobal('confirm', vi.fn(() => true))
     const wrapper = mount(FileList)
     await flushPromises()
 
@@ -104,7 +103,10 @@ describe('FileList', () => {
     await wrapper.find('button.danger').trigger('click')
     await flushPromises()
 
-    expect(globalThis.confirm).toHaveBeenCalled()
+    // Custom confirm dialog appears; confirm it.
+    expect(wrapper.find('.confirm-dialog').exists()).toBe(true)
+    await wrapper.find('.btn-danger').trigger('click')
+    await flushPromises()
     expect(wrapper.text()).toContain('已删除 · 撤销')
 
     await wrapper.find('button:not(.danger)').trigger('click') // the undo button

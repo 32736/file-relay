@@ -90,12 +90,31 @@ defineExpose({ load })
     >
       {{ error }}
     </p>
-    <p
+    <div
       v-if="loading && shares.length === 0"
+      class="skeleton-list"
       role="status"
+      aria-label="加载中"
     >
-      加载中…
-    </p>
+      <div
+        v-for="n in 3"
+        :key="n"
+        class="skeleton-row"
+      >
+        <span
+          class="skeleton-block"
+          style="width: 40%"
+        />
+        <span
+          class="skeleton-block"
+          style="width: 14%"
+        />
+        <span
+          class="skeleton-block"
+          style="width: 10%"
+        />
+      </div>
+    </div>
     <p
       v-else-if="shares.length === 0"
       class="empty"
@@ -237,6 +256,30 @@ td {
 .state.已耗尽 {
   background: var(--danger-soft);
   color: var(--danger);
+}
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+}
+.skeleton-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.7rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+.skeleton-block {
+  height: 0.9rem;
+  border-radius: 4px;
+  background: var(--surface-muted);
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+@keyframes shimmer {
+  50% {
+    opacity: 0.5;
+  }
 }
 button.ghost {
   background: transparent;

@@ -6,6 +6,7 @@ const dialogRef = ref<HTMLDivElement | null>(null)
 
 import { api } from '../lib/api'
 import { saveShareUrl } from '../lib/share-urls'
+import { toast } from '../lib/toast'
 import type { FileItem } from './FileList.vue'
 
 const props = defineProps<{ file: FileItem }>()
@@ -44,6 +45,7 @@ async function createShare(): Promise<void> {
       body: JSON.stringify(body),
     })
     saveShareUrl(result.value.id, result.value.url)
+    toast('分享已创建', 'success')
     emit('shared')
     await nextTick()
     if (qrCanvas.value) {
@@ -59,6 +61,7 @@ async function createShare(): Promise<void> {
 async function copyUrl(): Promise<void> {
   if (!result.value) return
   await navigator.clipboard.writeText(result.value.url)
+  toast('链接已复制', 'success')
   copied.value = true
   setTimeout(() => (copied.value = false), 1500)
 }

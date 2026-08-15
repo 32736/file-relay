@@ -3,6 +3,8 @@ import { onMounted, ref, watch } from 'vue'
 
 import { api } from '../lib/api'
 import { formatBytes, formatDate } from '../lib/format'
+import { toast } from '../lib/toast'
+import FileTypeIcon from './FileTypeIcon.vue'
 import ShareDialog from './ShareDialog.vue'
 
 export interface FileItem {
@@ -13,7 +15,7 @@ export interface FileItem {
   createdAt: number
 }
 
-const emit = defineEmits<{ shared: [] }>()
+const emit = defineEmits<{ shared: []; hasfiles: [value: boolean] }>()
 
 const files = ref<FileItem[]>([])
 const nextCursor = ref<string | null>(null)
@@ -22,6 +24,7 @@ const selected = ref<Set<string>>(new Set())
 const loading = ref(false)
 const error = ref<string | null>(null)
 const sharing = ref<FileItem | null>(null)
+const confirming = ref<string[] | null>(null)
 const selectAllRef = ref<HTMLInputElement | null>(null)
 const undo = ref<{ ids: string[] } | null>(null)
 let undoTimer: ReturnType<typeof setTimeout> | undefined
@@ -49,6 +52,7 @@ async function load(reset = true): Promise<void> {
     )
     files.value = reset ? body.files : [...files.value, ...body.files]
     nextCursor.value = body.nextCursor
+    emit('hasfiles', files.value.length > 0)
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
   } finally {
@@ -76,10 +80,16 @@ function toggleAll(): void {
       : new Set(files.value.map((file) => file.id))
 }
 
-async function deleteSelected(): Promise<void> {
+function askDelete(): void {
   const ids = [...selected.value]
   if (ids.length === 0) return
-  if (!window.confirm(`将从 Drop 永久删除 ${ids.length} 个文件，确定？`)) return
+  confirming.value = ids
+}
+
+async function confirmDelete(): Promise<void> {
+  const ids = confirming.value
+  confirming.value = null
+  if (!ids) return
   try {
     await api<{ deleted: number }>('/api/files/batch-delete', {
       method: 'POST',
@@ -90,9 +100,10 @@ async function deleteSelected(): Promise<void> {
     undo.value = { ids }
     clearTimeout(undoTimer)
     undoTimer = setTimeout(() => (undo.value = null), 5000)
+    toast(`已删除 ${ids.length} 个文件`, 'success')
     await load(true)
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : String(cause)
+    toast(cause instanceof Error ? cause.message : String(cause), 'error')
   }
 }
 
@@ -134,7 +145,7 @@ defineExpose({ load })
       <button
         class="ghost danger"
         :disabled="selected.size === 0"
-        @click="deleteSelected"
+        @click="askDelete"
       >
         删除选中（{{ selected.size }}）
       </button>
@@ -155,12 +166,31 @@ defineExpose({ load })
     >
       {{ error }}
     </p>
-    <p
+    <div
       v-if="loading && files.length === 0"
+      class="skeleton-list"
       role="status"
+      aria-label="加载中"
     >
-      加载中…
-    </p>
+      <div
+        v-for="n in 4"
+        :key="n"
+        class="skeleton-row"
+      >
+        <span
+          class="skeleton-block"
+          style="width: 42%"
+        />
+        <span
+          class="skeleton-block"
+          style="width: 12%"
+        />
+        <span
+          class="skeleton-block"
+          style="width: 18%"
+        />
+      </div>
+    </div>
     <div
       v-else-if="files.length === 0"
       class="empty"
@@ -223,7 +253,10 @@ defineExpose({ load })
             class="name"
             :title="file.name"
           >
-            <span class="file-name">{{ file.name }}</span>
+            <span class="name-inner">
+              <FileTypeIcon :mime="file.mimeType" />
+              <span class="file-name">{{ file.name }}</span>
+            </span>
             <span class="file-meta">{{ formatBytes(file.size) }} · {{ formatDate(file.createdAt) }}</span>
           </td>
           <td class="actions">
@@ -345,6 +378,40 @@ defineExpose({ load })
       @close="sharing = null"
       @shared="emit('shared')"
     />
+
+    <div
+      v-if="confirming"
+      class="confirm-overlay"
+      @click.self="confirming = null"
+    >
+      <div
+        class="confirm-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="确认删除"
+      >
+        <p class="confirm-title">
+          删除 {{ confirming.length }} 个文件？
+        </p>
+        <p class="confirm-sub">
+          删除后将无法恢复。
+        </p>
+        <div class="confirm-actions">
+          <button
+            class="btn-secondary"
+            @click="confirming = null"
+          >
+            取消
+          </button>
+          <button
+            class="btn-danger"
+            @click="confirmDelete"
+          >
+            删除 {{ confirming.length }} 个文件
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -442,6 +509,83 @@ tbody tr:hover .actions .icon-btn,
   width: 7rem;
   height: auto;
   margin-bottom: 0.4rem;
+}
+.name-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+}
+.skeleton-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.7rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+.skeleton-block {
+  height: 0.9rem;
+  border-radius: 4px;
+  background: var(--surface-muted);
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+@keyframes shimmer {
+  50% {
+    opacity: 0.5;
+  }
+}
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.4);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+}
+.confirm-dialog {
+  background: var(--surface);
+  border: 2px solid var(--text);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-hard);
+  padding: 1.5rem 1.75rem;
+  max-width: 22rem;
+  width: 90%;
+}
+.confirm-title {
+  margin: 0 0 0.3rem;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.confirm-sub {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.confirm-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+}
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border: 2px solid var(--danger);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-hard-sm);
+}
+.btn-danger:not(:disabled):hover {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--text);
 }
 .actions {
   display: flex;

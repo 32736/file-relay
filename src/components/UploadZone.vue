@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { useUploads, type UploadTask } from '../composables/useUploads'
 import { formatBytes } from '../lib/format'
+import { toast } from '../lib/toast'
 
+defineProps<{ compact?: boolean }>()
 const emit = defineEmits<{ uploaded: [] }>()
 
 const { tasks, addFiles, pause, resume, cancel, retry, restore, hasFile } = useUploads(() =>
@@ -39,8 +41,29 @@ onBeforeUnmount(() => {
   if (timer) clearInterval(timer)
 })
 
+// Notify on new completions.
+const seenCompleted = new Set<string>()
+watch(
+  () => tasks.value.filter((task) => task.status === 'completed').map((task) => task.uploadId),
+  (ids) => {
+    for (const id of ids) {
+      if (!seenCompleted.has(id)) {
+        seenCompleted.add(id)
+        const task = tasks.value.find((item) => item.uploadId === id)
+        if (task) toast(`已上传：${task.name}`, 'success')
+      }
+    }
+  },
+)
+
 function percent(task: UploadTask): number {
   return task.size > 0 ? Math.min(100, Math.round((task.transferred / task.size) * 100)) : 0
+}
+
+function etaSeconds(task: UploadTask): number {
+  const speed = speeds.value[task.uploadId] ?? 0
+  if (speed <= 0) return 0
+  return Math.max(1, Math.ceil((task.size - task.transferred) / speed))
 }
 
 function statusLabel(task: UploadTask): string {
@@ -97,6 +120,7 @@ defineExpose({ addFiles })
   >
     <div
       class="drop-area"
+      :class="{ compact }"
       role="button"
       tabindex="0"
       @dragenter.prevent="dragging = true"
@@ -185,6 +209,9 @@ defineExpose({ addFiles })
         <div class="row sub">
           <span v-if="task.status === 'uploading'">
             {{ percent(task) }}% · {{ formatBytes(speeds[task.uploadId] ?? 0) }}/s
+            <template v-if="speeds[task.uploadId] && task.transferred < task.size">
+              · 剩余约 {{ etaSeconds(task) }} 秒
+            </template>
           </span>
           <span
             v-else-if="task.status === 'failed'"
@@ -283,6 +310,20 @@ defineExpose({ addFiles })
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--text);
+}
+/* Compact when files already exist: smaller area, art hidden */
+.upload-zone .drop-area.compact {
+  padding: 1.25rem 1rem;
+  flex-direction: row;
+  justify-content: center;
+  gap: 0.75rem;
+}
+.upload-zone .drop-area.compact .drop-art {
+  width: 3.5rem;
+  margin: 0;
+}
+.upload-zone .drop-area.compact .drop-title {
+  font-size: 1rem;
 }
 .drop-sub {
   margin: 0;

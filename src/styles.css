@@ -145,7 +145,7 @@ button:not(:disabled) {
 
 .shell main {
   flex: 1;
-  width: min(76ch, 100%);
+  width: min(64rem, 100%); /* 1024px — roomier desktop layout */
   margin: 0 auto;
   padding: 1.75rem 1.25rem 3rem;
 }
@@ -295,6 +295,36 @@ footer {
   padding: 1rem 1.25rem;
   color: var(--text-faint);
   font-size: 0.75rem;
+}
+
+/* ---- Toasts ---- */
+
+.toasts {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.toast {
+  background: var(--surface);
+  border: 2px solid var(--text);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 4px 4px 0 var(--text);
+  max-width: 22rem;
+}
+.toast.success {
+  border-color: var(--success);
+  box-shadow: 4px 4px 0 var(--success);
+}
+.toast.error {
+  border-color: var(--danger);
+  box-shadow: 4px 4px 0 var(--danger);
 }
 
 /* ---- Motion (ripple in mark) ---- */

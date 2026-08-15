@@ -9,6 +9,7 @@ import UploadZone from './components/UploadZone.vue'
 import { api } from './lib/api'
 import { formatBytes } from './lib/format'
 import { clearSharePayload, readSharePayload } from './lib/share-target'
+import { useToasts } from './lib/toast'
 
 type AuthState = 'loading' | 'anonymous' | 'owner'
 type WorkspaceTab = 'files' | 'shares'
@@ -18,7 +19,9 @@ const tab = ref<WorkspaceTab>('files')
 const fileList = ref<InstanceType<typeof FileList> | null>(null)
 const uploadZone = ref<InstanceType<typeof UploadZone> | null>(null)
 const stats = ref<{ fileCount: number; totalBytes: number } | null>(null)
+const hasFiles = ref(false)
 const sharedNotice = ref(false)
+const toasts = useToasts()
 
 // Public pages are routed by pathname (no router in this phase):
 //   /s/<token>  → public share page
@@ -260,11 +263,13 @@ function switchTab(next: WorkspaceTab): void {
           </p>
           <UploadZone
             ref="uploadZone"
+            :compact="hasFiles"
             @uploaded="refresh"
           />
           <FileList
             ref="fileList"
             @shared="refresh"
+            @hasfiles="hasFiles = $event"
           />
         </section>
         <ShareList v-else-if="tab === 'shares'" />
@@ -274,6 +279,23 @@ function switchTab(next: WorkspaceTab): void {
         </footer>
       </main>
     </template>
+
+    <!-- Global toasts -->
+    <div
+      v-if="toasts.length"
+      class="toasts"
+      aria-live="polite"
+    >
+      <div
+        v-for="item in toasts"
+        :key="item.id"
+        class="toast"
+        :class="item.kind"
+        role="status"
+      >
+        {{ item.message }}
+      </div>
+    </div>
   </div>
 </template>
 
