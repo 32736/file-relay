@@ -118,6 +118,7 @@ function parseAssignments(
       return { column, increment: by }
     }
     if (rhs === '?') return { column, value: params[cursor.index++] }
+    if (/^NULL$/i.test(rhs)) return { column, value: null }
     if (/^-?\d+$/.test(rhs)) return { column, value: Number(rhs) }
     if (rhs.startsWith("'")) return { column, value: rhs.slice(1, -1) }
     throw new Error(`unsupported SET value in fake: ${rhs}`)

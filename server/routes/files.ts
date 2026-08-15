@@ -96,6 +96,27 @@ export const fileRoutes = new Hono<AppEnv>()
 
     return c.json({ deleted: result.meta.changes })
   })
+  // Undo for a logical delete (the UI offers a short undo window after
+  // batch-delete); only rows that are logically deleted are restored.
+  .post('/batch-restore', requireAuth, requireSameOrigin, async (c) => {
+    const body = await c.req.json().catch(() => null)
+    const parsed = z
+      .object({
+        ids: z.array(z.string().uuid()).min(1).max(100),
+      })
+      .safeParse(body)
+    if (!parsed.success) {
+      return apiError(c, 400, 'VALIDATION_ERROR', 'Invalid restore request')
+    }
+    const ids = parsed.data.ids
+    const result = await c.env.DB.prepare(
+      `UPDATE files SET deleted_at = NULL
+       WHERE id IN (${ids.map(() => '?').join(', ')}) AND deleted_at IS NOT NULL`,
+    )
+      .bind(...ids)
+      .run()
+    return c.json({ restored: result.meta.changes })
+  })
   .get('/:id', requireAuth, async (c) => {
     const row = await c.env.DB.prepare(
       `SELECT id, original_name, mime_type, size, created_at

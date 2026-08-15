@@ -247,3 +247,113 @@ describe('Phase 02 files', () => {
     expect(db.rows('files')[0].deleted_at ?? null).toBeNull()
   })
 })
+
+describe('batch-restore (UI undo for logical delete)', () => {
+  let db: D1Fake
+  let bucket: R2Fake
+  let env: ReturnType<typeof makeTestEnv>
+  let cookie: string
+
+  beforeEach(async () => {
+    db = new D1Fake()
+    bucket = new R2Fake()
+    env = makeTestEnv(db, bucket)
+    cookie = await seedOwnerSession(db)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('requires authentication and same-origin', async () => {
+    const unauth = await app.request(
+      '/api/files/batch-restore',
+      { method: 'POST', body: JSON.stringify({ ids: [] }) },
+      env,
+    )
+    expect(unauth.status).toBe(401)
+
+    const crossOrigin = await app.request(
+      '/api/files/batch-restore',
+      {
+        method: 'POST',
+        headers: { Cookie: cookie, Origin: 'https://evil.example' },
+        body: JSON.stringify({ ids: [] }),
+      },
+      env,
+    )
+    expect(crossOrigin.status).toBe(403)
+  })
+
+  it('validates the body', async () => {
+    const response = await app.request(
+      '/api/files/batch-restore',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie, Origin: LOCAL_ORIGIN },
+        body: JSON.stringify({ ids: ['not-a-uuid'] }),
+      },
+      env,
+    )
+    expect(response.status).toBe(400)
+  })
+
+  it('restores logically deleted files and reports the count', async () => {
+    const first = await uploadFile(env, cookie, 'first.txt', 10)
+    const second = await uploadFile(env, cookie, 'second.txt', 20)
+
+    // Logically delete both.
+    const del = await app.request(
+      '/api/files/batch-delete',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie, Origin: LOCAL_ORIGIN },
+        body: JSON.stringify({ ids: [first.fileId, second.fileId] }),
+      },
+      env,
+    )
+    expect(del.status).toBe(200)
+    expect((await del.json()) as { deleted: number }).toEqual({ deleted: 2 })
+    expect((await app.request(`/api/files/${first.fileId}`, { headers: { Cookie: cookie } }, env)).status).toBe(404)
+
+    // Restore both; the detail endpoints become reachable again.
+    const restore = await app.request(
+      '/api/files/batch-restore',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie, Origin: LOCAL_ORIGIN },
+        body: JSON.stringify({ ids: [first.fileId, second.fileId] }),
+      },
+      env,
+    )
+    expect(restore.status).toBe(200)
+    expect((await restore.json()) as { restored: number }).toEqual({ restored: 2 })
+    expect((await app.request(`/api/files/${first.fileId}`, { headers: { Cookie: cookie } }, env)).status).toBe(200)
+    expect((await app.request(`/api/files/${second.fileId}`, { headers: { Cookie: cookie } }, env)).status).toBe(200)
+  })
+
+  it('restores only rows that are actually deleted', async () => {
+    const live = await uploadFile(env, cookie, 'live.txt', 10)
+    const deleted = await uploadFile(env, cookie, 'deleted.txt', 10)
+    await app.request(
+      '/api/files/batch-delete',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie, Origin: LOCAL_ORIGIN },
+        body: JSON.stringify({ ids: [deleted.fileId] }),
+      },
+      env,
+    )
+
+    const restore = await app.request(
+      '/api/files/batch-restore',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: cookie, Origin: LOCAL_ORIGIN },
+        body: JSON.stringify({ ids: [live.fileId, deleted.fileId] }),
+      },
+      env,
+    )
+    expect((await restore.json()) as { restored: number }).toEqual({ restored: 1 })
+  })
+})

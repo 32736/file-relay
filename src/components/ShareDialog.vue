@@ -2,7 +2,10 @@
 import { nextTick, onMounted, ref } from 'vue'
 import QRCode from 'qrcode'
 
+const dialogRef = ref<HTMLDivElement | null>(null)
+
 import { api } from '../lib/api'
+import { saveShareUrl } from '../lib/share-urls'
 import type { FileItem } from './FileList.vue'
 
 const props = defineProps<{ file: FileItem }>()
@@ -40,6 +43,7 @@ async function createShare(): Promise<void> {
       method: 'POST',
       body: JSON.stringify(body),
     })
+    saveShareUrl(result.value.id, result.value.url)
     emit('shared')
     await nextTick()
     if (qrCanvas.value) {
@@ -59,13 +63,10 @@ async function copyUrl(): Promise<void> {
   setTimeout(() => (copied.value = false), 1500)
 }
 
-function sharePath(): string {
-  if (!result.value) return ''
-  const token = result.value.url.split('/s/')[1]
-  return `/s/${token}`
-}
-
-onMounted(() => undefined)
+onMounted(() => {
+  // Move focus into the dialog so keyboard users land inside, not on the page.
+  nextTick(() => dialogRef.value?.focus())
+})
 </script>
 
 <template>
@@ -74,9 +75,13 @@ onMounted(() => undefined)
     @click.self="emit('close')"
   >
     <div
+      ref="dialogRef"
       class="dialog"
       role="dialog"
+      aria-modal="true"
       aria-label="分享文件"
+      tabindex="-1"
+      @keydown.esc="emit('close')"
     >
       <h3>分享 {{ file.name }}</h3>
 
@@ -172,7 +177,7 @@ onMounted(() => undefined)
           </button>
         </div>
         <p class="hint">
-          本页下载地址：{{ sharePath() }}
+          链接已保存到分享页（本设备），关闭后仍可复制。
         </p>
       </div>
     </div>
@@ -191,7 +196,7 @@ onMounted(() => undefined)
 }
 .dialog {
   background: #fff;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 1.25rem 1.5rem;
   max-width: 26rem;
   width: 90%;
@@ -222,14 +227,14 @@ label input[type='password'] {
 }
 button {
   padding: 0.4rem 0.9rem;
-  border-radius: 5px;
-  border: 1px solid var(--border, #ccc);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
   cursor: pointer;
 }
 button[type='submit'] {
-  background: var(--accent, #3b82f6);
+  background: var(--accent);
   color: #fff;
-  border-color: var(--accent, #3b82f6);
+  border-color: var(--accent);
 }
 button.ghost {
   background: transparent;
@@ -243,13 +248,13 @@ button.ghost {
   font-size: 0.85rem;
 }
 .error {
-  color: #dc2626;
+  color: var(--danger);
 }
 .ok {
-  color: #16a34a;
+  color: var(--success);
 }
 .hint {
-  color: #777;
+  color: var(--text-muted);
   font-size: 0.8rem;
 }
 </style>

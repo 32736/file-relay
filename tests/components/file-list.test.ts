@@ -31,6 +31,44 @@ function stubFiles(): void {
   )
 }
 
+/** Fetch stub with batch-delete / batch-restore recording for undo tests. */
+function stubWithDelete(): ReturnType<typeof vi.fn> {
+  const calls: { url: string; method?: string }[] = []
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      calls.push({ url, method: init?.method })
+      if (url.includes('/batch-delete') && init?.method === 'POST') {
+        return new Response(JSON.stringify({ deleted: 2 }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      if (url.includes('/batch-restore') && init?.method === 'POST') {
+        return new Response(JSON.stringify({ restored: 2 }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      if (url.includes('/api/files?') || url === '/api/files') {
+        return new Response(
+          JSON.stringify({
+            files: [
+              { id: 'f1', name: 'a.txt', size: 10, mimeType: 'text/plain', createdAt: 1 },
+              { id: 'f2', name: 'b.txt', size: 20, mimeType: 'text/plain', createdAt: 2 },
+            ],
+            nextCursor: null,
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        )
+      }
+      return new Response('not found', { status: 404 })
+    }),
+  )
+  return vi.mocked(globalThis.fetch)
+}
+
 describe('FileList', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -49,6 +87,46 @@ describe('FileList', () => {
     expect(wrapper.findComponent(ShareDialog).exists()).toBe(true)
   })
 
+
+  it('confirms batch delete and offers an undo window that restores', async () => {
+    stubWithDelete()
+    vi.stubGlobal('confirm', vi.fn(() => true))
+    const wrapper = mount(FileList)
+    await flushPromises()
+
+    // Select two rows via the row checkboxes.
+    const checkboxes = wrapper.findAll('input[type="checkbox"]')
+    await checkboxes[1].setValue(true)
+    await checkboxes[2].setValue(true)
+    await wrapper.find('button.danger').trigger('click')
+    await flushPromises()
+
+    expect(globalThis.confirm).toHaveBeenCalled()
+    expect(wrapper.text()).toContain('已删除 · 撤销')
+
+    await wrapper.find('button:not(.danger)').trigger('click') // the undo button
+    await flushPromises()
+
+    const fetchMock = vi.mocked(globalThis.fetch)
+    const calls = fetchMock.mock.calls.map((call) => String(call[0]))
+    expect(calls.some((url) => url.includes('/batch-delete'))).toBe(true)
+    expect(calls.some((url) => url.includes('/batch-restore'))).toBe(true)
+  })
+
+  it('marks the select-all checkbox indeterminate on partial selection', async () => {
+    stubFiles()
+    const wrapper = mount(FileList)
+    await flushPromises()
+
+    const checkboxes = wrapper.findAll('input[type="checkbox"]')
+    expect(checkboxes[0].element as HTMLInputElement).not.toHaveProperty('indeterminate', true)
+
+    await checkboxes[1].setValue(true)
+    await flushPromises()
+
+    const selectAll = wrapper.find('input[type="checkbox"]').element as HTMLInputElement
+    expect(selectAll.indeterminate).toBe(true)
+  })
 
   it('creates a share and renders the URL and QR canvas', async () => {
     vi.stubGlobal(

@@ -29,32 +29,28 @@ async function load(): Promise<void> {
 }
 
 async function download(): Promise<void> {
+  // Native streaming download: the server sends Content-Disposition +
+  // Content-Length, so the browser writes the file to disk instead of the
+  // previous blob() full-buffer (which OOM'd phones on large files).
+  window.location.href = `/api/public/shares/${props.token}/download`
   busy.value = true
-  error.value = null
-  try {
-    const response = await fetch(`/api/public/shares/${props.token}/download`)
-    if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null
-      throw new Error(body?.error?.message ?? `下载失败（${response.status}）`)
-    }
-    // Trigger the browser download; the response body is the streamed file.
-    const blob = await response.blob()
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = meta.value?.name ?? 'download'
-    document.body.appendChild(anchor)
-    anchor.click()
-    anchor.remove()
-    URL.revokeObjectURL(url)
+  setTimeout(async () => {
+    busy.value = false
     done.value = true
     setTimeout(() => (done.value = false), 3000)
-    await load() // refresh remaining count
-  } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : String(cause)
-  } finally {
-    busy.value = false
+    await load() // refresh remaining count after the claim
+  }, 1200)
+}
+
+function terminalReason(): string | null {
+  if (!meta.value) return null
+  if (meta.value.expiresAt !== null && meta.value.expiresAt <= Math.floor(Date.now() / 1000)) {
+    return '此分享已过期'
   }
+  if (meta.value.remainingDownloads !== null && meta.value.remainingDownloads <= 0) {
+    return '此分享的下载次数已用完'
+  }
+  return null
 }
 
 onMounted(() => void load())
@@ -65,7 +61,9 @@ onMounted(() => void load())
     class="share-page"
     aria-label="分享的文件"
   >
-    <h1>{{ meta?.name ?? '分享' }}</h1>
+    <h1 class="file-title">
+      {{ meta?.name ?? '分享' }}
+    </h1>
 
     <p
       v-if="error"
@@ -80,6 +78,13 @@ onMounted(() => void load())
       role="status"
     >
       下载已开始
+    </p>
+
+    <p
+      v-if="!meta && !error"
+      role="status"
+    >
+      加载中…
     </p>
 
     <template v-if="meta">
@@ -98,12 +103,20 @@ onMounted(() => void load())
         </div>
       </dl>
 
+      <p
+        v-if="terminalReason()"
+        class="terminal"
+        role="alert"
+      >
+        {{ terminalReason() }}，请联系发送者重新分享。
+      </p>
       <button
+        v-else
         class="download"
-        :disabled="busy || (meta.remainingDownloads !== null && meta.remainingDownloads <= 0)"
+        :disabled="busy"
         @click="download"
       >
-        {{ busy ? '下载中…' : '下载文件' }}
+        {{ busy ? '下载已开始' : '下载文件' }}
       </button>
     </template>
   </section>
@@ -114,8 +127,18 @@ onMounted(() => void load())
   max-width: 30rem;
   margin: 2rem auto;
   padding: 1.5rem;
-  border: 1px solid var(--border, #ddd);
-  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.file-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.4rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.terminal {
+  color: var(--danger);
+  font-size: 0.9rem;
 }
 .meta {
   margin: 1rem 0;
@@ -127,13 +150,13 @@ onMounted(() => void load())
   padding: 0.3rem 0;
 }
 .meta dt {
-  color: #666;
+  color: var(--text-muted);
 }
 button {
   padding: 0.5rem 1.1rem;
-  border-radius: 6px;
-  border: 1px solid var(--border, #ccc);
-  background: var(--accent, #3b82f6);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--accent);
   color: #fff;
   cursor: pointer;
 }
@@ -142,9 +165,9 @@ button:disabled {
   cursor: default;
 }
 .error {
-  color: #dc2626;
+  color: var(--danger);
 }
 .ok {
-  color: #16a34a;
+  color: var(--success);
 }
 </style>

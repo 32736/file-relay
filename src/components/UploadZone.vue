@@ -97,10 +97,14 @@ defineExpose({ addFiles })
   >
     <div
       class="drop-area"
+      role="button"
+      tabindex="0"
       @dragenter.prevent="dragging = true"
       @dragover.prevent="dragging = true"
       @dragleave.prevent="dragging = false"
       @drop.prevent="onDrop"
+      @keydown.enter.prevent="pickInput?.click()"
+      @click="pickInput?.click()"
     >
       <p>
         拖放文件到这里，或
@@ -137,7 +141,8 @@ defineExpose({ addFiles })
         >
           <div
             class="fill"
-            :style="{ width: `${percent(task)}%` }"
+            :style="{ '--progress': percent(task) / 100 }"
+            aria-hidden="true"
           />
         </div>
         <div class="row sub">
@@ -208,21 +213,21 @@ defineExpose({ addFiles })
 
 <style scoped>
 .upload-zone .drop-area {
-  border: 2px dashed var(--border, #ccc);
-  border-radius: 8px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
   padding: 1.5rem;
   text-align: center;
 }
 .upload-zone.dragging .drop-area {
-  border-color: var(--accent, #3b82f6);
-  background: rgba(59, 130, 246, 0.06);
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 .pick input {
   display: none;
 }
 .pick {
   cursor: pointer;
-  color: var(--accent, #3b82f6);
+  color: var(--accent);
   text-decoration: underline;
 }
 .tasks {
@@ -234,8 +239,8 @@ defineExpose({ addFiles })
   gap: 0.6rem;
 }
 .task {
-  border: 1px solid var(--border, #eee);
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   padding: 0.6rem 0.8rem;
 }
 .task.completed {
@@ -253,16 +258,16 @@ defineExpose({ addFiles })
   white-space: nowrap;
 }
 .meta {
-  color: #888;
+  color: var(--text-muted);
   font-size: 0.8rem;
 }
 .status {
-  color: #555;
+  color: var(--text-muted);
   font-size: 0.8rem;
 }
 .sub {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--text-muted);
   min-height: 1.1rem;
 }
 .bar {
@@ -274,8 +279,10 @@ defineExpose({ addFiles })
 }
 .fill {
   height: 100%;
-  background: var(--accent, #3b82f6);
-  transition: width 0.2s;
+  background: var(--accent);
+  transform: scaleX(var(--progress, 0));
+  transform-origin: left;
+  transition: transform 0.2s ease-out;
 }
 .actions {
   display: flex;
@@ -283,19 +290,28 @@ defineExpose({ addFiles })
 }
 .actions button {
   background: transparent;
-  border: 1px solid var(--border, #ccc);
-  border-radius: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   padding: 0.2rem 0.6rem;
   font-size: 0.8rem;
   cursor: pointer;
 }
 .actions button.danger {
-  color: #dc2626;
+  color: var(--danger);
 }
 .error {
-  color: #dc2626;
+  color: var(--danger);
 }
 .hidden-input {
-  display: none;
+  /* sr-only: reachable via the "选择文件续传" button */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 </style>

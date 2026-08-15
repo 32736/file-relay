@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 
 import { api } from '../lib/api'
 import { formatBytes, formatDate } from '../lib/format'
@@ -22,6 +22,20 @@ const selected = ref<Set<string>>(new Set())
 const loading = ref(false)
 const error = ref<string | null>(null)
 const sharing = ref<FileItem | null>(null)
+const selectAllRef = ref<HTMLInputElement | null>(null)
+const undo = ref<{ ids: string[] } | null>(null)
+let undoTimer: ReturnType<typeof setTimeout> | undefined
+
+// Reflect partial selection so screen readers aren't lied to.
+watch(
+  () => selected.value.size,
+  () => {
+    if (selectAllRef.value) {
+      selectAllRef.value.indeterminate =
+        selected.value.size > 0 && selected.value.size < files.value.length
+    }
+  },
+)
 
 async function load(reset = true): Promise<void> {
   loading.value = true
@@ -65,12 +79,33 @@ function toggleAll(): void {
 async function deleteSelected(): Promise<void> {
   const ids = [...selected.value]
   if (ids.length === 0) return
+  if (!window.confirm(`将从 Drop 永久删除 ${ids.length} 个文件，确定？`)) return
   try {
     await api<{ deleted: number }>('/api/files/batch-delete', {
       method: 'POST',
       body: JSON.stringify({ ids }),
     })
     selected.value = new Set()
+    // Short undo window — deletion is logical, so restoring is cheap.
+    undo.value = { ids }
+    clearTimeout(undoTimer)
+    undoTimer = setTimeout(() => (undo.value = null), 5000)
+    await load(true)
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : String(cause)
+  }
+}
+
+async function undoDelete(): Promise<void> {
+  if (!undo.value) return
+  const ids = undo.value.ids
+  clearTimeout(undoTimer)
+  undo.value = null
+  try {
+    await api<{ restored: number }>('/api/files/batch-restore', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    })
     await load(true)
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
@@ -97,11 +132,19 @@ defineExpose({ load })
         @input="onSearch"
       >
       <button
-        class="ghost"
+        class="ghost danger"
         :disabled="selected.size === 0"
         @click="deleteSelected"
       >
         删除选中（{{ selected.size }}）
+      </button>
+      <button
+        v-if="undo"
+        class="ghost"
+        role="status"
+        @click="undoDelete"
+      >
+        已删除 · 撤销
       </button>
     </div>
 
@@ -130,6 +173,7 @@ defineExpose({ load })
         <tr>
           <th>
             <input
+              ref="selectAllRef"
               type="checkbox"
               aria-label="全选"
               @change="toggleAll"
@@ -176,10 +220,10 @@ defineExpose({ load })
               分享
             </button>
             <button
-              class="ghost danger"
+              class="ghost"
               @click="toggle(file.id)"
             >
-              删除
+              选择
             </button>
           </td>
         </tr>
@@ -227,7 +271,7 @@ th,
 td {
   text-align: left;
   padding: 0.45rem 0.6rem;
-  border-bottom: 1px solid var(--border, #eee);
+  border-bottom: 1px solid var(--border);
 }
 .name {
   max-width: 24rem;
@@ -241,8 +285,8 @@ td {
 }
 button.ghost {
   background: transparent;
-  border: 1px solid var(--border, #ccc);
-  border-radius: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   padding: 0.25rem 0.6rem;
   cursor: pointer;
 }
@@ -251,12 +295,12 @@ button.ghost:disabled {
   cursor: default;
 }
 button.danger {
-  color: #dc2626;
+  color: var(--danger);
 }
 .empty {
-  color: #888;
+  color: var(--text-muted);
 }
 .error {
-  color: #dc2626;
+  color: var(--danger);
 }
 </style>

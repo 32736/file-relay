@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 
 import { api } from '../lib/api'
 import { formatDate } from '../lib/format'
+import { loadShareUrls } from '../lib/share-urls'
 
 interface ShareItem {
   id: string
@@ -20,6 +21,8 @@ const shares = ref<ShareItem[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const busyId = ref<string | null>(null)
+const copiedId = ref<string | null>(null)
+const shareUrls = ref<Record<string, string>>({})
 
 async function load(): Promise<void> {
   loading.value = true
@@ -27,11 +30,20 @@ async function load(): Promise<void> {
   try {
     const body = await api<{ shares: ShareItem[] }>('/api/shares')
     shares.value = body.shares
+    shareUrls.value = loadShareUrls()
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
   } finally {
     loading.value = false
   }
+}
+
+async function copyUrl(id: string): Promise<void> {
+  const url = shareUrls.value[id]
+  if (!url) return
+  await navigator.clipboard.writeText(url)
+  copiedId.value = id
+  setTimeout(() => (copiedId.value = null), 1500)
 }
 
 async function revoke(id: string): Promise<void> {
@@ -123,6 +135,13 @@ defineExpose({ load })
           <td>{{ share.expiresAt ? formatDate(share.expiresAt) : '永久' }}</td>
           <td class="actions">
             <button
+              v-if="shareUrls[share.id]"
+              class="ghost"
+              @click="copyUrl(share.id)"
+            >
+              {{ copiedId === share.id ? '已复制' : '复制链接' }}
+            </button>
+            <button
               v-if="share.revokedAt === null"
               class="ghost danger"
               :disabled="busyId === share.id"
@@ -156,7 +175,7 @@ th,
 td {
   text-align: left;
   padding: 0.45rem 0.6rem;
-  border-bottom: 1px solid var(--border, #eee);
+  border-bottom: 1px solid var(--border);
 }
 .name {
   max-width: 20rem;
@@ -167,22 +186,22 @@ td {
 .state {
   font-size: 0.8rem;
   padding: 0.1rem 0.45rem;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 .state.有效 {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--success-soft);
+  color: var(--success);
 }
 .state.已撤销,
 .state.已过期,
 .state.已耗尽 {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 button.ghost {
   background: transparent;
-  border: 1px solid var(--border, #ccc);
-  border-radius: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   padding: 0.25rem 0.6rem;
   cursor: pointer;
 }
@@ -191,12 +210,12 @@ button.ghost:disabled {
   cursor: default;
 }
 button.danger {
-  color: #dc2626;
+  color: var(--danger);
 }
 .empty {
-  color: #888;
+  color: var(--text-muted);
 }
 .error {
-  color: #dc2626;
+  color: var(--danger);
 }
 </style>

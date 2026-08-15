@@ -17,3 +17,6 @@ coverage/
 .history/
 
 .body.bin
+
+# Impeccable critique snapshots (local working artifacts, not source)
+.impeccable/

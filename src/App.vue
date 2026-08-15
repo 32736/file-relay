@@ -84,20 +84,30 @@ function switchTab(next: WorkspaceTab): void {
       class="hero"
       aria-labelledby="page-title"
     >
-      <p class="eyebrow">
+      <p
+        v-if="!isPublicPage"
+        class="eyebrow"
+      >
         Private file transfer
       </p>
       <div
+        v-if="!isPublicPage"
         class="mark"
         aria-hidden="true"
       >
         ↗
       </div>
-      <h1 id="page-title">
+      <h1
+        id="page-title"
+        :class="{ compact: isPublicPage }"
+      >
         Drop
       </h1>
 
-      <p class="summary">
+      <p
+        v-if="!isPublicPage"
+        class="summary"
+      >
         A focused, owner-operated handoff point for files across your devices.
       </p>
 
@@ -145,6 +155,7 @@ function switchTab(next: WorkspaceTab): void {
       >
         <button
           :class="{ active: tab === 'files' }"
+          :aria-current="tab === 'files' ? 'page' : undefined"
           type="button"
           @click="switchTab('files')"
         >
@@ -152,6 +163,7 @@ function switchTab(next: WorkspaceTab): void {
         </button>
         <button
           :class="{ active: tab === 'shares' }"
+          :aria-current="tab === 'shares' ? 'page' : undefined"
           type="button"
           @click="switchTab('shares')"
         >
@@ -187,11 +199,15 @@ function switchTab(next: WorkspaceTab): void {
 </template>
 
 <style scoped>
+.hero h1.compact {
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  letter-spacing: -0.03em;
+}
 .tabs {
   display: flex;
   gap: 0.4rem;
   margin-bottom: 1rem;
-  border-bottom: 1px solid var(--border, #eee);
+  border-bottom: 1px solid var(--border);
 }
 .tabs button {
   background: transparent;
@@ -200,20 +216,20 @@ function switchTab(next: WorkspaceTab): void {
   padding: 0.5rem 1rem;
   cursor: pointer;
   font-size: 0.95rem;
-  color: #666;
+  color: var(--text-muted);
 }
 .tabs button.active {
-  color: var(--accent, #3b82f6);
-  border-bottom-color: var(--accent, #3b82f6);
+  color: var(--accent);
+  border-bottom-color: var(--accent);
   font-weight: 600;
 }
 .stats {
   margin-top: 0.4rem;
-  color: #888;
+  color: var(--text-muted);
   font-size: 0.85rem;
 }
 .shared-notice {
-  color: #16a34a;
+  color: var(--success);
   margin-bottom: 0.6rem;
 }
 </style>
