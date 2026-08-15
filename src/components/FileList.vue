@@ -559,8 +559,7 @@ tbody tr:hover .actions .icon-btn,
 }
 .confirm-title {
   margin: 0 0 0.3rem;
-  font-family: "Space Grotesk", sans-serif;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1.05rem;
 }
 .confirm-sub {
