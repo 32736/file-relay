@@ -30,8 +30,7 @@ burn-after-reading files, and revoked/expired shares. Wire the Worker's
 
 ## Out of Scope
 
-- Share passwords, previews, storage stats (Phase 07).
-- Turnstile / incoming uploads (Phase 08).
+- Storage statistics.
 - Any cleanup behavior beyond the listed tasks; no new public routes.
 - Production deployment or remote migration application (explicit approval).
 

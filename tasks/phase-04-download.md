@@ -15,10 +15,6 @@ interact with share download counting.
 - `docs/security.md`
 - `docs/cloudflare.md`
 - `docs/api.md`
-- `docs/cloudflare_private_file_drop_codex_implementation_plan.md`
-  (§16 R2 object keys, §31 download flow, §32 range downloads, §33 preview
-  safety, §40 filename safety, §44 routes, §55 phase scope, §69 download test
-  matrix)
 
 ## Scope
 
@@ -31,8 +27,6 @@ interact with share download counting.
 ## Out of Scope
 
 - Public share downloads (`/api/public/shares/:token/download`, Phase 05).
-- Inline previews and the preview whitelist UI (Phase 07; Phase 04 always sends
-  `attachment`).
 - Download counting, share sessions, atomic claims (Phase 05).
 - Scheduled cleanup of downloaded/expired files (Phase 06).
 - Front-end download UI.

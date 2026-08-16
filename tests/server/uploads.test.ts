@@ -136,7 +136,6 @@ describe('Phase 02 uploads', () => {
     const sessions = db.rows('upload_sessions')
     expect(sessions).toHaveLength(1)
     expect(sessions[0].mode).toBe('single')
-    expect(sessions[0].auth_kind).toBe('owner')
     expect(sessions[0].status).toBe('created')
     expect(sessions[0].original_name).toBe('ok.txt')
     expect(db.rows('files')).toHaveLength(0) // files row appears on completion
@@ -175,7 +174,6 @@ describe('Phase 02 uploads', () => {
     expect(files).toHaveLength(1)
     expect(files[0].id).toBe(body.id)
     expect(files[0].size).toBe(1024)
-    expect(files[0].source).toBe('owner')
     expect(files[0].etag).toBe(body.etag)
     // Default retention: 30 days from creation, stored as epoch seconds
     expect(files[0].expires_at).toBe((files[0].created_at as number) + 30 * 24 * 60 * 60)
@@ -671,9 +669,8 @@ describe('Phase 03 multipart', () => {
       .prepare(
         `INSERT INTO upload_sessions
          (id, file_id, object_key, original_name, mime_type, total_size, chunk_size,
-          total_parts, mode, r2_upload_id, auth_kind, access_token_hash, status,
-          created_at, expires_at, completed_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          total_parts, mode, r2_upload_id, status, created_at, expires_at, completed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         'sess-crash',
@@ -686,8 +683,6 @@ describe('Phase 03 multipart', () => {
         3,
         'multipart',
         'fake-mpu-1',
-        'owner',
-        null,
         'completed',
         now - 100,
         now + 100,
@@ -808,9 +803,8 @@ describe('Phase 03 multipart', () => {
       .prepare(
         `INSERT INTO upload_sessions
          (id, file_id, object_key, original_name, mime_type, total_size, chunk_size,
-          total_parts, mode, r2_upload_id, auth_kind, access_token_hash, status,
-          created_at, expires_at, completed_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          total_parts, mode, r2_upload_id, status, created_at, expires_at, completed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         'sess-no-object',
@@ -823,8 +817,6 @@ describe('Phase 03 multipart', () => {
         3,
         'multipart',
         'fake-mpu-1',
-        'owner',
-        null,
         'completed',
         now - 100,
         now + 100,

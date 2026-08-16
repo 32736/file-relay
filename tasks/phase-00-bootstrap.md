@@ -26,8 +26,7 @@ Establish a reliable, testable Vue and Cloudflare Worker foundation.
 
 ## Out of Scope
 
-Authentication, file upload or download, sharing, cleanup behavior, Turnstile,
-PWA, Tauri, and E2EE.
+Authentication, file upload or download, sharing, cleanup behavior, and PWA.
 
 ## Existing Constraints
 

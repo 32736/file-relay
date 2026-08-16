@@ -14,6 +14,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   NOT_FOUND: '请求的内容不存在',
   CONFLICT: '当前操作无法完成，请刷新后重试',
   SIZE_MISMATCH: '文件大小校验失败，请重试',
+  INVALID_CHALLENGE: '验证已失效，请重试',
+  INVALID_MAGIC_LINK: '登录链接无效或已过期',
   UPLOAD_INTERRUPTED: '上传已中断，请重试',
   UPSTREAM_ERROR: '存储服务暂时不可用，请稍后重试',
 }

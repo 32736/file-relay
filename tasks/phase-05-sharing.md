@@ -32,8 +32,7 @@ and forms the share URL. Passwords stay out of scope until Phase 07.
 
 ## Out of Scope
 
-- Share passwords / `POST /api/public/shares/:token/unlock` (Phase 07).
-- Preview whitelist, QR codes, storage stats (Phase 07).
+- QR codes and storage statistics.
 - Physical deletion of exhausted burn-after-reading files (Phase 06 cron sets
   `deleted_at` and removes R2 objects in a safety window).
 - `/s/:token` SPA page UI (deferred; the API surface is what Phase 05 tests).
@@ -82,9 +81,6 @@ and forms the share URL. Passwords stay out of scope until Phase 07.
 6. **Revocation is a flag.** `DELETE /api/shares/:id` sets `revoked_at`;
    revoked shares 404/403 immediately. Idempotent `204` for already-revoked;
    `404` for unknown ids.
-7. **Passwords are schema-ready but inert.** `password_mac` exists (NULL) and
-   the create-body rejects a `password` field with `400` this phase (Phase 07
-   enables it).
 
 ## API Changes
 
@@ -130,7 +126,6 @@ CREATE TABLE `shares` (
   `id` text PRIMARY KEY NOT NULL,
   `file_id` text NOT NULL,
   `token_hash` text NOT NULL,
-  `password_mac` text,
   `expires_at` integer,
   `max_downloads` integer,
   `download_count` integer DEFAULT 0 NOT NULL,
@@ -212,4 +207,3 @@ pnpm db:migrate:local
 - **公共元数据最小暴露**：只返回 name/size/mimeType/expiresAt/remainingDownloads/passwordRequired；文件已删除 → 分享整体 404（不区分条件）。
 - **阅后即焚**：`maxDownloads=1` 自然耗尽 + 标志字段；物理删除归 Phase 06 cron 安全窗口，绝不在流中删除。
 - **撤销**：`revoked_at` 标志位，幂等 204。
-- **密码**：`password_mac` 字段建好但本期 NULL；创建 body 传 `password` → 400（Phase 07 开启）。

@@ -31,9 +31,9 @@ describe('Phase 05 sharing', () => {
     const now = Math.floor(Date.now() / 1000)
     await db
       .prepare(
-        'INSERT INTO files (id, object_key, original_name, mime_type, size, etag, source, created_at, expires_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO files (id, object_key, original_name, mime_type, size, etag, created_at, expires_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       )
-      .bind(fileId, objectKey, name, 'text/plain', size, 'etag-x', 'owner', now, now + 2592000, null)
+      .bind(fileId, objectKey, name, 'text/plain', size, 'etag-x', now, now + 2592000, null)
       .run()
     await bucket.put(
       objectKey,

@@ -4,12 +4,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AppEnv, Bindings } from '../../server/env'
 import { app } from '../../server/index'
 import { randomToken, sha256Hex } from '../../server/lib/crypto'
+import { storeOwnerEmail } from '../../server/lib/magic-link'
 import { requireAuth } from '../../server/middleware/auth'
 import { D1Fake } from '../helpers/d1-fake'
 
 const OWNER_ID = 123456
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token'
 const GITHUB_USER_URL = 'https://api.github.com/user'
+const GITHUB_EMAIL_URL = 'https://api.github.com/user/emails'
+const RESEND_EMAILS_URL = 'https://api.resend.com/emails'
+const EMAIL_ENCRYPTION_KEY = 'MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE'
+
+function stubResend(status = 200): ReturnType<typeof vi.fn> {
+  const send = vi.fn(async (input: RequestInfo | URL) => {
+    if (String(input) === RESEND_EMAILS_URL) {
+      return jsonResponse({ id: 'email-id' }, status)
+    }
+    return new Response('not found', { status: 404 })
+  })
+  vi.stubGlobal('fetch', send)
+  return send
+}
 
 function testEnv(db: D1Fake): Bindings {
   return {
@@ -20,6 +35,9 @@ function testEnv(db: D1Fake): Bindings {
     OWNER_GITHUB_ID: String(OWNER_ID),
     GITHUB_CLIENT_ID: 'test-client-id',
     GITHUB_CLIENT_SECRET: 'test-client-secret',
+    RESEND_API_KEY: 're_test_key',
+    EMAIL_ENCRYPTION_KEY,
+    MAGIC_LINK_FROM: 'login@example.test',
     UPLOAD_CHUNK_SIZE: '33554432',
     MAX_FILE_SIZE: '2147483648',
     SESSION_TTL_SECONDS: '2592000',
@@ -34,7 +52,7 @@ function jsonResponse(body: unknown, status = 200): Response {
   })
 }
 
-function stubGitHub(overrides: { userId?: number; failTokenExchange?: boolean } = {}): void {
+function stubGitHub(overrides: { userId?: number; failTokenExchange?: boolean; emails?: unknown } = {}): void {
   const userId = overrides.userId ?? OWNER_ID
   vi.stubGlobal(
     'fetch',
@@ -46,6 +64,11 @@ function stubGitHub(overrides: { userId?: number; failTokenExchange?: boolean } 
       }
       if (url === GITHUB_USER_URL) {
         return jsonResponse({ id: userId })
+      }
+      if (url === GITHUB_EMAIL_URL) {
+        return jsonResponse(overrides.emails ?? [
+          { email: 'owner@example.test', primary: true, verified: true },
+        ])
       }
       return new Response('not found', { status: 404 })
     }),
@@ -138,7 +161,7 @@ describe('Phase 01 auth', () => {
     expect(location.origin).toBe('https://github.com')
     expect(location.pathname).toBe('/login/oauth/authorize')
     expect(location.searchParams.get('client_id')).toBe('test-client-id')
-    expect(location.searchParams.get('scope')).toBe('read:user')
+    expect(location.searchParams.get('scope')).toBe('read:user user:email')
     expect(location.searchParams.get('redirect_uri')).toBe(
       'http://localhost/api/auth/github/callback',
     )
@@ -217,6 +240,150 @@ describe('Phase 01 auth', () => {
     expect(rows[0].token_hash).not.toBe(rawToken)
     expect(rows[0].token_hash).toBe(await sha256Hex(rawToken))
     expect(rows[0].github_user_id).toBe(String(OWNER_ID))
+
+    const emails = db.rows('owner_emails')
+    expect(emails).toHaveLength(1)
+    expect(emails[0].github_user_id).toBe(String(OWNER_ID))
+    expect(emails[0].encrypted_email).not.toContain('owner@example.test')
+  })
+
+  it('sends a one-time Magic Link only for the synced GitHub email', async () => {
+    const db = new D1Fake()
+    const env = testEnv(db)
+    const resend = stubResend()
+    await storeOwnerEmail(env, String(OWNER_ID), 'owner@example.test')
+
+    const request = await app.request(
+      '/api/auth/magic-link',
+      {
+        method: 'POST',
+        headers: { Origin: 'http://localhost' },
+        body: JSON.stringify({ email: 'OWNER@example.test' }),
+      },
+      env,
+    )
+
+    expect(request.status).toBe(204)
+    expect(resend).toHaveBeenCalledTimes(1)
+    expect(resend).toHaveBeenCalledWith(
+      RESEND_EMAILS_URL,
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer re_test_key',
+          'User-Agent': 'drop/1.0',
+        }),
+      }),
+    )
+    const sent = JSON.parse(String(resend.mock.calls[0]?.[1]?.body)) as { text: string; to: string[] }
+    expect(sent.to).toEqual(['owner@example.test'])
+    const token = /#([A-Za-z0-9_-]{43})/.exec(sent.text)?.[1]
+    expect(token).toBeTruthy()
+    expect(db.rows('magic_link_tokens')).toHaveLength(1)
+    const tokenHash = String(db.rows('magic_link_tokens')[0].token_hash)
+    expect(tokenHash).not.toBe(token)
+    expect(resend).toHaveBeenCalledWith(
+      RESEND_EMAILS_URL,
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'Idempotency-Key': `magic-link/${tokenHash}` }),
+      }),
+    )
+
+    const verify = await app.request(
+      '/api/auth/magic-link/verify',
+      {
+        method: 'POST',
+        headers: { Origin: 'http://localhost' },
+        body: JSON.stringify({ token }),
+      },
+      env,
+    )
+    expect(verify.status).toBe(200)
+    expect(cookieValue(verify.headers.getSetCookie(), 'drop_session')).toBeTruthy()
+
+    const replay = await app.request(
+      '/api/auth/magic-link/verify',
+      {
+        method: 'POST',
+        headers: { Origin: 'http://localhost' },
+        body: JSON.stringify({ token }),
+      },
+      env,
+    )
+    expect(replay.status).toBe(400)
+    await expect(replay.json()).resolves.toEqual({
+      error: { code: 'INVALID_MAGIC_LINK', message: '登录链接无效或已过期' },
+    })
+  })
+
+  it('does not disclose whether a Magic Link email is eligible', async () => {
+    const db = new D1Fake()
+    const env = testEnv(db)
+    const resend = stubResend()
+    await storeOwnerEmail(env, String(OWNER_ID), 'owner@example.test')
+
+    const mismatch = await app.request(
+      '/api/auth/magic-link',
+      {
+        method: 'POST',
+        headers: { Origin: 'http://localhost' },
+        body: JSON.stringify({ email: 'other@example.test' }),
+      },
+      env,
+    )
+    expect(mismatch.status).toBe(204)
+    expect(resend).not.toHaveBeenCalled()
+    expect(db.rows('magic_link_tokens')).toHaveLength(0)
+
+    const foreignOrigin = await app.request(
+      '/api/auth/magic-link',
+      {
+        method: 'POST',
+        headers: { Origin: 'https://evil.example' },
+        body: JSON.stringify({ email: 'owner@example.test' }),
+      },
+      env,
+    )
+    expect(foreignOrigin.status).toBe(403)
+    expect(resend).not.toHaveBeenCalled()
+  })
+
+  it('removes an old email mapping when GitHub no longer has a verified primary email', async () => {
+    const db = new D1Fake()
+    const env = testEnv(db)
+    await storeOwnerEmail(env, String(OWNER_ID), 'old@example.test')
+    stubGitHub({ emails: [{ email: 'old@example.test', primary: true, verified: false }] })
+
+    const start = await app.request('/api/auth/github', {}, env)
+    const state = new URL(start.headers.get('location')!).searchParams.get('state')!
+    const response = await app.request(
+      `/api/auth/github/callback?code=test-code&state=${state}`,
+      { headers: { Cookie: `drop_oauth_state=${state}` } },
+      env,
+    )
+
+    expect(response.status).toBe(302)
+    expect(db.rows('owner_emails')).toHaveLength(0)
+  })
+
+  it('removes an unsent Magic Link token when email delivery fails', async () => {
+    const db = new D1Fake()
+    const env = testEnv(db)
+    stubResend(503)
+    await storeOwnerEmail(env, String(OWNER_ID), 'owner@example.test')
+
+    const response = await app.request(
+      '/api/auth/magic-link',
+      {
+        method: 'POST',
+        headers: { Origin: 'http://localhost' },
+        body: JSON.stringify({ email: 'owner@example.test' }),
+      },
+      env,
+    )
+
+    expect(response.status).toBe(204)
+    expect(db.rows('magic_link_tokens')).toHaveLength(0)
   })
 
   it('returns the owner identity for a valid session cookie', async () => {

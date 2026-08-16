@@ -64,14 +64,13 @@ async function seedFile(
     mime_type: 'text/plain',
     size: 100,
     etag: `etag-${overrides.id}`,
-    source: 'owner',
     created_at: overrides.created_at,
     expires_at: overrides.created_at + 2592000,
     deleted_at: null,
   }
   await db
     .prepare(
-      'INSERT INTO files (id, object_key, original_name, mime_type, size, etag, source, created_at, expires_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO files (id, object_key, original_name, mime_type, size, etag, created_at, expires_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
     )
     .bind(
       row.id,
@@ -80,7 +79,6 @@ async function seedFile(
       row.mime_type,
       row.size,
       row.etag,
-      row.source,
       row.created_at,
       row.expires_at,
       row.deleted_at,

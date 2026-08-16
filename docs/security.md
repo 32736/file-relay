@@ -16,6 +16,12 @@ test fixtures.
   access tokens.
 - Owner sessions use a `__Host-` HttpOnly, Secure, SameSite=Lax cookie.
 - Cookie-authenticated state changes validate the request Origin.
+- GitHub OAuth requests `user:email` only to sync the owner's verified primary
+  email. The address is AES-GCM encrypted with a Worker secret before storage.
+- Magic Link tokens are 32-byte random values kept in the URL fragment; D1
+  stores only their hashes, and each token is short-lived and single-use.
+- Resend receives only the recipient address and one-time link required for
+  delivery. Its API key is a Worker secret; the browser never receives it.
 
 ## File safety
 

@@ -17,6 +17,7 @@ export async function runCleanup(env: Bindings): Promise<void> {
   await cleanupExpiredFiles(env, now)
   await cleanupDeletedFiles(env)
   await cleanupShares(env, now)
+  await cleanupMagicLinks(env, now)
 }
 
 async function cleanupExpiredSessions(env: Bindings, now: number): Promise<void> {
@@ -117,3 +118,10 @@ async function cleanupShares(env: Bindings, now: number): Promise<void> {
     .run()
 }
 
+async function cleanupMagicLinks(env: Bindings, now: number): Promise<void> {
+  await env.DB.prepare(
+    'DELETE FROM magic_link_tokens WHERE expires_at <= ? OR consumed_at IS NOT NULL LIMIT ?',
+  )
+    .bind(now, BATCH_SIZE)
+    .run()
+}

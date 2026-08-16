@@ -74,7 +74,17 @@ button:not(:disabled), a, input { transition: border-color .18s ease, background
 .brand-panel .logo { grid-row: span 2; width: 4.4rem; height: 4.4rem; }
 .brand-panel .wordmark { font-size: 2.3rem; }
 .brand-panel .promise { grid-column: 2; max-width: 34rem; margin: .35rem 0 .75rem; color: var(--text-muted); }
-.signin { display: inline-block; width: fit-content; grid-column: 2; padding: .72rem 1rem; border: 2px solid var(--text); background: var(--text); color: var(--surface); text-decoration: none; box-shadow: var(--shadow-hard-sm); }
+.login-actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; }
+.signin { display: inline-block; width: fit-content; padding: .72rem 1rem; border: 2px solid var(--text); background: var(--text); color: var(--surface); text-decoration: none; box-shadow: var(--shadow-hard-sm); }
+.magic-link-form { display: grid; gap: .35rem; min-width: min(100%, 27rem); }
+.magic-link-form label { color: var(--text-muted); font-size: .82rem; font-weight: 650; }
+.magic-link-controls { display: flex; gap: .5rem; }
+.magic-link-controls input { min-width: 0; flex: 1; padding: .65rem .8rem; border: 1px solid var(--text); border-radius: var(--radius-sm); background: var(--surface); }
+.magic-link-notice, .magic-link-error { grid-column: 2; margin: 0; }
+.magic-link-notice { color: var(--success); }
+.connection-error { grid-column: 2; margin: 0; }
+.logout-button { color: var(--danger) !important; }
+.logout-button:hover { background: var(--danger-soft) !important; }
 .public-header { position: static; }
 .public-header .logo { width: 2rem; height: 2rem; }
 
@@ -112,6 +122,11 @@ button:not(:disabled), a, input { transition: border-color .18s ease, background
   .brand-panel { margin-top: 7vh; padding: 2rem 1.25rem; grid-template-columns: auto 1fr; }
   .brand-panel .logo { width: 3.25rem; height: 3.25rem; }
   .brand-panel .wordmark { font-size: 1.8rem; }
+  .login-actions { grid-column: 1 / -1; flex-direction: column; align-items: stretch; }
+  .login-actions .signin { width: 100%; text-align: center; }
+  .magic-link-form { width: 100%; }
+  .magic-link-controls { flex-direction: column; }
+  .magic-link-notice, .magic-link-error, .connection-error { grid-column: 1 / -1; }
   .workspace-grid { display: block; flex: none; }
   .workspace-panel + .workspace-panel { margin-top: 1rem; }
   .upload-panel > .upload-zone, .files-panel > .file-list { max-height: none; overflow: visible; }

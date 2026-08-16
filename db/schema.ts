@@ -14,6 +14,31 @@ export const sessions = sqliteTable(
   (table) => [index('idx_sessions_expires_at').on(table.expiresAt)],
 )
 
+// The owner email is obtained from GitHub's verified primary email API and
+// encrypted with a Worker secret. Magic-link tokens themselves are hash-only.
+export const ownerEmails = sqliteTable('owner_emails', {
+  githubUserId: text('github_user_id').primaryKey(),
+  encryptedEmail: text('encrypted_email').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+})
+
+export const magicLinkTokens = sqliteTable(
+  'magic_link_tokens',
+  {
+    id: text('id').primaryKey(),
+    tokenHash: text('token_hash').notNull().unique(),
+    githubUserId: text('github_user_id').notNull(),
+    createdAt: integer('created_at').notNull(),
+    expiresAt: integer('expires_at').notNull(),
+    consumedAt: integer('consumed_at'),
+  },
+  (table) => [
+    index('idx_magic_link_tokens_expires_at').on(table.expiresAt),
+    index('idx_magic_link_tokens_owner_created').on(table.githubUserId, table.createdAt),
+  ],
+)
+
 // Phase 02: file metadata. R2 holds the bytes under `object_key`; the original
 // filename is metadata only. A row is created when an upload completes, so the
 // table never contains half-uploaded files. Deletion is logical via
@@ -27,7 +52,6 @@ export const files = sqliteTable(
     mimeType: text('mime_type'),
     size: integer('size').notNull(),
     etag: text('etag'),
-    source: text('source').notNull().default('owner'),
     createdAt: integer('created_at').notNull(),
     expiresAt: integer('expires_at'),
     deletedAt: integer('deleted_at'),
@@ -57,21 +81,15 @@ export const uploadParts = sqliteTable(
   ],
 )
 
-// Phase 02: upload sessions, created with the full Phase 03-ready shape
-// (mode / r2_upload_id / access_token_hash / status lifecycle) so multipart
-// only adds behavior, not schema. `auth_kind` is 'owner' until Phase 08 adds
-// incoming uploads.
-// Phase 05: shares. Only the SHA-256 hash of the share token is stored; the
-// raw token appears exactly once in the creation response. Download limits are
-// enforced with atomic `UPDATE ... RETURNING` claims. `password_mac` stays NULL
-// until Phase 07; physical cleanup of exhausted/expired shares is Phase 06.
+// Shares store only the SHA-256 hash of the raw token, which appears exactly
+// once in the creation response. Download limits use atomic claims; cleanup
+// removes exhausted and expired records.
 export const shares = sqliteTable(
   'shares',
   {
     id: text('id').primaryKey(),
     fileId: text('file_id').notNull(),
     tokenHash: text('token_hash').notNull().unique(),
-    passwordMac: text('password_mac'),
     expiresAt: integer('expires_at'),
     maxDownloads: integer('max_downloads'),
     downloadCount: integer('download_count').notNull().default(0),
@@ -99,8 +117,6 @@ export const uploadSessions = sqliteTable(
     totalParts: integer('total_parts').notNull(),
     mode: text('mode').notNull(),
     r2UploadId: text('r2_upload_id'),
-    authKind: text('auth_kind').notNull(),
-    accessTokenHash: text('access_token_hash'),
     status: text('status').notNull(),
     createdAt: integer('created_at').notNull(),
     expiresAt: integer('expires_at').notNull(),

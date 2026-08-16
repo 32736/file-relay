@@ -64,6 +64,21 @@ Idempotent — `204 No Content` even without a session.
 development over `http://localhost` uses `drop_session` because browsers reject
 `__Host-` cookies without the Secure attribute.
 
+### GitHub 邮箱 Magic Link
+
+GitHub OAuth 请求 `read:user user:email`，并在所有者成功登录后读取其已验证的
+主邮箱。邮箱使用 Worker secret 加密后保存在 D1；GitHub 数字 ID 仍是唯一的
+身份标识。邮件由 Resend 的 HTTPS API 代为投递，Resend API Key 仅保存在 Worker
+secret 中。
+
+- `POST /api/auth/magic-link`：同源公开请求，接收邮箱并在其与已同步的 GitHub
+  已验证主邮箱匹配时发送一次性链接。始终返回 `204`，避免邮箱枚举。
+- `POST /api/auth/magic-link/verify`：同源公开请求，消费 URL fragment 中的令牌并
+  创建现有 HttpOnly 会话。令牌 10 分钟过期、只能使用一次。
+
+邮件链接形如 `/auth/magic#<token>`。令牌位于 fragment，不会进入 HTTP 请求、
+Worker 日志或 Referer；前端会立即清除 fragment 后再进行验证。
+
 ## Phase 02
 
 Owner-only file uploads up to 32 MiB, file listing, and logical deletion.
@@ -184,8 +199,7 @@ header-injection-safe (`filename="..."` ASCII fallback plus RFC 5987
   `206 Partial Content` with `Content-Range: bytes start-end/size`.
 - Unsatisfiable, malformed, or multi-range → `416 Range Not Satisfiable` with
   `Content-Range: bytes */size`.
-- `Content-Disposition: attachment` always (inline previews were removed by
-  decision D14).
+- `Content-Disposition: attachment` always.
 
 ## Phase 05
 

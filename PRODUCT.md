@@ -33,5 +33,5 @@ readable.
 ## Boundaries
 
 - Personal tool, not a team product. No accounts for recipients.
-- Plaintext-only (E2EE removed). Attachments only, no inline previews.
-- Browser + PWA only (no desktop app).
+- 文件始终以附件形式下载，不在应用内预览。
+- Browser + PWA only.

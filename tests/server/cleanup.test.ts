@@ -39,7 +39,7 @@ describe('Phase 06 cleanup', () => {
     const objectKey = `objects/2026/08/${id}`
     await db
       .prepare(
-        'INSERT INTO files (id, object_key, original_name, mime_type, size, etag, source, created_at, expires_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO files (id, object_key, original_name, mime_type, size, etag, created_at, expires_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       )
       .bind(
         id,
@@ -48,7 +48,6 @@ describe('Phase 06 cleanup', () => {
         'text/plain',
         100,
         'etag',
-        'owner',
         0,
         overrides.expires_at ?? null,
         overrides.deleted_at ?? null,
@@ -66,9 +65,8 @@ describe('Phase 06 cleanup', () => {
       .prepare(
         `INSERT INTO upload_sessions
          (id, file_id, object_key, original_name, mime_type, total_size, chunk_size,
-          total_parts, mode, r2_upload_id, auth_kind, access_token_hash, status,
-          created_at, expires_at, completed_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          total_parts, mode, r2_upload_id, status, created_at, expires_at, completed_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         id,
@@ -81,8 +79,6 @@ describe('Phase 06 cleanup', () => {
         1,
         overrides.mode ?? 'single',
         overrides.r2_upload_id ?? null,
-        'owner',
-        null,
         overrides.status ?? 'created',
         0,
         overrides.expires_at ?? 0,
@@ -220,6 +216,28 @@ describe('Phase 06 cleanup', () => {
 
     const remaining = db.rows('shares').map((row) => row.id)
     expect(remaining).toEqual(['live-share'])
+  })
+
+  it('removes consumed and expired Magic Link tokens while keeping active tokens', async () => {
+    const now = Math.floor(Date.now() / 1000)
+    for (const [id, tokenHash, expiresAt, consumedAt] of [
+      ['expired-link', 'magic-expired', now - 1, null],
+      ['consumed-link', 'magic-consumed', now + DAY, now - 1],
+      ['active-link', 'magic-active', now + DAY, null],
+    ] as [string, string, number, number | null][]) {
+      await db
+        .prepare(
+          `INSERT INTO magic_link_tokens
+           (id, token_hash, github_user_id, created_at, expires_at, consumed_at)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(id, tokenHash, '123456', now, expiresAt, consumedAt)
+        .run()
+    }
+
+    await runCleanup(env)
+
+    expect(db.rows('magic_link_tokens').map((row) => row.id)).toEqual(['active-link'])
   })
 
   it('respects the batch bound per run and drains on the next run', async () => {

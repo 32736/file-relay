@@ -4,7 +4,7 @@
 
 After product review, make Drop installable and mobile-friendly: a web app
 manifest, a service worker offline shell, mobile UX polish, and a
-capability-gated Web Share Target declaration. No offline upload queue.
+capability-gated Web Share Target declaration.
 
 ## Read Before Work
 
@@ -32,9 +32,7 @@ capability-gated Web Share Target declaration. No offline upload queue.
 
 ## Out of Scope
 
-- Offline upload queue (explicitly deferred).
-- Native push notifications, background sync.
-- Tauri/E2EE (Phases 10/11).
+- Native application packaging.
 
 ## Design Decisions (confirmed)
 

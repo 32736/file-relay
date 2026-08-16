@@ -10,9 +10,9 @@ const SharePage = defineAsyncComponent(() => import('./components/SharePage.vue'
 import { api } from './lib/api'
 import { formatBytes } from './lib/format'
 import { clearSharePayload, readSharePayload } from './lib/share-target'
-import { useToasts } from './lib/toast'
+import { toast, useToasts } from './lib/toast'
 
-type AuthState = 'loading' | 'anonymous' | 'owner'
+type AuthState = 'loading' | 'anonymous' | 'owner' | 'unavailable'
 const auth = ref<AuthState>('loading')
 const fileList = ref<InstanceType<typeof FileList> | null>(null)
 const uploadZone = ref<InstanceType<typeof UploadZone> | null>(null)
@@ -24,6 +24,15 @@ const toasts = useToasts()
 const shareDialogRef = ref<HTMLDialogElement | null>(null)
 const shareDialogOpen = ref(false)
 const shareDialogMounted = ref(false)
+const logoutBusy = ref(false)
+const magicLinkEmail = ref('')
+const magicLinkBusy = ref(false)
+const magicLinkNotice = ref('')
+const magicLinkError = ref('')
+const isMagicLinkPath = window.location.pathname === '/auth/magic'
+const magicLinkToken = isMagicLinkPath
+  ? window.location.hash.slice(1)
+  : ''
 let shareCloseTimer: ReturnType<typeof setTimeout> | undefined
 
 // Public pages are routed by pathname (no router in this phase):
@@ -33,20 +42,44 @@ const shareMatch = /^\/s\/([A-Za-z0-9_-]+)\/?$/.exec(window.location.pathname)
 const shareToken = shareMatch?.[1] ?? null
 
 onMounted(async () => {
+  window.addEventListener('keydown', onShareDialogKeydown)
+
+  if (isMagicLinkPath) {
+    history.replaceState(null, '', '/auth/magic')
+    if (!magicLinkToken) {
+      magicLinkError.value = '登录链接无效或已过期'
+      auth.value = 'anonymous'
+      return
+    }
+    try {
+      await api('/api/auth/magic-link/verify', {
+        method: 'POST',
+        headers: { Origin: window.location.origin },
+        body: JSON.stringify({ token: magicLinkToken }),
+      })
+      window.location.replace('/')
+    } catch (cause) {
+      magicLinkError.value = cause instanceof Error ? cause.message : '登录链接无效或已过期'
+      auth.value = 'anonymous'
+    }
+    return
+  }
+
   try {
     const response = await fetch('/api/auth/me')
-    auth.value = response.ok ? 'owner' : 'anonymous'
+    auth.value = response.ok ? 'owner' : response.status === 401 ? 'anonymous' : 'unavailable'
     if (auth.value === 'owner') {
       void loadStats()
       void consumeShareTarget()
     }
   } catch {
-    auth.value = 'anonymous'
+    auth.value = 'unavailable'
   }
 })
 
 onBeforeUnmount(() => {
   clearTimeout(shareCloseTimer)
+  window.removeEventListener('keydown', onShareDialogKeydown)
 })
 
 // Web Share Target: the service worker stashed shared files in IndexedDB and
@@ -111,6 +144,12 @@ function closeShareDialog(): void {
   }, 180)
 }
 
+function onShareDialogKeydown(event: KeyboardEvent): void {
+  if (event.key !== 'Escape' || event.isComposing || !shareDialogOpen.value) return
+  event.preventDefault()
+  closeShareDialog()
+}
+
 function onPageDragOver(): void {
   if (auth.value === 'owner' && !shareDialogOpen.value) pageDragging.value = true
 }
@@ -120,6 +159,46 @@ function onPageDrop(event: DragEvent): void {
   if (auth.value !== 'owner' || shareDialogOpen.value) return
   const files = Array.from(event.dataTransfer?.files ?? [])
   if (files.length > 0) uploadZone.value?.addFiles(files)
+}
+
+async function logout(): Promise<void> {
+  if (logoutBusy.value) return
+
+  logoutBusy.value = true
+  try {
+    await api<void>('/api/auth/logout', {
+      method: 'POST',
+      headers: { Origin: window.location.origin },
+    })
+    closeShareDialog()
+    stats.value = null
+    hasFiles.value = false
+    auth.value = 'anonymous'
+  } catch (cause) {
+    toast(cause instanceof Error ? cause.message : '退出登录失败，请重试', 'error')
+  } finally {
+    logoutBusy.value = false
+  }
+}
+
+async function requestMagicLink(): Promise<void> {
+  if (magicLinkBusy.value) return
+
+  magicLinkBusy.value = true
+  magicLinkError.value = ''
+  magicLinkNotice.value = ''
+  try {
+    await api<void>('/api/auth/magic-link', {
+      method: 'POST',
+      headers: { Origin: window.location.origin },
+      body: JSON.stringify({ email: magicLinkEmail.value }),
+    })
+    magicLinkNotice.value = '如果该邮箱与 GitHub 已验证主邮箱一致，登录链接已发送。'
+  } catch (cause) {
+    magicLinkError.value = cause instanceof Error ? cause.message : '发送登录链接失败，请稍后重试'
+  } finally {
+    magicLinkBusy.value = false
+  }
 }
 </script>
 
@@ -173,19 +252,76 @@ function onPageDrop(event: DragEvent): void {
             放下一份文件，在任何设备上接住它。为你的设备准备的私人中转站。
           </p>
           <span
-            v-if="auth === 'loading'"
+            v-if="isMagicLinkPath && !magicLinkError"
+            class="promise"
+            role="status"
+          >
+            正在验证登录链接…
+          </span>
+          <span
+            v-else-if="auth === 'loading'"
             class="promise"
             role="status"
           >
             正在检查登录状态…
           </span>
-          <a
-            v-else
-            class="signin"
-            href="/api/auth/github"
+          <p
+            v-else-if="auth === 'unavailable'"
+            class="error connection-error"
+            role="alert"
           >
-            使用 GitHub 登录
-          </a>
+            无法连接服务，请检查网络后刷新页面再登录。
+          </p>
+          <div
+            v-else
+            class="login-actions"
+          >
+            <a
+              class="signin"
+              href="/api/auth/github"
+            >
+              使用 GitHub 登录
+            </a>
+            <form
+              class="magic-link-form"
+              @submit.prevent="requestMagicLink"
+            >
+              <label for="magic-link-email">GitHub 绑定邮箱</label>
+              <div class="magic-link-controls">
+                <input
+                  id="magic-link-email"
+                  v-model="magicLinkEmail"
+                  type="email"
+                  autocomplete="email"
+                  inputmode="email"
+                  placeholder="输入 GitHub 已验证主邮箱"
+                  :disabled="magicLinkBusy"
+                  required
+                >
+                <button
+                  class="btn-secondary"
+                  type="submit"
+                  :disabled="magicLinkBusy"
+                >
+                  {{ magicLinkBusy ? '发送中…' : '发送登录链接' }}
+                </button>
+              </div>
+            </form>
+          </div>
+          <p
+            v-if="magicLinkNotice"
+            class="magic-link-notice"
+            role="status"
+          >
+            {{ magicLinkNotice }}
+          </p>
+          <p
+            v-if="magicLinkError"
+            class="error magic-link-error"
+            role="alert"
+          >
+            {{ magicLinkError }}
+          </p>
         </section>
       </main>
     </template>
@@ -222,6 +358,14 @@ function onPageDrop(event: DragEvent): void {
             @click="toggleShareDialog"
           >
             分享
+          </button>
+          <button
+            class="logout-button"
+            type="button"
+            :disabled="logoutBusy"
+            @click="logout"
+          >
+            {{ logoutBusy ? '退出中…' : '退出登录' }}
           </button>
         </nav>
       </header>

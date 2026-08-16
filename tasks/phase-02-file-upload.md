@@ -15,10 +15,6 @@ multipart itself.
 - `docs/cloudflare.md`
 - `docs/api.md`
 - `docs/database.md`
-- `docs/cloudflare_private_file_drop_codex_implementation_plan.md`
-  (§12 files/upload_sessions model, §16 R2 object keys, §17 upload protocol,
-  §18 single upload, §25 file listing, §26 deletion, §41 error envelope,
-  §44 upload/file routes, §53 phase scope, §69 upload test matrix)
 
 ## Scope
 
@@ -64,10 +60,9 @@ multipart itself.
    the chunk size return `413 PAYLOAD_TOO_LARGE` in this phase — multipart is
    not implemented until Phase 03, and this boundary is explicit and honest
    rather than pretending to support large files.
-2. **`upload_sessions` is created with the full Phase 03-ready shape**
-   (`mode`, `r2_upload_id`, `access_token_hash`, `total_parts`, `status`
-   lifecycle) so Phase 03 only adds behavior, not schema. `auth_kind` is
-   `"owner"` in this phase; `access_token_hash` stays NULL.
+2. **`upload_sessions` is created with the Phase 03-ready shape**
+   (`mode`, `r2_upload_id`, `total_parts`, `status` lifecycle) so Phase 03
+   only adds behavior, not schema.
 3. **Streaming single upload with size verification.** `PUT
    /api/uploads/:id/content` writes `request.body` straight to R2, then
    compares the R2 object size with the declared `total_size`. On mismatch the
@@ -112,8 +107,8 @@ Body: `{ "name": string, "size": number, "type": string | null }`
   string (≤ 255 chars).
 - Size ≤ chunk size → creates a `single` session; larger → `413
   PAYLOAD_TOO_LARGE` (multipart arrives in Phase 03).
-- Creates the `upload_sessions` row (`auth_kind = 'owner'`, `status =
-  'created'`); the `files` row is created when the content upload succeeds
+- Creates the `upload_sessions` row (`status = 'created'`); the `files` row is
+  created when the content upload succeeds
   (mirroring plan §23), so listings never expose half-uploaded files. The
   object key is `objects/YYYY/MM/<fileId>`.
 - `200` → `{ "uploadId", "mode": "single", "chunkSize", "totalParts": 1 }`.
@@ -127,7 +122,7 @@ Body: `{ "name": string, "size": number, "type": string | null }`
 - After the put: compares R2 object size with `total_size`; mismatch → delete
   the R2 object and `400 SIZE_MISMATCH`.
 - On success marks the session `completed`, writes the `files` row (`etag`,
-  `size`, `source = 'owner'`, `created_at`) and returns `200` with
+  `size`, `created_at`) and returns `200` with
   `{ "id", "name", "size", "etag" }`.
 
 ### `GET /api/uploads/:uploadId`
@@ -181,7 +176,6 @@ CREATE TABLE `files` (
   `mime_type` text,
   `size` integer NOT NULL,
   `etag` text,
-  `source` text DEFAULT 'owner' NOT NULL,
   `created_at` integer NOT NULL,
   `expires_at` integer,
   `deleted_at` integer
@@ -202,8 +196,6 @@ CREATE TABLE `upload_sessions` (
   `total_parts` integer NOT NULL,
   `mode` text NOT NULL,
   `r2_upload_id` text,
-  `auth_kind` text NOT NULL,
-  `access_token_hash` text,
   `status` text NOT NULL,
   `created_at` integer NOT NULL,
   `expires_at` integer NOT NULL,
@@ -230,8 +222,7 @@ Matrix (maps to plan §53/§69 "Upload" and the acceptance criteria):
 2. `POST /api/uploads` validation: empty name, missing size, size 0/negative,
    size > MAX_FILE_SIZE, oversized name → `400`/`413`; no rows created.
 3. `POST /api/uploads` (31 MiB) → `200` `mode: single`, `chunkSize`, `totalParts:
-   1`; the `upload_sessions` row is created with `auth_kind = 'owner'` (the
-   `files` row appears only after the content upload succeeds).
+   1`; the `files` row appears only after the content upload succeeds.
 4. `POST /api/uploads` (33 MiB) → `413` (multipart deferred to Phase 03).
 5. `PUT .../content` happy path with a streamed body → `200`; R2 fake holds the
    object under `objects/<year>/<month>/<fileId>` with the declared
@@ -287,7 +278,7 @@ pnpm db:migrate:local
 # 设计决策摘要（中文，供人工 review）
 
 - **协议与方案 §17 一致**：`POST /api/uploads` 返回 `{ uploadId, mode, chunkSize, totalParts }`；≤32 MiB → `single`。**>32 MiB 本阶段返回 413**（multipart 留给 Phase 03），边界明确不假装支持大文件。
-- **`upload_sessions` 按 Phase 03 就绪形态建全字段**（`mode`/`r2_upload_id`/`access_token_hash`/`total_parts`/状态机），Phase 03 只加行为不加 schema。
+- **`upload_sessions` 按 Phase 03 就绪形态建全字段**（`mode`/`r2_upload_id`/`total_parts`/状态机），Phase 03 只加行为不加 schema。
 - **流式上传 + 实际大小校验**：`BUCKET.put(objectKey, request.body)` 直写 R2（禁止 `arrayBuffer()`）；put 后对比 R2 对象 size 与声明 size，不一致删除对象并 400。
 - **R2 key = `objects/YYYY/MM/<fileId>`**（方案 §16），原始文件名永不进 key。
 - **Origin 防护做成中间件 `requireSameOrigin`**，所有 POST/PUT/DELETE 管理路由统一挂载（复用 Phase 01 的 `isSameOrigin`）。

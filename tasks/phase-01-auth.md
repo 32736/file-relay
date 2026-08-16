@@ -15,10 +15,6 @@ protected routes without reimplementing session checks.
 - `docs/cloudflare.md`
 - `docs/api.md`
 - `docs/database.md`
-- `docs/cloudflare_private_file_drop_codex_implementation_plan.md`
-  (§11 secrets, §12 sessions model, §13 ID/token rules, §14 OAuth flow,
-  §15 Origin protection, §41 error envelope, §44 auth routes, §52 phase scope,
-  §69 auth test matrix)
 
 ## Scope
 
@@ -39,8 +35,7 @@ protected routes without reimplementing session checks.
 
 ## Out of Scope
 
-- File upload, download, sharing, cleanup, Turnstile, PWA, Tauri, E2EE.
-- Share passwords, previews, QR codes, storage stats (Phase 07+).
+- File upload, download, sharing, cleanup, PWA, QR codes, and storage stats.
 - Multi-user model: this service has exactly one owner.
 - `SESSION_SECRET` / HMAC keyed session tokens (see Design Decisions).
 - Front-end routing, state management, or any heavier UI.

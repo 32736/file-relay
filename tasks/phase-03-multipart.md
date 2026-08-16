@@ -15,10 +15,6 @@ carries the multipart fields; this phase adds behavior, one table, and tests.
 - `docs/cloudflare.md`
 - `docs/api.md`
 - `docs/database.md`
-- `docs/cloudflare_private_file_drop_codex_implementation_plan.md`
-  (§9 R2 multipart limits, §12 upload_parts model, §17 upload protocol, §19
-  multipart creation, §20 part upload, §21 part validation, §22 resume,
-  §23 complete, §24 abort, §44 upload routes, §54 phase scope, §69 test matrix)
 
 ## Scope
 
@@ -156,8 +152,7 @@ CREATE INDEX `idx_upload_parts_session` ON `upload_parts` (`upload_session_id`);
 ```
 
 The `upload_sessions` table already has `r2_upload_id`, `total_parts`, `mode`,
-`access_token_hash`, and the full status lifecycle from Phase 02 — no session
-schema changes.
+and the full status lifecycle from Phase 02 — no session schema changes.
 
 ## Tests
 

@@ -22,7 +22,6 @@ interface UploadSessionRow {
   total_parts: number
   mode: string
   r2_upload_id: string | null
-  auth_kind: string
   status: string
   expires_at: number
 }
@@ -46,7 +45,7 @@ async function findSession(
   return (
     (await env.DB.prepare(
       `SELECT id, file_id, object_key, original_name, mime_type, total_size,
-              chunk_size, total_parts, mode, r2_upload_id, auth_kind, status, expires_at
+              chunk_size, total_parts, mode, r2_upload_id, status, expires_at
        FROM upload_sessions WHERE id = ?`,
     )
       .bind(sessionId)
@@ -73,9 +72,8 @@ function insertSessionStatement(
   return env.DB.prepare(
     `INSERT INTO upload_sessions
      (id, file_id, object_key, original_name, mime_type, total_size, chunk_size,
-      total_parts, mode, r2_upload_id, auth_kind, access_token_hash, status,
-      created_at, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      total_parts, mode, r2_upload_id, status, created_at, expires_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).bind(
     params.sessionId,
     params.fileId,
@@ -87,8 +85,6 @@ function insertSessionStatement(
     params.totalParts,
     params.mode,
     params.r2UploadId,
-    'owner',
-    null,
     'created',
     params.now,
     params.now + UPLOAD_SESSION_TTL_SECONDS,
@@ -104,8 +100,8 @@ function insertFileStatement(
 ) {
   return env.DB.prepare(
     `INSERT INTO files
-     (id, object_key, original_name, mime_type, size, etag, source, created_at, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     (id, object_key, original_name, mime_type, size, etag, created_at, expires_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   ).bind(
     session.file_id,
     session.object_key,
@@ -113,7 +109,6 @@ function insertFileStatement(
     session.mime_type,
     size,
     etag,
-    'owner',
     now,
     now + retentionSeconds(env.DEFAULT_RETENTION_DAYS),
   )
@@ -218,7 +213,7 @@ export const uploadRoutes = new Hono<AppEnv>()
   })
   .get('/:id', requireAuth, async (c) => {
     const session = await findSession(c.env, c.req.param('id'))
-    if (!session || session.auth_kind !== 'owner') {
+    if (!session) {
       return apiError(c, 404, 'NOT_FOUND', 'Upload session not found')
     }
 
@@ -243,7 +238,7 @@ export const uploadRoutes = new Hono<AppEnv>()
   })
   .put('/:id/content', requireAuth, requireSameOrigin, async (c) => {
     const session = await findSession(c.env, c.req.param('id'))
-    if (!session || session.auth_kind !== 'owner') {
+    if (!session) {
       return apiError(c, 404, 'NOT_FOUND', 'Upload session not found')
     }
     if (session.status !== 'created' || session.mode !== 'single') {
@@ -290,7 +285,7 @@ export const uploadRoutes = new Hono<AppEnv>()
   })
   .put('/:id/parts/:partNumber', requireAuth, requireSameOrigin, async (c) => {
     const session = await findSession(c.env, c.req.param('id'))
-    if (!session || session.auth_kind !== 'owner') {
+    if (!session) {
       return apiError(c, 404, 'NOT_FOUND', 'Upload session not found')
     }
     if (session.mode !== 'multipart') {
@@ -360,7 +355,7 @@ export const uploadRoutes = new Hono<AppEnv>()
   })
   .post('/:id/complete', requireAuth, requireSameOrigin, async (c) => {
     const session = await findSession(c.env, c.req.param('id'))
-    if (!session || session.auth_kind !== 'owner') {
+    if (!session) {
       return apiError(c, 404, 'NOT_FOUND', 'Upload session not found')
     }
 
@@ -450,7 +445,7 @@ export const uploadRoutes = new Hono<AppEnv>()
   })
   .delete('/:id', requireAuth, requireSameOrigin, async (c) => {
     const session = await findSession(c.env, c.req.param('id'))
-    if (!session || session.auth_kind !== 'owner') {
+    if (!session) {
       return apiError(c, 404, 'NOT_FOUND', 'Upload session not found')
     }
 

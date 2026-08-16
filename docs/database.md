@@ -26,8 +26,9 @@ together.
 - Phase 02: `files` and `upload_sessions` (single uploads; the session table is
   created with the Phase 03-ready multipart shape).
 - Phase 03: `upload_parts` (multipart part records, UPSERTed per part).
-- Phase 05: `shares` (token hashes only; atomic download claims via
-  `UPDATE ... RETURNING`; `password_mac` reserved for Phase 07).
+- Phase 05: `shares`（仅存令牌哈希；通过 `UPDATE ... RETURNING` 原子计数下载）。
+- Magic Link: `owner_emails`（GitHub 已验证主邮箱的加密值）和
+  `magic_link_tokens`（令牌哈希、过期时间与单次消费状态）。
 
 ## Planned ownership
 

@@ -349,11 +349,12 @@ export class D1Fake {
 
   constructor(seed: {
     sessions?: Row[]
+    owner_emails?: Row[]
+    magic_link_tokens?: Row[]
     files?: Row[]
     upload_sessions?: Row[]
     upload_parts?: Row[]
     shares?: Row[]
-    incoming_requests?: Row[]
   } = {}) {
     this.tables.set('sessions', {
       columns: [
@@ -365,6 +366,26 @@ export class D1Fake {
       ],
       rows: seed.sessions ? seed.sessions.map((row) => ({ ...row })) : [],
     })
+    this.tables.set('owner_emails', {
+      columns: [
+        { name: 'github_user_id' },
+        { name: 'encrypted_email' },
+        { name: 'created_at' },
+        { name: 'updated_at' },
+      ],
+      rows: seed.owner_emails ? seed.owner_emails.map((row) => ({ ...row })) : [],
+    })
+    this.tables.set('magic_link_tokens', {
+      columns: [
+        { name: 'id' },
+        { name: 'token_hash' },
+        { name: 'github_user_id' },
+        { name: 'created_at' },
+        { name: 'expires_at' },
+        { name: 'consumed_at' },
+      ],
+      rows: seed.magic_link_tokens ? seed.magic_link_tokens.map((row) => ({ ...row })) : [],
+    })
     this.tables.set('files', {
       columns: [
         { name: 'id' },
@@ -373,7 +394,6 @@ export class D1Fake {
         { name: 'mime_type' },
         { name: 'size' },
         { name: 'etag' },
-        { name: 'source' },
         { name: 'created_at' },
         { name: 'expires_at' },
         { name: 'deleted_at' },
@@ -390,20 +410,6 @@ export class D1Fake {
       ],
       rows: seed.upload_parts ? seed.upload_parts.map((row) => ({ ...row })) : [],
     })
-    this.tables.set('incoming_requests', {
-      columns: [
-        { name: 'id' },
-        { name: 'token_hash' },
-        { name: 'title' },
-        { name: 'expires_at' },
-        { name: 'max_file_size' },
-        { name: 'max_files' },
-        { name: 'uploaded_count' },
-        { name: 'created_at' },
-        { name: 'revoked_at' },
-      ],
-      rows: seed.incoming_requests ? seed.incoming_requests.map((row) => ({ ...row })) : [],
-    })
     this.tables.set('upload_sessions', {
       columns: [
         { name: 'id' },
@@ -416,8 +422,6 @@ export class D1Fake {
         { name: 'total_parts' },
         { name: 'mode' },
         { name: 'r2_upload_id' },
-        { name: 'auth_kind' },
-        { name: 'access_token_hash' },
         { name: 'status' },
         { name: 'created_at' },
         { name: 'expires_at' },
@@ -430,7 +434,6 @@ export class D1Fake {
         { name: 'id' },
         { name: 'file_id' },
         { name: 'token_hash' },
-        { name: 'password_mac' },
         { name: 'expires_at' },
         { name: 'max_downloads' },
         { name: 'download_count' },
@@ -595,11 +598,27 @@ class FakeStatement {
           return { success: true, meta: { changes: 1 } }
         }
       }
+      if (query.table === 'owner_emails') {
+        const existingIndex = table.rows.findIndex(
+          (existing) => existing.github_user_id === row.github_user_id,
+        )
+        if (existingIndex >= 0) {
+          if (!query.orReplace) throw new Error('PRIMARY KEY constraint failed: owner_emails')
+          table.rows[existingIndex] = row
+          return { success: true, meta: { changes: 1 } }
+        }
+      }
       if (
         query.table === 'sessions' &&
         table.rows.some((existing) => existing.token_hash === row.token_hash)
       ) {
         throw new Error('UNIQUE constraint failed: sessions.token_hash')
+      }
+      if (
+        query.table === 'magic_link_tokens' &&
+        table.rows.some((existing) => existing.token_hash === row.token_hash)
+      ) {
+        throw new Error('UNIQUE constraint failed: magic_link_tokens.token_hash')
       }
       if (
         query.table === 'files' &&
