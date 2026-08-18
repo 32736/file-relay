@@ -110,7 +110,7 @@ function onPickResume(event: Event): void {
   if (files.length > 0) void handleFiles(files)
 }
 
-defineExpose({ addFiles })
+defineExpose({ addFiles, tasks })
 </script>
 
 <template>

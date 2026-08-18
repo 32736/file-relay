@@ -1,5 +1,34 @@
 /* Drop — Handoff Terminal visual system. */
 
+/* Drop Mobile design tokens (drop-mobile prototype). Used by the mobile
+   component tree under the 767px breakpoint; harmless on desktop. */
+:root {
+  --drop-brand: #DC3B36;
+  --drop-brand-strong: #C32F2B;
+  --drop-brand-tint: #FBEAE9;
+  --drop-background: #FFFFFF;
+  --drop-foreground: #1A1A1F;
+  --drop-card: #FFFFFF;
+  --drop-muted: #F4F4F6;
+  --drop-muted-foreground: #8A8A93;
+  --drop-border: #ECECEE;
+  --drop-ink: #1A1A1F;
+  --drop-ink-2: #52525B;
+  --drop-ink-3: #9A9AA3;
+  --drop-line: #ECECEE;
+  --drop-surface: #FFFFFF;
+  --drop-surface-2: #F7F7F9;
+  --drop-surface-sunken: #FAFAFB;
+  --drop-state-success: #1F9D6B;
+  --drop-state-error: #DC3B36;
+  --drop-radius-sm: 6px;
+  --drop-radius-md: 10px;
+  --drop-radius-lg: 16px;
+  --drop-radius-pill: 999px;
+  --drop-shadow-2: 0 8px 24px -8px rgba(20, 20, 31, 0.16);
+  --drop-shadow-3: 0 24px 60px -20px rgba(20, 20, 31, 0.28);
+}
+
 :root {
   --bg: #eeece6;
   --bg-warm: #f7f3eb;
@@ -133,4 +162,55 @@ button:not(:disabled), a, input { transition: border-color .18s ease, background
   button { min-height: 2.75rem; }
   .toasts { right: .75rem; bottom: .75rem; left: .75rem; }
   .toast { max-width: none; }
+}
+
+/* Mobile breakpoint (drop-mobile prototype). The mobile component tree is
+   mounted by App.vue below 767px; these shared adjustments style the
+   login panel, toasts, and the reusable ShareDialog bottom sheet. */
+@media (max-width: 767px) {
+  html, body, #app { overflow: visible; }
+  .shell { height: auto; min-height: 100dvh; overflow: visible; }
+
+  /* Login panel: centered brand column per login.html prototype. */
+  .brand-panel {
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .brand-panel .logo { grid-row: auto; width: 3rem; height: 3rem; }
+  .brand-panel .wordmark { font-size: 2rem; }
+  .brand-panel .promise { grid-column: 1; }
+  .login-actions { grid-column: 1; }
+  .magic-link-notice, .magic-link-error, .connection-error { grid-column: 1; }
+  .signin {
+    width: 100%;
+    border: 0;
+    box-shadow: var(--drop-shadow-2);
+    background: var(--drop-brand);
+    color: #fff;
+    text-align: center;
+    padding: .9rem 1rem;
+    border-radius: var(--drop-radius-md);
+  }
+
+  /* Toasts sit above the bottom navigation. */
+  .toasts { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+
+  /* ShareDialog as a bottom sheet inside the mobile shell. */
+  .mobile-app dialog.dialog {
+    margin: auto 0 0;
+    width: 100%;
+    max-width: 100%;
+    border: 0;
+    border-top: 1px solid var(--drop-border);
+    border-radius: var(--drop-radius-lg) var(--drop-radius-lg) 0 0;
+    box-shadow: var(--drop-shadow-3);
+    padding: 1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  }
+  .mobile-app dialog.dialog::backdrop { background: rgba(0, 0, 0, 0.4); }
 }

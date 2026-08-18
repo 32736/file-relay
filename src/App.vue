@@ -4,6 +4,7 @@ import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 
 import FileList from './components/FileList.vue'
 import UploadZone from './components/UploadZone.vue'
 
+const MobileApp = defineAsyncComponent(() => import('./components/mobile/MobileApp.vue'))
 const ShareList = defineAsyncComponent(() => import('./components/ShareList.vue'))
 const SharePage = defineAsyncComponent(() => import('./components/SharePage.vue'))
 
@@ -35,6 +36,15 @@ const magicLinkToken = isMagicLinkPath
   : ''
 let shareCloseTimer: ReturnType<typeof setTimeout> | undefined
 
+// Below 768px the owner workspace mounts the drop-mobile component tree
+// (bottom tab navigation) instead of the desktop panels.
+const mobileQuery = window.matchMedia('(max-width: 767px)')
+const isMobile = ref(mobileQuery.matches)
+
+function onMediaChange(event: MediaQueryListEvent): void {
+  isMobile.value = event.matches
+}
+
 // Public pages are routed by pathname (no router in this phase):
 //   /s/<token>  → public share page
 // otherwise the owner workspace.
@@ -43,6 +53,7 @@ const shareToken = shareMatch?.[1] ?? null
 
 onMounted(async () => {
   window.addEventListener('keydown', onShareDialogKeydown)
+  mobileQuery.addEventListener('change', onMediaChange)
 
   if (isMagicLinkPath) {
     history.replaceState(null, '', '/auth/magic')
@@ -80,6 +91,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   clearTimeout(shareCloseTimer)
   window.removeEventListener('keydown', onShareDialogKeydown)
+  mobileQuery.removeEventListener('change', onMediaChange)
 })
 
 // Web Share Target: the service worker stashed shared files in IndexedDB and
@@ -179,6 +191,14 @@ async function logout(): Promise<void> {
   } finally {
     logoutBusy.value = false
   }
+}
+
+// MobileApp's profile page performs the logout API call itself and only
+// reports success; reset the local owner state here.
+function onMobileLoggedOut(): void {
+  stats.value = null
+  hasFiles.value = false
+  auth.value = 'anonymous'
 }
 
 async function requestMagicLink(): Promise<void> {
@@ -326,96 +346,102 @@ async function requestMagicLink(): Promise<void> {
       </main>
     </template>
 
-    <!-- Owner workspace: compact top bar + tabs -->
+    <!-- Owner workspace: mobile tree (drop-mobile) or desktop panels -->
     <template v-else>
-      <header class="topbar">
-        <div class="brand-lockup">
-          <img
-            class="logo"
-            src="/logo.svg"
-            alt=""
-            aria-hidden="true"
-          >
-          <h1 class="wordmark">
-            Dr<span class="o">o</span>p
-          </h1>
-        </div>
-        <span
-          v-if="stats"
-          class="stats"
-          role="status"
-        >
-          {{ stats.fileCount }} 个文件 · 已用 {{ formatBytes(stats.totalBytes) }}
-        </span>
-        <nav
-          class="tabs top-tabs"
-          aria-label="工作区导航"
-        >
-          <button
-            :class="{ active: shareDialogOpen }"
-            :aria-expanded="shareDialogOpen"
-            type="button"
-            @click="toggleShareDialog"
-          >
-            分享
-          </button>
-          <button
-            class="logout-button"
-            type="button"
-            :disabled="logoutBusy"
-            @click="logout"
-          >
-            {{ logoutBusy ? '退出中…' : '退出登录' }}
-          </button>
-        </nav>
-      </header>
-
-      <dialog
-        v-if="shareDialogMounted"
-        ref="shareDialogRef"
-        class="share-management-dialog"
-        aria-label="分享管理"
-        @cancel.prevent="closeShareDialog"
-      >
-        <ShareList />
-      </dialog>
-
-      <main class="page-content">
-        <section
-          aria-label="文件工作区"
-        >
-          <p
-            v-if="sharedNotice"
-            class="shared-notice"
+      <MobileApp
+        v-if="isMobile"
+        @logout="onMobileLoggedOut"
+      />
+      <template v-else>
+        <header class="topbar">
+          <div class="brand-lockup">
+            <img
+              class="logo"
+              src="/logo.svg"
+              alt=""
+              aria-hidden="true"
+            >
+            <h1 class="wordmark">
+              Dr<span class="o">o</span>p
+            </h1>
+          </div>
+          <span
+            v-if="stats"
+            class="stats"
             role="status"
           >
-            已收到分享的文件，正在加入上传队列
-          </p>
-          <div class="workspace-grid">
-            <article class="workspace-panel upload-panel">
-              <div class="panel-head">
-                <span class="panel-kicker">上传队列</span>
-              </div>
-              <UploadZone
-                ref="uploadZone"
-                :compact="hasFiles"
-                @uploaded="refresh"
-              />
-            </article>
-            <article class="workspace-panel files-panel">
-              <div class="panel-head">
-                <span class="panel-kicker">文件台</span>
-              </div>
-              <FileList
-                ref="fileList"
-                @shared="refresh"
-                @hasfiles="hasFiles = $event"
-                @changed="loadStats"
-              />
-            </article>
-          </div>
-        </section>
-      </main>
+            {{ stats.fileCount }} 个文件 · 已用 {{ formatBytes(stats.totalBytes) }}
+          </span>
+          <nav
+            class="tabs top-tabs"
+            aria-label="工作区导航"
+          >
+            <button
+              :class="{ active: shareDialogOpen }"
+              :aria-expanded="shareDialogOpen"
+              type="button"
+              @click="toggleShareDialog"
+            >
+              分享
+            </button>
+            <button
+              class="logout-button"
+              type="button"
+              :disabled="logoutBusy"
+              @click="logout"
+            >
+              {{ logoutBusy ? '退出中…' : '退出登录' }}
+            </button>
+          </nav>
+        </header>
+
+        <dialog
+          v-if="shareDialogMounted"
+          ref="shareDialogRef"
+          class="share-management-dialog"
+          aria-label="分享管理"
+          @cancel.prevent="closeShareDialog"
+        >
+          <ShareList />
+        </dialog>
+
+        <main class="page-content">
+          <section
+            aria-label="文件工作区"
+          >
+            <p
+              v-if="sharedNotice"
+              class="shared-notice"
+              role="status"
+            >
+              已收到分享的文件，正在加入上传队列
+            </p>
+            <div class="workspace-grid">
+              <article class="workspace-panel upload-panel">
+                <div class="panel-head">
+                  <span class="panel-kicker">上传队列</span>
+                </div>
+                <UploadZone
+                  ref="uploadZone"
+                  :compact="hasFiles"
+                  @uploaded="refresh"
+                />
+              </article>
+              <article class="workspace-panel files-panel">
+                <div class="panel-head">
+                  <span class="panel-kicker">文件台</span>
+                </div>
+                <FileList
+                  ref="fileList"
+                  @shared="refresh"
+                  @hasfiles="hasFiles = $event"
+                  @changed="loadStats"
+                />
+              </article>
+            </div>
+          </section>
+        </main>
+      </template>
     </template>
 
     <div

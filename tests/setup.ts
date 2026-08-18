@@ -11,3 +11,21 @@ if (!cryptoGlobal || typeof cryptoGlobal.subtle === 'undefined') {
     writable: true,
   })
 }
+
+// jsdom does not implement matchMedia; provide a desktop-default stub so
+// components can query viewport breakpoints.
+if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }),
+  })
+}
