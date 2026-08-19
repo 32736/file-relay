@@ -129,8 +129,14 @@ defineExpose({ addFiles })
   z-index: 80;
   display: flex;
   align-items: flex-end;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(2px);
+  background: rgba(15, 15, 18, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: overlay-in 0.2s var(--drop-ease-spring);
+}
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .sheet {
@@ -138,11 +144,16 @@ defineExpose({ addFiles })
   max-height: calc(100dvh - 64px);
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--drop-border);
-  border-radius: var(--drop-radius-lg) var(--drop-radius-lg) 0 0;
+  border-top: 1px solid rgba(15, 15, 18, 0.08);
+  border-radius: var(--drop-radius-xl) var(--drop-radius-xl) 0 0;
   background: var(--drop-card);
-  box-shadow: var(--drop-shadow-3);
+  box-shadow: var(--drop-shadow-4);
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: sheet-in 0.3s var(--drop-ease-spring);
+}
+@keyframes sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 .sheet-handle {
   width: 2.5rem;
@@ -161,6 +172,7 @@ defineExpose({ addFiles })
   font-size: 1rem;
   font-weight: 600;
   color: var(--drop-ink);
+  letter-spacing: -0.02em;
 }
 .sheet-close {
   display: inline-flex;
@@ -172,6 +184,7 @@ defineExpose({ addFiles })
   border-radius: var(--drop-radius-sm);
   background: transparent;
   color: var(--drop-ink-2);
+  transition: background-color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .sheet-close:active {
   background: var(--drop-surface-2);
@@ -182,14 +195,14 @@ defineExpose({ addFiles })
   padding: 0.25rem 1rem 1rem;
 }
 
-/* Restyle the desktop UploadZone to the mobile sheet look. */
 .mobile-uploads :deep(.drop-area) {
-  border: 0.125rem dashed var(--drop-border);
+  border: 1.5px dashed var(--drop-border);
   border-radius: var(--drop-radius-md);
   background: var(--drop-surface-2);
   box-shadow: none;
   padding: 1.5rem 1rem;
   gap: 0.5rem;
+  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .mobile-uploads :deep(.drop-area:hover),
 .mobile-uploads :deep(.dragging .drop-area) {
@@ -201,7 +214,7 @@ defineExpose({ addFiles })
 }
 .mobile-uploads :deep(.drop-title) {
   font-size: 0.9375rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 .mobile-uploads :deep(.drop-sub) {
   font-size: 0.75rem;
@@ -217,6 +230,7 @@ defineExpose({ addFiles })
   border-radius: 0;
   background: transparent;
   padding: 0.75rem 0;
+  box-shadow: none;
 }
 .mobile-uploads :deep(.task:first-child) {
   border-top: 0;
@@ -236,7 +250,7 @@ defineExpose({ addFiles })
   border-radius: var(--drop-radius-pill);
 }
 .mobile-uploads :deep(.fill) {
-  background: var(--drop-brand);
+  background: linear-gradient(90deg, var(--drop-brand) 0%, var(--drop-brand-strong) 100%);
 }
 .mobile-uploads :deep(.actions button) {
   border-color: var(--drop-border);
@@ -256,16 +270,18 @@ defineExpose({ addFiles })
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 2.75rem;
-  border: 1px solid var(--drop-border);
+  min-height: 3rem;
+  border: 1px solid rgba(15, 15, 18, 0.08);
   border-radius: var(--drop-radius-md);
   background: var(--drop-card);
   color: var(--drop-ink);
   font-size: 0.875rem;
   font-weight: 500;
+  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .pick-grid button:active {
   background: var(--drop-surface-2);
+  border-color: var(--drop-brand);
 }
 
 .sheet-summary {
@@ -279,18 +295,22 @@ defineExpose({ addFiles })
 .summary-text {
   font-size: 0.8125rem;
   color: var(--drop-ink-2);
+  font-weight: 500;
 }
 .summary-done {
   min-height: 2.5rem;
   padding: 0 1.375rem;
   border: 0;
   border-radius: var(--drop-radius-md);
-  background: var(--drop-brand);
+  background: linear-gradient(135deg, var(--drop-brand) 0%, var(--drop-brand-strong) 100%);
   color: #fff;
   font-size: 0.875rem;
   font-weight: 600;
+  box-shadow: 0 4px 14px -2px rgba(230, 57, 70, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: filter var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring);
 }
 .summary-done:active {
-  background: var(--drop-brand-strong);
+  filter: brightness(0.96);
+  transform: scale(0.98);
 }
 </style>

@@ -247,14 +247,17 @@ defineExpose({ load })
 }
 .search-box input {
   width: 100%;
-  height: 2.5rem;
+  height: 2.75rem;
   padding: 0 2.5rem 0 2.375rem;
   border: 1px solid var(--drop-border);
   border-radius: var(--drop-radius-md);
-  background: var(--drop-surface-2);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--drop-ink);
   font-size: 0.875rem;
   appearance: none;
+  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .search-box input::-webkit-search-cancel-button {
   display: none;
@@ -265,6 +268,8 @@ defineExpose({ load })
 .search-box input:focus {
   outline: none;
   border-color: var(--drop-brand);
+  background: var(--drop-surface);
+  box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.1);
 }
 .clear-btn {
   position: absolute;
@@ -278,6 +283,10 @@ defineExpose({ load })
   border-radius: var(--drop-radius-sm);
   background: transparent;
   color: var(--drop-ink-2);
+  transition: background-color var(--drop-dur-base) var(--drop-ease-spring);
+}
+.clear-btn:active {
+  background: var(--drop-muted);
 }
 .clear-btn :deep(svg) {
   width: 1rem;
@@ -292,12 +301,14 @@ defineExpose({ load })
 }
 .list-title {
   font-size: 0.8125rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--drop-ink-2);
+  letter-spacing: -0.01em;
 }
 .list-count {
   font-size: 0.75rem;
   color: var(--drop-ink-3);
+  font-variant-numeric: tabular-nums;
 }
 
 .file-rows {
@@ -309,8 +320,8 @@ defineExpose({ load })
   width: 100%;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  min-height: 3.5rem;
+  padding: 0.875rem 1rem;
+  min-height: 3.75rem;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -318,6 +329,7 @@ defineExpose({ load })
   font: inherit;
   color: inherit;
   -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .file-row + .file-row {
   border-top: 1px solid var(--drop-line);
@@ -335,6 +347,7 @@ defineExpose({ load })
   border-radius: var(--drop-radius-md);
   background: var(--drop-surface-2);
   color: var(--drop-ink-2);
+  box-shadow: var(--drop-shadow-1);
 }
 .tile :deep(.file-icon) {
   width: 1.375rem;
@@ -358,12 +371,14 @@ defineExpose({ load })
   font-size: 0.9375rem;
   font-weight: 500;
   color: var(--drop-ink);
+  letter-spacing: -0.01em;
 }
 .file-meta {
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
   color: var(--drop-ink-3);
+  font-variant-numeric: tabular-nums;
 }
 .file-time {
   margin-left: auto;
@@ -385,6 +400,12 @@ defineExpose({ load })
   background: var(--drop-card);
   color: var(--drop-ink-2);
   font-size: 0.875rem;
+  font-weight: 500;
+  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring);
+}
+.more button:hover {
+  border-color: var(--drop-brand);
+  background: var(--drop-brand-tint);
 }
 
 .skeleton {
@@ -395,8 +416,8 @@ defineExpose({ load })
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  min-height: 3.5rem;
+  padding: 0.875rem 1rem;
+  min-height: 3.75rem;
 }
 .skeleton-row + .skeleton-row {
   border-top: 1px solid var(--drop-line);
@@ -406,8 +427,9 @@ defineExpose({ load })
   width: 2.5rem;
   height: 2.5rem;
   border-radius: var(--drop-radius-md);
-  background: var(--drop-surface-2);
-  animation: skeleton-pulse 1.2s ease-in-out infinite;
+  background: linear-gradient(90deg, var(--drop-surface-2) 0%, var(--drop-background) 50%, var(--drop-surface-2) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
 .skeleton-lines {
   flex: 1;
@@ -418,16 +440,16 @@ defineExpose({ load })
 .skeleton-block {
   height: 14px;
   border-radius: 4px;
-  background: var(--drop-surface-2);
-  animation: skeleton-pulse 1.2s ease-in-out infinite;
+  background: linear-gradient(90deg, var(--drop-surface-2) 0%, var(--drop-background) 50%, var(--drop-surface-2) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
 .skeleton-block.short {
   height: 11px;
 }
 @keyframes skeleton-pulse {
-  50% {
-    opacity: 0.45;
-  }
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .empty {
@@ -443,12 +465,14 @@ defineExpose({ load })
   width: 64px;
   height: 64px;
   color: var(--drop-ink-3);
+  opacity: 0.6;
 }
 .empty-title {
   margin: 16px 0 0;
   font-size: 18px;
   font-weight: 600;
   color: var(--drop-ink);
+  letter-spacing: -0.02em;
 }
 .empty-desc {
   margin: 8px 0 0;
@@ -473,13 +497,16 @@ defineExpose({ load })
   margin-top: 24px;
   border: 0;
   border-radius: var(--drop-radius-md);
-  background: var(--drop-brand);
+  background: linear-gradient(135deg, var(--drop-brand) 0%, var(--drop-brand-strong) 100%);
   color: #fff;
   font-size: 15px;
   font-weight: 600;
+  box-shadow: 0 8px 24px -4px rgba(230, 57, 70, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: filter var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring);
 }
 .empty-cta:active {
-  background: var(--drop-brand-strong);
+  filter: brightness(0.96);
+  transform: scale(0.98);
 }
 
 .error {

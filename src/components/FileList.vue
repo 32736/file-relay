@@ -371,16 +371,25 @@ defineExpose({ load })
   display: flex;
   gap: 0.75rem;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 0.875rem;
 }
 .search {
   flex: 1;
-  min-height: 2.55rem;
-  padding: 0.45rem 0.7rem;
-  border: 1px solid var(--border-strong);
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--text);
+  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring);
+}
+.search:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--surface);
+  box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.1);
 }
 table {
   width: 100%;
@@ -393,7 +402,7 @@ td {
   border-bottom: 1px solid var(--border);
 }
 th { color: var(--text-faint); font-size: .72rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
-tbody tr { transition: background-color .18s ease; }
+tbody tr { transition: background-color var(--drop-dur-base) var(--drop-ease-spring); }
 .name {
   max-width: 30rem;
 }
@@ -404,22 +413,31 @@ tbody tr { transition: background-color .18s ease; }
   white-space: nowrap;
   font-weight: 600;
   color: var(--text);
+  letter-spacing: -0.01em;
 }
 .file-meta {
   display: flex;
   justify-content: space-between;
   gap: .75rem;
-  margin-top: 0.1rem;
+  margin-top: 0.125rem;
   font-size: 0.78rem;
   color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
 }
 .file-meta span:last-child { text-align: right; white-space: nowrap; }
-.file-list table { width: 100%; table-layout: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+.file-list table {
+  width: 100%;
+  table-layout: fixed;
+  background: var(--surface);
+  border: 1px solid rgba(15, 15, 18, 0.06);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--drop-shadow-1);
+}
 .file-list th:last-child, .file-list td:last-child { width: 9rem; }
 .file-list th { text-align: center; }
 .file-list td.actions { display: table-cell; min-height: 3.6rem; vertical-align: middle; text-align: right; white-space: nowrap; }
 .file-list td.actions .icon-btn { margin-left: .35rem; vertical-align: middle; }
-/* Actions fade in on hover/focus on desktop; always visible on touch. */
 .actions .icon-btn {
   opacity: 1;
 }
@@ -447,6 +465,7 @@ tbody tr.selected {
   color: var(--text-muted);
   cursor: pointer;
   padding: 0;
+  transition: color var(--drop-dur-base) var(--drop-ease-spring), border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring);
 }
 .icon-btn svg {
   width: 1.05rem;
@@ -454,7 +473,12 @@ tbody tr.selected {
 }
 .icon-btn:hover {
   color: var(--primary-dark);
-  border-color: var(--border-strong);
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: 0 2px 8px -2px rgba(230, 57, 70, 0.2);
+}
+.icon-btn:active {
+  transform: scale(0.96);
 }
 .icon-btn.select-btn.selected {
   color: var(--primary-dark);
@@ -494,7 +518,7 @@ tbody tr.selected {
   flex-direction: column;
   gap: 0.6rem;
   padding: 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(15, 15, 18, 0.06);
   border-radius: var(--radius-md);
   background: var(--surface);
 }
@@ -508,35 +532,48 @@ tbody tr.selected {
 .skeleton-block {
   height: 0.9rem;
   border-radius: 4px;
-  background: var(--surface-muted);
-  animation: shimmer 1.2s ease-in-out infinite;
+  background: linear-gradient(90deg, var(--surface-muted) 0%, var(--bg-warm) 50%, var(--surface-muted) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
 }
 @keyframes shimmer {
-  50% {
-    opacity: 0.5;
-  }
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 .confirm-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(17, 24, 39, 0.4);
+  background: rgba(15, 15, 18, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: grid;
   place-items: center;
   z-index: 50;
+  animation: overlay-in 0.2s var(--drop-ease-spring);
+}
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .confirm-dialog {
   background: var(--surface);
-  border: 2px solid var(--text);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-hard);
-  padding: 1.5rem 1.75rem;
+  border: 1px solid rgba(15, 15, 18, 0.08);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--drop-shadow-4), var(--drop-inner-highlight);
+  padding: 1.75rem 2rem;
   max-width: 22rem;
   width: 90%;
+  animation: dialog-in 0.25s var(--drop-ease-spring);
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .confirm-title {
-  margin: 0 0 0.3rem;
+  margin: 0 0 0.35rem;
   font-weight: 700;
   font-size: 1.05rem;
+  letter-spacing: -0.02em;
 }
 .confirm-sub {
   margin: 0 0 1.25rem;
@@ -549,18 +586,22 @@ tbody tr.selected {
   justify-content: flex-end;
 }
 .btn-danger {
-  background: var(--danger);
+  background: linear-gradient(135deg, var(--danger) 0%, #c92a38 100%);
   color: #fff;
-  border: 2px solid var(--danger);
+  border: 0;
   border-radius: var(--radius-sm);
   padding: 0.6rem 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: var(--shadow-hard-sm);
+  box-shadow: 0 4px 14px -2px rgba(230, 57, 70, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: filter var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring);
 }
 .btn-danger:not(:disabled):hover {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0 var(--text);
+  filter: brightness(1.05);
+  box-shadow: 0 6px 20px -2px rgba(230, 57, 70, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+.btn-danger:active {
+  transform: scale(0.98);
 }
 .actions {
   display: flex;
@@ -571,10 +612,16 @@ tbody tr:hover {
 }
 button.ghost {
   background: var(--surface);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 0.45rem 0.7rem;
+  padding: 0.45rem 0.875rem;
   cursor: pointer;
+  font-weight: 500;
+  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring), color var(--drop-dur-base) var(--drop-ease-spring);
+}
+button.ghost:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
 }
 button.ghost:disabled {
   opacity: 0.5;

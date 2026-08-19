@@ -230,7 +230,7 @@ onBeforeUnmount(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.625rem;
   padding: 0 1rem 1rem;
 }
 
@@ -238,7 +238,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  height: 2.75rem;
+  height: 3rem;
   padding: 0;
   border-bottom: 1px solid var(--drop-border);
   margin: 0 -1rem 0.125rem;
@@ -250,16 +250,18 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border: 0;
   border-radius: var(--drop-radius-md);
   background: transparent;
   color: var(--drop-ink-2);
   -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--drop-dur-base) var(--drop-ease-spring), color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .back-btn:active {
   background: var(--drop-surface-2);
+  color: var(--drop-ink);
 }
 .back-btn :deep(svg) {
   width: 1.25rem;
@@ -271,35 +273,41 @@ onBeforeUnmount(() => {
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--drop-ink);
+  letter-spacing: -0.01em;
 }
 
 .manage {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
 }
 .revoke {
   width: 100%;
-  min-height: 2.75rem;
+  min-height: 3rem;
   border: 0;
-  border-radius: var(--drop-radius-md);
+  border-radius: var(--drop-radius-lg);
   background: var(--drop-surface-2);
   color: var(--drop-state-error);
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  transition: background-color var(--drop-dur-base) var(--drop-ease-spring), opacity var(--drop-dur-base) var(--drop-ease-spring);
 }
 .revoke:active {
-  opacity: 0.6;
+  background: var(--drop-brand-tint);
 }
 .revoke:disabled {
   opacity: 0.5;
 }
 
 .card {
-  padding: 0.75rem;
-  border: 1px solid var(--drop-border);
+  padding: 1rem;
+  border: 1px solid rgba(15, 15, 18, 0.06);
   border-radius: var(--drop-radius-lg);
   background: var(--drop-card);
+  box-shadow: var(--drop-shadow-1);
 }
 
 .file-head {
@@ -312,11 +320,12 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: var(--drop-radius-md);
   background: var(--drop-brand-tint);
   color: var(--drop-brand);
+  box-shadow: inset 0 0 0 1px rgba(230, 57, 70, 0.08);
 }
 .tile :deep(svg) {
   width: 1.125rem;
@@ -333,6 +342,7 @@ onBeforeUnmount(() => {
   font-size: 0.9375rem;
   font-weight: 500;
   color: var(--drop-ink);
+  letter-spacing: -0.01em;
 }
 .file-meta {
   margin-top: 0.125rem;
@@ -347,11 +357,11 @@ onBeforeUnmount(() => {
   padding: 0.1875rem 0.5rem;
   border-radius: var(--drop-radius-pill);
   font-size: 0.625rem;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
 }
 .badge.active {
-  background: color-mix(in srgb, var(--drop-state-success) 10%, transparent);
+  background: color-mix(in srgb, var(--drop-state-success) 12%, transparent);
   color: var(--drop-state-success);
 }
 .badge.inactive {
@@ -363,9 +373,10 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.375rem 0.5rem;
+  padding: 0.5rem 0.625rem;
   border-radius: var(--drop-radius-md);
   background: var(--drop-surface-2);
+  border: 1px solid var(--drop-line);
 }
 .link-icon {
   width: 0.875rem;
@@ -393,13 +404,14 @@ onBeforeUnmount(() => {
   border-radius: var(--drop-radius-sm);
   background: transparent;
   color: var(--drop-brand);
+  transition: background-color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .copy-btn :deep(svg) {
   width: 1rem;
   height: 1rem;
 }
 .copy-btn:active {
-  opacity: 0.6;
+  background: var(--drop-brand-tint);
 }
 
 .url-missing {
@@ -412,12 +424,13 @@ onBeforeUnmount(() => {
 .qr-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
 }
 .qr {
-  padding: 0.375rem;
+  padding: 0.5rem;
   border-radius: var(--drop-radius-md);
   background: var(--drop-surface-2);
+  border: 1px solid var(--drop-line);
 }
 
 .stat-grid {
@@ -426,7 +439,7 @@ onBeforeUnmount(() => {
 }
 .stat {
   text-align: center;
-  padding: 0.125rem 0.25rem;
+  padding: 0.25rem 0.25rem;
 }
 .stat + .stat {
   border-left: 1px solid var(--drop-border);
@@ -435,9 +448,11 @@ onBeforeUnmount(() => {
   line-height: 1.2;
 }
 .stat-number {
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   font-weight: 700;
   color: var(--drop-ink);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
 }
 .stat-unit {
   margin-left: 0.125rem;
@@ -449,6 +464,7 @@ onBeforeUnmount(() => {
   margin-top: 0.125rem;
   font-size: 0.6875rem;
   color: var(--drop-ink-3);
+  font-weight: 500;
 }
 
 .error {

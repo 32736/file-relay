@@ -81,26 +81,37 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   z-index: 80;
   display: flex;
   align-items: flex-end;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(2px);
+  background: rgba(15, 15, 18, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: overlay-in 0.2s var(--drop-ease-spring);
+}
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .sheet {
   width: 100%;
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--drop-border);
-  border-radius: var(--drop-radius-lg) var(--drop-radius-lg) 0 0;
+  border-top: 1px solid rgba(15, 15, 18, 0.08);
+  border-radius: var(--drop-radius-xl) var(--drop-radius-xl) 0 0;
   background: var(--drop-card);
-  box-shadow: var(--drop-shadow-3);
+  box-shadow: var(--drop-shadow-4);
   padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  animation: sheet-in 0.3s var(--drop-ease-spring);
+}
+@keyframes sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
 .file-head {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  padding: 0.875rem 1rem;
   border-bottom: 1px solid var(--drop-line);
 }
 .tile {
@@ -113,6 +124,7 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   border-radius: var(--drop-radius-md);
   background: var(--drop-brand-tint);
   color: var(--drop-brand);
+  box-shadow: inset 0 0 0 1px rgba(230, 57, 70, 0.08);
 }
 .tile :deep(.file-icon) {
   width: 1.375rem;
@@ -130,6 +142,7 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   font-size: 0.9375rem;
   font-weight: 500;
   color: var(--drop-ink);
+  letter-spacing: -0.01em;
 }
 .file-meta {
   margin-top: 0.125rem;
@@ -146,13 +159,14 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  padding: 0.875rem 1rem;
+  padding: 1rem;
   border: 0;
   border-radius: 0;
   background: transparent;
   text-align: left;
   font: inherit;
   -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .action-row + .action-row {
   border-top: 1px solid var(--drop-line);
@@ -167,6 +181,8 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   flex: 1;
   font-size: 0.9375rem;
   color: var(--drop-ink);
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 .action-row.danger .action-icon,
 .action-row.danger .action-label {

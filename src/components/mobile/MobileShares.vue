@@ -200,17 +200,20 @@ defineExpose({ load })
 .cards {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.625rem;
 }
 .card {
-  padding: 1rem;
-  border: 1px solid var(--drop-border);
+  padding: 0.875rem 1rem;
+  border: 1px solid rgba(15, 15, 18, 0.06);
   border-radius: var(--drop-radius-lg);
   background: var(--drop-card);
+  box-shadow: var(--drop-shadow-1);
   -webkit-tap-highlight-color: transparent;
+  transition: box-shadow var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring);
 }
 .card:active {
   background: var(--drop-surface-2);
+  transform: scale(0.99);
 }
 .card-head {
   display: flex;
@@ -227,6 +230,7 @@ defineExpose({ load })
   border-radius: var(--drop-radius-md);
   background: var(--drop-brand-tint);
   color: var(--drop-brand);
+  box-shadow: inset 0 0 0 1px rgba(230, 57, 70, 0.08);
 }
 .tile :deep(svg) {
   width: 1.125rem;
@@ -241,19 +245,21 @@ defineExpose({ load })
   font-size: 0.9375rem;
   font-weight: 500;
   color: var(--drop-ink);
+  letter-spacing: -0.01em;
 }
 .badge {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.125rem 0.5rem;
+  padding: 0.1875rem 0.5rem;
   border-radius: var(--drop-radius-pill);
   font-size: 0.6875rem;
+  font-weight: 600;
   white-space: nowrap;
 }
 .badge.active {
-  background: color-mix(in srgb, var(--drop-state-success) 10%, transparent);
+  background: color-mix(in srgb, var(--drop-state-success) 12%, transparent);
   color: var(--drop-state-success);
 }
 .badge.inactive {
@@ -266,7 +272,7 @@ defineExpose({ load })
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-top: 0.375rem;
+  margin-top: 0.5rem;
   font-size: 0.75rem;
   color: var(--drop-ink-3);
 }
@@ -297,6 +303,7 @@ defineExpose({ load })
   white-space: nowrap;
   font-family: ui-monospace, "SFMono-Regular", monospace;
   color: var(--drop-ink-2);
+  font-size: 0.6875rem;
 }
 .copy-btn {
   flex: none;
@@ -309,13 +316,15 @@ defineExpose({ load })
   border-radius: var(--drop-radius-sm);
   background: transparent;
   color: var(--drop-ink-2);
+  transition: background-color var(--drop-dur-base) var(--drop-ease-spring), color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .copy-btn :deep(svg) {
   width: 1rem;
   height: 1rem;
 }
 .copy-btn:active {
-  background: var(--drop-muted);
+  background: var(--drop-brand-tint);
+  color: var(--drop-brand);
 }
 
 .skeleton {
@@ -328,19 +337,20 @@ defineExpose({ load })
   flex-direction: column;
   gap: 0.75rem;
   padding: 1rem;
-  border: 1px solid var(--drop-border);
+  border: 1px solid rgba(15, 15, 18, 0.06);
   border-radius: var(--drop-radius-lg);
+  background: var(--drop-card);
 }
 .skeleton-block {
   height: 0.875rem;
   border-radius: 0.25rem;
-  background: var(--drop-surface-2);
-  animation: skeleton-pulse 1.2s ease-in-out infinite;
+  background: linear-gradient(90deg, var(--drop-surface-2) 0%, var(--drop-background) 50%, var(--drop-surface-2) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
 @keyframes skeleton-pulse {
-  50% {
-    opacity: 0.45;
-  }
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .empty {

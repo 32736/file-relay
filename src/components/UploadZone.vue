@@ -281,7 +281,7 @@ defineExpose({ addFiles, tasks })
 <style scoped>
 .upload-zone .drop-area {
   position: relative;
-  border: 2px dashed var(--text);
+  border: 1.5px dashed rgba(15, 15, 18, 0.2);
   border-radius: var(--radius-lg);
   padding: 2.75rem 1.5rem 2.25rem;
   text-align: center;
@@ -290,28 +290,28 @@ defineExpose({ addFiles, tasks })
   align-items: center;
   gap: 0.6rem;
   background: var(--surface);
-  box-shadow: inset 0 -4px 0 var(--surface-muted);
+  box-shadow: var(--drop-shadow-1), var(--drop-inner-highlight);
   transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.15s ease;
+    border-color var(--drop-dur-base) var(--drop-ease-spring),
+    background-color var(--drop-dur-base) var(--drop-ease-spring),
+    box-shadow var(--drop-dur-base) var(--drop-ease-spring),
+    transform var(--drop-dur-base) var(--drop-ease-spring);
 }
 .upload-zone .drop-area:hover,
 .upload-zone.dragging .drop-area {
   border-style: solid;
-  border-color: var(--text);
+  border-color: var(--primary);
   background: var(--bg-warm);
-  box-shadow: var(--shadow-hard-sm), inset 0 -4px 0 var(--primary);
-  transform: translate(-1px, -1px);
+  box-shadow: var(--drop-shadow-2), var(--drop-inner-highlight);
+  transform: translateY(-1px);
 }
 .drop-title {
   margin: 0;
   font-size: 1.35rem;
   font-weight: 700;
   color: var(--text);
+  letter-spacing: -0.02em;
 }
-/* Compact when files already exist: smaller area, art hidden */
 .upload-zone .drop-area.compact {
   padding: 1.1rem 1rem;
   flex-direction: column;
@@ -331,22 +331,23 @@ defineExpose({ addFiles, tasks })
 }
 .tasks {
   list-style: none;
-  margin: 0.75rem 0 0;
+  margin: 0.875rem 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 .task {
-  border: 1px solid var(--border);
+  border: 1px solid rgba(15, 15, 18, 0.06);
   border-radius: var(--radius-md);
-  padding: 0.75rem 0.9rem;
+  padding: 0.875rem 1rem;
   background: var(--surface);
+  box-shadow: var(--drop-shadow-1);
+  transition: box-shadow var(--drop-dur-base) var(--drop-ease-spring);
 }
 .task.completed {
   opacity: 0.85;
 }
-/* Drop-ripple completion mark: the dot lands and ripples once. */
 .done-dot {
   width: 0.7rem;
   height: 0.7rem;
@@ -386,17 +387,19 @@ defineExpose({ addFiles, tasks })
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
 }
 .meta {
   color: var(--text-muted);
   font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
 }
 .status {
   color: var(--text-muted);
   font-size: 0.8rem;
 }
-.task.uploading .status { color: var(--primary-dark); }
-.task.failed .status { color: var(--danger); }
+.task.uploading .status { color: var(--primary-dark); font-weight: 600; }
+.task.failed .status { color: var(--danger); font-weight: 600; }
 .sub {
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -408,7 +411,7 @@ defineExpose({ addFiles, tasks })
   gap: .7rem;
   align-items: center;
   min-width: 0;
-  margin-top: .55rem;
+  margin-top: .6rem;
 }
 .progress-info {
   min-width: 0;
@@ -417,20 +420,22 @@ defineExpose({ addFiles, tasks })
   font-size: .78rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 .bar {
   height: 6px;
   background: var(--surface-muted);
-  border-radius: 3px;
+  border-radius: 999px;
   margin: 0.4rem 0;
   overflow: hidden;
 }
 .fill {
   height: 100%;
-  background: var(--primary);
+  background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%);
   transform: scaleX(var(--progress, 0));
   transform-origin: left;
-  transition: transform 0.2s ease-out;
+  transition: transform 0.25s var(--drop-ease-spring);
+  border-radius: 999px;
 }
 .actions {
   display: flex;
@@ -438,14 +443,15 @@ defineExpose({ addFiles, tasks })
   justify-content: flex-end;
 }
 .actions button {
-  background: transparent;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 0.3rem 0.65rem;
   font-size: 0.8rem;
   cursor: pointer;
+  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring), color var(--drop-dur-base) var(--drop-ease-spring);
 }
-.actions button:hover { border-color: var(--text); background: var(--surface-muted); }
+.actions button:hover { border-color: var(--border-strong); background: var(--surface-muted); }
 .actions button.danger {
   color: var(--danger);
 }
@@ -453,7 +459,6 @@ defineExpose({ addFiles, tasks })
   color: var(--danger);
 }
 .hidden-input {
-  /* sr-only: reachable via the "选择文件续传" button */
   position: absolute;
   width: 1px;
   height: 1px;

@@ -258,32 +258,34 @@ onMounted(() => void loadStats())
   position: sticky;
   top: 0;
   z-index: 20;
-  border-bottom: 1px solid var(--drop-border);
-  background: color-mix(in srgb, var(--drop-background) 95%, transparent);
-  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(15, 15, 18, 0.06);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
 }
 .header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 3.5rem;
-  padding: 0 1rem;
+  height: 3.75rem;
+  padding: 0 1.25rem;
 }
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
 }
 .logo {
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.875rem;
+  height: 1.875rem;
   display: block;
 }
 .wordmark {
   margin: 0;
   font-size: 1.125rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  font-family: "Geist", "Plus Jakarta Sans", sans-serif;
   color: var(--drop-ink);
 }
 .wordmark .o {
@@ -292,10 +294,11 @@ onMounted(() => void loadStats())
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.875rem;
 }
 .usage {
   font-size: 0.75rem;
+  font-weight: 500;
   color: var(--drop-ink-2);
   font-variant-numeric: tabular-nums;
 }
@@ -303,20 +306,22 @@ onMounted(() => void loadStats())
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.125rem;
+  height: 2.125rem;
   border: 0;
-  border-radius: var(--drop-radius-md);
+  border-radius: var(--drop-radius-sm);
   background: transparent;
   color: var(--drop-ink-3);
   -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--drop-dur-base) var(--drop-ease-spring), color var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring);
 }
 .logout-btn:active {
-  background: var(--drop-surface-2);
+  transform: scale(0.94);
+  background: var(--drop-brand-tint);
   color: var(--drop-state-error);
 }
 .logout-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .mobile-body {
@@ -324,7 +329,7 @@ onMounted(() => void loadStats())
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .tabbar {
@@ -338,10 +343,12 @@ onMounted(() => void loadStats())
   align-items: center;
   width: 100%;
   max-width: 30rem;
-  height: calc(4rem + env(safe-area-inset-bottom, 0px));
+  height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  border-top: 1px solid var(--drop-border);
-  background: var(--drop-background);
+  border-top: 1px solid rgba(15, 15, 18, 0.06);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
 }
 .tab-item {
   display: flex;
@@ -349,15 +356,17 @@ onMounted(() => void loadStats())
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-  height: 4rem;
+  gap: 0.3125rem;
+  height: 4.5rem;
   padding: 0 0.25rem;
   border: 0;
   background: transparent;
   color: var(--drop-ink-3);
   font-size: 0.6875rem;
+  font-weight: 500;
   line-height: 1;
   -webkit-tap-highlight-color: transparent;
+  transition: color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .tab-item.active {
   color: var(--drop-brand);
@@ -367,17 +376,19 @@ onMounted(() => void loadStats())
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 3.75rem;
+  height: 3.75rem;
   margin: 0 auto;
   border: 0;
-  border-radius: var(--drop-radius-lg);
-  background: var(--drop-brand);
+  border-radius: var(--drop-radius-xl);
+  background: linear-gradient(135deg, var(--drop-brand) 0%, var(--drop-brand-strong) 100%);
   color: #fff;
-  box-shadow: var(--drop-shadow-2);
+  box-shadow: 0 8px 28px -4px rgba(230, 57, 70, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transform: translateY(-0.75rem);
+  transition: transform var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring);
 }
 .tab-upload:active {
-  background: var(--drop-brand-strong);
+  transform: translateY(-0.625rem) scale(0.96);
+  box-shadow: 0 4px 16px -2px rgba(230, 57, 70, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 </style>

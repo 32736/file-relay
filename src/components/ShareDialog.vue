@@ -176,23 +176,31 @@ onMounted(() => {
 .dialog {
   margin: auto;
   background: var(--surface);
-  border: 2px solid var(--text);
-  border-radius: var(--radius-md);
-  padding: 1.25rem 1.5rem;
+  border: 1px solid rgba(15, 15, 18, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.75rem;
   max-width: 26rem;
   width: 90%;
-  box-shadow: var(--shadow-hard);
+  box-shadow: var(--drop-shadow-4), var(--drop-inner-highlight);
+  animation: dialog-in 0.25s var(--drop-ease-spring);
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .dialog::backdrop {
-  background: rgba(24, 26, 25, 0.52);
+  background: rgba(15, 15, 18, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .dialog-title {
-  margin: 0 0 0.75rem;
+  margin: 0 0 1rem;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 650;
   line-height: 1.4;
   color: var(--text);
   overflow: hidden;
+  letter-spacing: -0.02em;
 }
 .title-text {
   display: block;
@@ -202,55 +210,93 @@ onMounted(() => {
 }
 label {
   display: block;
-  margin-bottom: 0.75rem;
-  font-size: 0.9rem;
+  margin-bottom: 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
 }
 label input[type='number'],
 label input[type='password'] {
   display: block;
   width: 100%;
-  margin-top: 0.25rem;
-  min-height: 2.5rem;
-  padding: 0.45rem 0.6rem;
-  border: 1px solid var(--border-strong);
+  margin-top: 0.375rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring);
+}
+label input[type='number']:focus,
+label input[type='password']:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.1);
 }
 .check {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.5rem;
   align-items: center;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-warm);
+}
+.check input[type='checkbox'] {
+  accent-color: var(--primary);
 }
 .buttons {
   display: flex;
   gap: 0.6rem;
   justify-content: flex-end;
-  margin-top: 0.75rem;
+  margin-top: 1rem;
 }
 button {
-  min-height: 2.5rem;
-  padding: 0.45rem 0.9rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   cursor: pointer;
+  font-weight: 500;
+  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring), color var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring);
 }
 button[type='submit'] {
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: #fff;
-  border: 2px solid var(--text);
-  box-shadow: var(--shadow-hard-sm);
+  border: 0;
+  box-shadow: 0 4px 14px -2px rgba(230, 57, 70, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
-button[type='submit']:not(:disabled):hover { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--text); background: var(--primary-dark); }
+button[type='submit']:not(:disabled):hover {
+  filter: brightness(1.05);
+  box-shadow: 0 6px 20px -2px rgba(230, 57, 70, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+button[type='submit']:active {
+  transform: scale(0.98);
+}
 button.ghost {
-  background: transparent;
+  background: var(--surface);
+}
+button.ghost:hover {
+  background: var(--surface-muted);
+  border-color: var(--border-strong);
 }
 .qr {
   display: block;
   margin: 0.5rem auto;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-warm);
 }
 .url {
   word-break: break-all;
   font-size: 0.85rem;
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  color: var(--text-muted);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-warm);
+  border: 1px solid var(--border);
 }
 .error {
   color: var(--danger);

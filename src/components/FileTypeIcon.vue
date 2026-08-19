@@ -176,10 +176,12 @@ function kind(mime: string | null): string {
 .file-icon {
   display: inline-grid;
   place-items: center;
-  width: 1.7rem;
-  height: 1.7rem;
+  width: 1.8rem;
+  height: 1.8rem;
   flex: none;
   color: var(--text-muted);
+  border-radius: var(--radius-xs);
+  transition: color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .file-icon svg {
   width: 1.35rem;
