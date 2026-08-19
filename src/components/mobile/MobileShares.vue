@@ -127,30 +127,12 @@ defineExpose({ load })
       v-else-if="shares.length === 0"
       class="empty"
     >
-      <AppIcon
-        class="empty-icon"
-        name="share"
-      />
-      <h2 class="empty-title">
-        还没有分享
-      </h2>
-      <p class="empty-desc">
-        从文件页面创建分享链接，即可分享给你的朋友
+      <p class="empty-text">
+        暂无分享
       </p>
-      <button
-        type="button"
-        class="empty-cta"
-        @click="emit('gofiles')"
-      >
-        <AppIcon name="folder" />
-        <span>去上传文件</span>
-      </button>
     </div>
 
     <template v-else>
-      <h2 class="section-title">
-        已创建的分享
-      </h2>
       <div class="cards">
         <article
           v-for="share in shares"
@@ -171,34 +153,37 @@ defineExpose({ load })
               :class="isActive(share) ? 'active' : 'inactive'"
             >{{ stateLabel(share) }}</span>
           </div>
-          <div
-            v-if="shareUrls[share.id] && isActive(share)"
-            class="link-row"
-          >
-            <AppIcon
-              class="link-icon"
-              name="link"
-            />
-            <span class="link-text">{{ shareUrls[share.id] }}</span>
-            <button
-              type="button"
-              data-stop
-              class="copy-btn"
-              :aria-label="copiedId === share.id ? '已复制' : '复制链接'"
-              @click="copyUrl(share.id)"
-            >
-              <AppIcon :name="copiedId === share.id ? 'check' : 'copy'" />
-            </button>
-          </div>
           <div class="card-meta">
-            <span>{{ daysLeft(share) }} · {{ share.downloadCount }} 次下载</span>
-            <span>{{ relativeTime(share.createdAt) }}</span>
+            <span class="meta-left">
+              <template v-if="shareUrls[share.id] && isActive(share)">
+                <AppIcon
+                  class="link-icon"
+                  name="link"
+                />
+                <span class="link-text">{{ shareUrls[share.id] }}</span>
+              </template>
+              <template v-else>
+                {{ daysLeft(share) }} · {{ share.downloadCount }} 次下载
+              </template>
+            </span>
+            <span class="meta-right">
+              <button
+                v-if="shareUrls[share.id] && isActive(share)"
+                type="button"
+                data-stop
+                class="copy-btn"
+                :aria-label="copiedId === share.id ? '已复制' : '复制链接'"
+                @click="copyUrl(share.id)"
+              >
+                <AppIcon :name="copiedId === share.id ? 'check' : 'copy'" />
+              </button>
+              <template v-else>
+                {{ relativeTime(share.createdAt) }}
+              </template>
+            </span>
           </div>
         </article>
       </div>
-      <p class="footnote">
-        分享链接到期后自动失效
-      </p>
     </template>
   </section>
 </template>
@@ -210,13 +195,6 @@ defineExpose({ load })
   display: flex;
   flex-direction: column;
   padding: 1rem 1rem 1.5rem;
-}
-
-.section-title {
-  margin: 0 0 0.75rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--drop-ink-2);
 }
 
 .cards {
@@ -283,27 +261,40 @@ defineExpose({ load })
   color: var(--drop-ink-3);
 }
 
-.link-row {
+.card-meta {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
-  margin-top: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--drop-radius-md);
-  background: var(--drop-surface-2);
-}
-.link-icon {
-  width: 1rem;
-  height: 1rem;
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
   color: var(--drop-ink-3);
 }
-.link-text {
+.meta-left {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.8125rem;
+}
+.meta-right {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+.link-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--drop-ink-3);
+  flex: none;
+}
+.link-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: ui-monospace, "SFMono-Regular", monospace;
   color: var(--drop-ink-2);
 }
@@ -325,31 +316,6 @@ defineExpose({ load })
 }
 .copy-btn:active {
   background: var(--drop-muted);
-}
-
-.card-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-  font-size: 0.75rem;
-  color: var(--drop-ink-3);
-}
-.card-meta span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.card-meta span:last-child {
-  flex: none;
-}
-
-.footnote {
-  margin: 1.5rem 0 0;
-  font-size: 0.75rem;
-  color: var(--drop-ink-3);
-  text-align: center;
 }
 
 .skeleton {
@@ -386,39 +352,9 @@ defineExpose({ load })
   padding: 1.5rem;
   text-align: center;
 }
-.empty-icon {
-  width: 4rem;
-  height: 4rem;
-  color: var(--drop-ink-3);
-}
-.empty-title {
-  margin: 1rem 0 0;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--drop-ink);
-}
-.empty-desc {
-  margin: 0.5rem 0 0;
-  max-width: 17.5rem;
+.empty-text {
   font-size: 0.875rem;
-  line-height: 1.5;
-  color: var(--drop-ink-2);
-}
-.empty-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  max-width: 17.5rem;
-  height: 3rem;
-  margin-top: 1.5rem;
-  border: 0;
-  border-radius: var(--drop-radius-md);
-  background: var(--drop-surface-2);
-  color: var(--drop-ink);
-  font-size: 0.9375rem;
-  font-weight: 500;
+  color: var(--drop-ink-3);
 }
 
 .error {

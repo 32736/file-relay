@@ -64,6 +64,7 @@ defineExpose({ addFiles })
           <UploadZone
             ref="uploadZone"
             class="mobile-uploads"
+            no-drag
             @uploaded="emit('uploaded')"
           />
 

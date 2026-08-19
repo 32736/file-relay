@@ -9,7 +9,6 @@ import type { FileItem } from '../FileList.vue'
 import AppIcon from './AppIcon.vue'
 import MobileActionSheet from './MobileActionSheet.vue'
 import MobileFiles from './MobileFiles.vue'
-import MobileMe from './MobileMe.vue'
 import MobileShareDetail from './MobileShareDetail.vue'
 import MobileShares from './MobileShares.vue'
 import type { MobileShareItem } from './MobileShares.vue'
@@ -17,11 +16,12 @@ import MobileUploadSheet from './MobileUploadSheet.vue'
 
 const emit = defineEmits<{ logout: [] }>()
 
-type TabKey = 'files' | 'shares' | 'profile'
+type TabKey = 'files' | 'shares'
 
 const tab = ref<TabKey>('files')
 const stats = ref<{ fileCount: number; totalBytes: number } | null>(null)
 
+const logoutBusy = ref(false)
 const shareDetail = ref<MobileShareItem | null>(null)
 const actionFile = ref<FileItem | null>(null)
 const uploadOpen = ref(false)
@@ -64,6 +64,22 @@ function onShareRevoked(): void {
 function openUpload(): void {
   actionFile.value = null
   uploadOpen.value = true
+}
+
+async function logout(): Promise<void> {
+  if (logoutBusy.value) return
+  logoutBusy.value = true
+  try {
+    await api<void>('/api/auth/logout', {
+      method: 'POST',
+      headers: { Origin: window.location.origin },
+    })
+    emit('logout')
+  } catch (cause) {
+    toast(cause instanceof Error ? cause.message : '退出登录失败，请重试', 'error')
+  } finally {
+    logoutBusy.value = false
+  }
 }
 
 function onUploaded(): void {
@@ -132,10 +148,20 @@ onMounted(() => void loadStats())
             Dr<span class="o">o</span>p
           </h1>
         </div>
-        <span
-          v-if="totalLabel"
-          class="usage"
-        >{{ totalLabel }}</span>
+        <div class="header-actions">
+          <span
+            v-if="totalLabel"
+            class="usage"
+          >{{ totalLabel }}</span>
+          <button
+            type="button"
+            class="logout-btn"
+            :disabled="logoutBusy"
+            @click="logout"
+          >
+            <AppIcon name="log-out" />
+          </button>
+        </div>
       </div>
     </header>
 
@@ -152,10 +178,6 @@ onMounted(() => void loadStats())
         @open="openShareDetail"
         @gofiles="switchTab('files')"
       />
-      <MobileMe
-        v-show="tab === 'profile' && !shareDetail"
-        @logout="emit('logout')"
-      />
       <MobileShareDetail
         v-if="shareDetail"
         :share="shareDetail"
@@ -163,16 +185,6 @@ onMounted(() => void loadStats())
         @revoked="onShareRevoked"
       />
     </main>
-
-    <button
-      v-if="tab === 'files' && !shareDetail"
-      type="button"
-      class="fab"
-      aria-label="上传文件"
-      @click="openUpload"
-    >
-      <AppIcon name="plus" />
-    </button>
 
     <nav
       class="tabbar"
@@ -189,21 +201,20 @@ onMounted(() => void loadStats())
       </button>
       <button
         type="button"
+        class="tab-upload"
+        aria-label="上传文件"
+        @click="openUpload"
+      >
+        <AppIcon name="plus" />
+      </button>
+      <button
+        type="button"
         class="tab-item"
         :class="{ active: tab === 'shares' && !shareDetail }"
         @click="switchTab('shares')"
       >
         <AppIcon name="share" />
         <span>分享</span>
-      </button>
-      <button
-        type="button"
-        class="tab-item"
-        :class="{ active: tab === 'profile' && !shareDetail }"
-        @click="switchTab('profile')"
-      >
-        <AppIcon name="user" />
-        <span>我的</span>
       </button>
     </nav>
 
@@ -278,10 +289,34 @@ onMounted(() => void loadStats())
 .wordmark .o {
   color: var(--drop-brand);
 }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
 .usage {
   font-size: 0.75rem;
   color: var(--drop-ink-2);
   font-variant-numeric: tabular-nums;
+}
+.logout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: var(--drop-radius-md);
+  background: transparent;
+  color: var(--drop-ink-3);
+  -webkit-tap-highlight-color: transparent;
+}
+.logout-btn:active {
+  background: var(--drop-surface-2);
+  color: var(--drop-state-error);
+}
+.logout-btn:disabled {
+  opacity: 0.6;
 }
 
 .mobile-body {
@@ -292,26 +327,6 @@ onMounted(() => void loadStats())
   padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
 }
 
-.fab {
-  position: fixed;
-  right: max(1rem, calc((100vw - 30rem) / 2 + 1rem));
-  bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 3.5rem;
-  height: 3.5rem;
-  border: 0;
-  border-radius: var(--drop-radius-lg);
-  background: var(--drop-brand);
-  color: #fff;
-  box-shadow: var(--drop-shadow-2);
-}
-.fab:active {
-  background: var(--drop-brand-strong);
-}
-
 .tabbar {
   position: fixed;
   bottom: 0;
@@ -319,7 +334,8 @@ onMounted(() => void loadStats())
   transform: translateX(-50%);
   z-index: 25;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
   width: 100%;
   max-width: 30rem;
   height: calc(4rem + env(safe-area-inset-bottom, 0px));
@@ -346,5 +362,22 @@ onMounted(() => void loadStats())
 .tab-item.active {
   color: var(--drop-brand);
   font-weight: 600;
+}
+.tab-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin: 0 auto;
+  border: 0;
+  border-radius: var(--drop-radius-lg);
+  background: var(--drop-brand);
+  color: #fff;
+  box-shadow: var(--drop-shadow-2);
+  transform: translateY(-0.75rem);
+}
+.tab-upload:active {
+  background: var(--drop-brand-strong);
 }
 </style>

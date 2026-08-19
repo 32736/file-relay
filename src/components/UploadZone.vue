@@ -5,7 +5,7 @@ import { useUploads, type UploadTask } from '../composables/useUploads'
 import { formatBytes } from '../lib/format'
 import { toast } from '../lib/toast'
 
-defineProps<{ compact?: boolean }>()
+const props = defineProps<{ compact?: boolean; noDrag?: boolean }>()
 const emit = defineEmits<{ uploaded: [] }>()
 
 const { tasks, addFiles, pause, resume, cancel, retry, restore, hasFile } = useUploads(() =>
@@ -88,7 +88,23 @@ async function handleFiles(files: File[]): Promise<void> {
   addFiles(files)
 }
 
+function onDragEnter(): void {
+  if (props.noDrag) return
+  dragging.value = true
+}
+
+function onDragOver(): void {
+  if (props.noDrag) return
+  dragging.value = true
+}
+
+function onDragLeave(): void {
+  if (props.noDrag) return
+  dragging.value = false
+}
+
 function onDrop(event: DragEvent): void {
+  if (props.noDrag) return
   dragging.value = false
   const files = Array.from(event.dataTransfer?.files ?? [])
   void handleFiles(files)
@@ -123,9 +139,9 @@ defineExpose({ addFiles, tasks })
       :class="{ compact }"
       role="button"
       tabindex="0"
-      @dragenter.prevent.stop="dragging = true"
-      @dragover.prevent.stop="dragging = true"
-      @dragleave.prevent.stop="dragging = false"
+      @dragenter.prevent.stop="onDragEnter"
+      @dragover.prevent.stop="onDragOver"
+      @dragleave.prevent.stop="onDragLeave"
       @drop.prevent.stop="onDrop"
       @keydown.enter.prevent="pickInput?.click()"
       @click="pickInput?.click()"
@@ -134,7 +150,12 @@ defineExpose({ addFiles, tasks })
         选择文件上传
       </p>
       <p class="drop-sub">
-        也可拖入页面任意位置 · 单文件最大 2 GB
+        <template v-if="noDrag">
+          单文件最大 2 GB
+        </template>
+        <template v-else>
+          也可拖入页面任意位置 · 单文件最大 2 GB
+        </template>
       </p>
       <input
         ref="pickInput"

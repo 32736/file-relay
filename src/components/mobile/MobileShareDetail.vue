@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { api } from '../../lib/api'
 import { formatDate } from '../../lib/format'
@@ -57,7 +57,22 @@ async function revoke(): Promise<void> {
   }
 }
 
+function onPopState(): void {
+  emit('back')
+}
+
+function goBack(): void {
+  if (window.history.length > 1) {
+    window.history.back()
+  } else {
+    emit('back')
+  }
+}
+
 onMounted(async () => {
+  window.history.pushState({ view: 'share-detail' }, '', '')
+  window.addEventListener('popstate', onPopState)
+
   shareUrl.value = loadShareUrls()[props.share.id] ?? ''
   if (shareUrl.value) {
     await nextTick()
@@ -67,6 +82,10 @@ onMounted(async () => {
     }
   }
 })
+
+onBeforeUnmount(() => {
+  window.removeEventListener('popstate', onPopState)
+})
 </script>
 
 <template>
@@ -74,6 +93,18 @@ onMounted(async () => {
     class="detail"
     aria-label="分享详情"
   >
+    <header class="detail-header">
+      <button
+        type="button"
+        class="back-btn"
+        aria-label="返回"
+        @click="goBack"
+      >
+        <AppIcon name="chevron-left" />
+      </button>
+      <span class="detail-title">分享详情</span>
+    </header>
+
     <p
       v-if="error"
       class="error"
@@ -115,10 +146,10 @@ onMounted(async () => {
         <button
           type="button"
           class="copy-btn"
+          :aria-label="copied ? '已复制' : '复制链接'"
           @click="copyUrl"
         >
           <AppIcon :name="copied ? 'check' : 'copy'" />
-          <span>{{ copied ? '已复制' : '复制' }}</span>
         </button>
       </div>
       <p
@@ -199,166 +230,47 @@ onMounted(async () => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 1rem 1rem 1.5rem;
+  gap: 0.5rem;
+  padding: 0 1rem 1rem;
 }
 
-.card {
-  padding: 1rem;
-  border: 1px solid var(--drop-border);
-  border-radius: var(--drop-radius-lg);
-  background: var(--drop-card);
-}
-
-.file-head {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.tile {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--drop-radius-md);
-  background: var(--drop-brand-tint);
-  color: var(--drop-brand);
-}
-.tile :deep(svg) {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-.file-body {
-  flex: 1;
-  min-width: 0;
-}
-.file-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--drop-ink);
-}
-.file-meta {
-  margin-top: 0.125rem;
-  font-size: 0.75rem;
-  color: var(--drop-ink-3);
-}
-.badge {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.25rem 0.625rem;
-  border-radius: var(--drop-radius-pill);
-  font-size: 0.6875rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
-.badge.active {
-  background: color-mix(in srgb, var(--drop-state-success) 10%, transparent);
-  color: var(--drop-state-success);
-}
-.badge.inactive {
-  background: var(--drop-muted);
-  color: var(--drop-ink-3);
-}
-
-.link-row {
+.detail-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.625rem 0.75rem;
-  border-radius: var(--drop-radius-md);
-  background: var(--drop-surface-2);
+  height: 2.75rem;
+  padding: 0;
+  border-bottom: 1px solid var(--drop-border);
+  margin: 0 -1rem 0.125rem;
+  padding-left: 0.25rem;
+  padding-right: 1rem;
 }
-.link-icon {
-  width: 1rem;
-  height: 1rem;
-  color: var(--drop-ink-3);
-}
-.link-text {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.8125rem;
-  font-family: ui-monospace, "SFMono-Regular", monospace;
-  color: var(--drop-ink-2);
-}
-.copy-btn {
-  flex: none;
+
+.back-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  min-height: 2.25rem;
-  padding: 0 0.5rem;
-  border: 0;
-  border-radius: var(--drop-radius-sm);
-  background: transparent;
-  color: var(--drop-brand);
-  font-size: 0.8125rem;
-  font-weight: 500;
-}
-.copy-btn :deep(svg) {
-  width: 1rem;
-  height: 1rem;
-}
-.copy-btn:active {
-  opacity: 0.6;
-}
-
-.url-missing {
-  margin: 0;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--drop-ink-3);
-}
-
-.qr-wrap {
-  display: flex;
   justify-content: center;
-  margin-top: 1rem;
-}
-.qr {
-  padding: 0.5rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
   border-radius: var(--drop-radius-md);
+  background: transparent;
+  color: var(--drop-ink-2);
+  -webkit-tap-highlight-color: transparent;
+}
+.back-btn:active {
   background: var(--drop-surface-2);
 }
+.back-btn :deep(svg) {
+  width: 1.25rem;
+  height: 1.25rem;
+}
 
-.stat-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-}
-.stat {
-  text-align: center;
-  padding: 0.25rem 0.5rem;
-}
-.stat + .stat {
-  border-left: 1px solid var(--drop-border);
-}
-.stat-value {
-  line-height: 1.2;
-}
-.stat-number {
-  font-size: 1.5rem;
-  font-weight: 700;
+.detail-title {
+  flex: 1;
+  font-size: 0.9375rem;
+  font-weight: 600;
   color: var(--drop-ink);
-}
-.stat-unit {
-  margin-left: 0.125rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--drop-ink-3);
-}
-.stat-label {
-  margin-top: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--drop-ink-3);
 }
 
 .manage {
@@ -381,6 +293,162 @@ onMounted(async () => {
 }
 .revoke:disabled {
   opacity: 0.5;
+}
+
+.card {
+  padding: 0.75rem;
+  border: 1px solid var(--drop-border);
+  border-radius: var(--drop-radius-lg);
+  background: var(--drop-card);
+}
+
+.file-head {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+.tile {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--drop-radius-md);
+  background: var(--drop-brand-tint);
+  color: var(--drop-brand);
+}
+.tile :deep(svg) {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+.file-body {
+  flex: 1;
+  min-width: 0;
+}
+.file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--drop-ink);
+}
+.file-meta {
+  margin-top: 0.125rem;
+  font-size: 0.6875rem;
+  color: var(--drop-ink-3);
+}
+.badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1875rem 0.5rem;
+  border-radius: var(--drop-radius-pill);
+  font-size: 0.625rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.badge.active {
+  background: color-mix(in srgb, var(--drop-state-success) 10%, transparent);
+  color: var(--drop-state-success);
+}
+.badge.inactive {
+  background: var(--drop-muted);
+  color: var(--drop-ink-3);
+}
+
+.link-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--drop-radius-md);
+  background: var(--drop-surface-2);
+}
+.link-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--drop-ink-3);
+}
+.link-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  color: var(--drop-ink-2);
+}
+.copy-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: var(--drop-radius-sm);
+  background: transparent;
+  color: var(--drop-brand);
+}
+.copy-btn :deep(svg) {
+  width: 1rem;
+  height: 1rem;
+}
+.copy-btn:active {
+  opacity: 0.6;
+}
+
+.url-missing {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--drop-ink-3);
+}
+
+.qr-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+.qr {
+  padding: 0.375rem;
+  border-radius: var(--drop-radius-md);
+  background: var(--drop-surface-2);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+.stat {
+  text-align: center;
+  padding: 0.125rem 0.25rem;
+}
+.stat + .stat {
+  border-left: 1px solid var(--drop-border);
+}
+.stat-value {
+  line-height: 1.2;
+}
+.stat-number {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--drop-ink);
+}
+.stat-unit {
+  margin-left: 0.125rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--drop-ink-3);
+}
+.stat-label {
+  margin-top: 0.125rem;
+  font-size: 0.6875rem;
+  color: var(--drop-ink-3);
 }
 
 .error {

@@ -182,7 +182,10 @@ defineExpose({ load })
           </span>
           <span class="file-body">
             <span class="file-name">{{ file.name }}</span>
-            <span class="file-meta">{{ formatBytes(file.size) }} · {{ formatDate(file.createdAt) }}</span>
+            <span class="file-meta">
+              <span class="file-size">{{ formatBytes(file.size) }}</span>
+              <span class="file-time">{{ formatDate(file.createdAt) }}</span>
+            </span>
           </span>
           <AppIcon
             class="chevron"
@@ -357,8 +360,13 @@ defineExpose({ load })
   color: var(--drop-ink);
 }
 .file-meta {
+  display: flex;
+  justify-content: space-between;
   font-size: 0.75rem;
   color: var(--drop-ink-3);
+}
+.file-time {
+  margin-left: auto;
 }
 .chevron {
   color: var(--drop-ink-3);

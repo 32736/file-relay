@@ -32,14 +32,6 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
               {{ formatBytes(file.size) }} · {{ formatDate(file.createdAt) }}
             </div>
           </div>
-          <button
-            type="button"
-            class="sheet-close"
-            aria-label="关闭"
-            @click="emit('close')"
-          >
-            <AppIcon name="x" />
-          </button>
         </div>
 
         <div class="actions">
@@ -77,14 +69,6 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
             <span class="action-label">删除</span>
           </button>
         </div>
-
-        <button
-          type="button"
-          class="cancel"
-          @click="emit('close')"
-        >
-          取消
-        </button>
       </div>
     </div>
   </Teleport>
@@ -152,21 +136,6 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   font-size: 0.75rem;
   color: var(--drop-ink-3);
 }
-.sheet-close {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border: 0;
-  border-radius: var(--drop-radius-sm);
-  background: transparent;
-  color: var(--drop-ink-2);
-}
-.sheet-close:active {
-  background: var(--drop-surface-2);
-}
 
 .actions {
   display: flex;
@@ -202,23 +171,5 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
 .action-row.danger .action-icon,
 .action-row.danger .action-label {
   color: var(--drop-state-error);
-}
-
-.cancel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: calc(100% - 2rem);
-  min-height: 2.875rem;
-  margin: 0.5rem 1rem 0;
-  border: 1px solid var(--drop-border);
-  border-radius: var(--drop-radius-md);
-  background: var(--drop-card);
-  color: var(--drop-ink);
-  font-size: 0.9375rem;
-  font-weight: 500;
-}
-.cancel:active {
-  background: var(--drop-surface-2);
 }
 </style>

@@ -82,7 +82,12 @@ onMounted(() => {
     @cancel.prevent="emit('close')"
     @click.self="emit('close')"
   >
-    <h3>分享 {{ file.name }}</h3>
+    <h3 class="dialog-title">
+      <span
+        class="title-text"
+        :title="file.name"
+      >{{ file.name }}</span>
+    </h3>
 
     <form
       v-if="!result"
@@ -120,13 +125,6 @@ onMounted(() => {
       </p>
       <div class="buttons">
         <button
-          type="button"
-          class="ghost"
-          @click="emit('close')"
-        >
-          取消
-        </button>
-        <button
           class="btn-primary"
           type="submit"
           :disabled="busy"
@@ -140,12 +138,6 @@ onMounted(() => {
       v-else
       class="result"
     >
-      <p
-        class="ok"
-        role="status"
-      >
-        分享已创建
-      </p>
       <canvas
         ref="qrCanvas"
         class="qr"
@@ -176,9 +168,6 @@ onMounted(() => {
           完成
         </button>
       </div>
-      <p class="hint">
-        链接已保存到分享页（本设备），关闭后仍可复制。
-      </p>
     </div>
   </dialog>
 </template>
@@ -196,6 +185,20 @@ onMounted(() => {
 }
 .dialog::backdrop {
   background: rgba(24, 26, 25, 0.52);
+}
+.dialog-title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+  overflow: hidden;
+}
+.title-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 label {
   display: block;
@@ -251,9 +254,6 @@ button.ghost {
 }
 .error {
   color: var(--danger);
-}
-.ok {
-  color: var(--success);
 }
 .hint {
   color: var(--text-muted);
