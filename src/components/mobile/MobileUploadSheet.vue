@@ -156,9 +156,9 @@ defineExpose({ addFiles })
   to { transform: translateY(0); }
 }
 .sheet-handle {
-  width: 2.5rem;
+  width: 2rem;
   height: 0.25rem;
-  margin: 0.75rem auto 0;
+  margin: 0.5rem auto 0;
   border-radius: var(--drop-radius-pill);
   background: var(--drop-line);
 }
@@ -166,10 +166,10 @@ defineExpose({ addFiles })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem 0.5rem;
+  padding: 0.5rem 0.875rem 0.375rem;
 }
 .sheet-title {
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--drop-ink);
   letter-spacing: -0.02em;
@@ -178,8 +178,8 @@ defineExpose({ addFiles })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border: 0;
   border-radius: var(--drop-radius-sm);
   background: transparent;
@@ -192,16 +192,16 @@ defineExpose({ addFiles })
 .sheet-body {
   min-height: 0;
   overflow-y: auto;
-  padding: 0.25rem 1rem 1rem;
+  padding: 0.125rem 0.875rem 0.875rem;
 }
 
 .mobile-uploads :deep(.drop-area) {
   border: 1.5px dashed var(--drop-border);
-  border-radius: var(--drop-radius-md);
+  border-radius: var(--drop-radius-sm);
   background: var(--drop-surface-2);
   box-shadow: none;
-  padding: 1.5rem 1rem;
-  gap: 0.5rem;
+  padding: 1rem 0.875rem;
+  gap: 0.375rem;
   transition: border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .mobile-uploads :deep(.drop-area:hover),
@@ -213,15 +213,15 @@ defineExpose({ addFiles })
   transform: none;
 }
 .mobile-uploads :deep(.drop-title) {
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 .mobile-uploads :deep(.drop-sub) {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--drop-ink-3);
 }
 .mobile-uploads :deep(.tasks) {
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
   gap: 0;
 }
 .mobile-uploads :deep(.task) {
@@ -229,20 +229,20 @@ defineExpose({ addFiles })
   border-top: 1px solid var(--drop-line);
   border-radius: 0;
   background: transparent;
-  padding: 0.75rem 0;
+  padding: 0.5rem 0;
   box-shadow: none;
 }
 .mobile-uploads :deep(.task:first-child) {
   border-top: 0;
 }
 .mobile-uploads :deep(.name) {
-  font-size: 0.9375rem;
-  font-weight: 500;
+  font-size: 0.8125rem;
+  font-weight: 600;
   color: var(--drop-ink);
 }
 .mobile-uploads :deep(.meta),
 .mobile-uploads :deep(.status) {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--drop-ink-3);
 }
 .mobile-uploads :deep(.bar) {
@@ -262,21 +262,21 @@ defineExpose({ addFiles })
 .pick-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
 }
 .pick-grid button {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  min-height: 3rem;
+  gap: 0.375rem;
+  min-height: 2.5rem;
   border: 1px solid rgba(15, 15, 18, 0.08);
-  border-radius: var(--drop-radius-md);
+  border-radius: var(--drop-radius-sm);
   background: var(--drop-card);
   color: var(--drop-ink);
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 0.8125rem;
+  font-weight: 600;
   transition: border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .pick-grid button:active {
@@ -288,23 +288,23 @@ defineExpose({ addFiles })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
   border-top: 1px solid var(--drop-line);
 }
 .summary-text {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--drop-ink-2);
   font-weight: 500;
 }
 .summary-done {
-  min-height: 2.5rem;
-  padding: 0 1.375rem;
+  min-height: 2.25rem;
+  padding: 0 1rem;
   border: 0;
-  border-radius: var(--drop-radius-md);
+  border-radius: var(--drop-radius-sm);
   background: linear-gradient(135deg, var(--drop-brand) 0%, var(--drop-brand-strong) 100%);
   color: #fff;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   box-shadow: 0 4px 14px -2px rgba(230, 57, 70, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   transition: filter var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring);

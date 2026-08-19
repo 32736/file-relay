@@ -230,30 +230,30 @@ onBeforeUnmount(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
-  padding: 0 1rem 1rem;
+  gap: 0.5rem;
+  padding: 0 0.875rem 0.875rem;
 }
 
 .detail-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  height: 3rem;
+  gap: 0.375rem;
+  height: 2.75rem;
   padding: 0;
   border-bottom: 1px solid var(--drop-border);
-  margin: 0 -1rem 0.125rem;
-  padding-left: 0.25rem;
-  padding-right: 1rem;
+  margin: 0 -0.875rem 0.125rem;
+  padding-left: 0.125rem;
+  padding-right: 0.875rem;
 }
 
 .back-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border: 0;
-  border-radius: var(--drop-radius-md);
+  border-radius: var(--drop-radius-sm);
   background: transparent;
   color: var(--drop-ink-2);
   -webkit-tap-highlight-color: transparent;
@@ -264,13 +264,13 @@ onBeforeUnmount(() => {
   color: var(--drop-ink);
 }
 .back-btn :deep(svg) {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
 .detail-title {
   flex: 1;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--drop-ink);
   letter-spacing: -0.01em;
@@ -279,18 +279,18 @@ onBeforeUnmount(() => {
 .manage {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.375rem;
   margin-top: auto;
-  padding-top: 0.5rem;
+  padding-top: 0.375rem;
 }
 .revoke {
   width: 100%;
-  min-height: 3rem;
+  min-height: 2.75rem;
   border: 0;
-  border-radius: var(--drop-radius-lg);
+  border-radius: var(--drop-radius-sm);
   background: var(--drop-surface-2);
   color: var(--drop-state-error);
-  font-size: 0.9375rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   transition: background-color var(--drop-dur-base) var(--drop-ease-spring), opacity var(--drop-dur-base) var(--drop-ease-spring);
@@ -303,9 +303,9 @@ onBeforeUnmount(() => {
 }
 
 .card {
-  padding: 1rem;
+  padding: 0.75rem;
   border: 1px solid rgba(15, 15, 18, 0.06);
-  border-radius: var(--drop-radius-lg);
+  border-radius: var(--drop-radius-sm);
   background: var(--drop-card);
   box-shadow: var(--drop-shadow-1);
 }
@@ -313,23 +313,23 @@ onBeforeUnmount(() => {
 .file-head {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.5rem;
 }
 .tile {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--drop-radius-md);
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--drop-radius-sm);
   background: var(--drop-brand-tint);
   color: var(--drop-brand);
   box-shadow: inset 0 0 0 1px rgba(230, 57, 70, 0.08);
 }
 .tile :deep(svg) {
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 1rem;
+  height: 1rem;
 }
 .file-body {
   flex: 1;
@@ -339,8 +339,8 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.9375rem;
-  font-weight: 500;
+  font-size: 0.8125rem;
+  font-weight: 600;
   color: var(--drop-ink);
   letter-spacing: -0.01em;
 }
@@ -354,7 +354,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.1875rem 0.5rem;
+  padding: 0.125rem 0.375rem;
   border-radius: var(--drop-radius-pill);
   font-size: 0.625rem;
   font-weight: 600;
@@ -372,15 +372,15 @@ onBeforeUnmount(() => {
 .link-row {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.5rem 0.625rem;
-  border-radius: var(--drop-radius-md);
+  gap: 0.25rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--drop-radius-sm);
   background: var(--drop-surface-2);
   border: 1px solid var(--drop-line);
 }
 .link-icon {
-  width: 0.875rem;
-  height: 0.875rem;
+  width: 0.75rem;
+  height: 0.75rem;
   color: var(--drop-ink-3);
 }
 .link-text {
@@ -389,7 +389,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-family: ui-monospace, "SFMono-Regular", monospace;
   color: var(--drop-ink-2);
 }
@@ -398,8 +398,8 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.5rem;
+  height: 1.5rem;
   border: 0;
   border-radius: var(--drop-radius-sm);
   background: transparent;
@@ -407,8 +407,8 @@ onBeforeUnmount(() => {
   transition: background-color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .copy-btn :deep(svg) {
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
 }
 .copy-btn:active {
   background: var(--drop-brand-tint);
@@ -424,11 +424,11 @@ onBeforeUnmount(() => {
 .qr-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
 }
 .qr {
-  padding: 0.5rem;
-  border-radius: var(--drop-radius-md);
+  padding: 0.375rem;
+  border-radius: var(--drop-radius-sm);
   background: var(--drop-surface-2);
   border: 1px solid var(--drop-line);
 }
@@ -439,7 +439,7 @@ onBeforeUnmount(() => {
 }
 .stat {
   text-align: center;
-  padding: 0.25rem 0.25rem;
+  padding: 0.125rem 0.125rem;
 }
 .stat + .stat {
   border-left: 1px solid var(--drop-border);
@@ -448,7 +448,7 @@ onBeforeUnmount(() => {
   line-height: 1.2;
 }
 .stat-number {
-  font-size: 1.375rem;
+  font-size: 1.125rem;
   font-weight: 700;
   color: var(--drop-ink);
   letter-spacing: -0.03em;
@@ -456,13 +456,13 @@ onBeforeUnmount(() => {
 }
 .stat-unit {
   margin-left: 0.125rem;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 500;
   color: var(--drop-ink-3);
 }
 .stat-label {
   margin-top: 0.125rem;
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   color: var(--drop-ink-3);
   font-weight: 500;
 }

@@ -267,8 +267,8 @@ onMounted(() => void loadStats())
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 3.75rem;
-  padding: 0 1.25rem;
+  height: 3.25rem;
+  padding: 0 1rem;
 }
 .brand {
   display: flex;
@@ -276,13 +276,13 @@ onMounted(() => void loadStats())
   gap: 0.625rem;
 }
 .logo {
-  width: 1.875rem;
-  height: 1.875rem;
+  width: 1.5rem;
+  height: 1.5rem;
   display: block;
 }
 .wordmark {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.045em;
   font-family: "Geist", "Plus Jakarta Sans", sans-serif;
@@ -294,10 +294,10 @@ onMounted(() => void loadStats())
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
+  gap: 0.625rem;
 }
 .usage {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 500;
   color: var(--drop-ink-2);
   font-variant-numeric: tabular-nums;
@@ -306,8 +306,8 @@ onMounted(() => void loadStats())
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.125rem;
-  height: 2.125rem;
+  width: 1.875rem;
+  height: 1.875rem;
   border: 0;
   border-radius: var(--drop-radius-sm);
   background: transparent;
@@ -329,7 +329,7 @@ onMounted(() => void loadStats())
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
 }
 
 .tabbar {
@@ -343,7 +343,7 @@ onMounted(() => void loadStats())
   align-items: center;
   width: 100%;
   max-width: 30rem;
-  height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  height: calc(4rem + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   border-top: 1px solid rgba(15, 15, 18, 0.06);
   background: rgba(255, 255, 255, 0.82);
@@ -356,13 +356,13 @@ onMounted(() => void loadStats())
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.3125rem;
-  height: 4.5rem;
+  gap: 0.25rem;
+  height: 4rem;
   padding: 0 0.25rem;
   border: 0;
   background: transparent;
   color: var(--drop-ink-3);
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 500;
   line-height: 1;
   -webkit-tap-highlight-color: transparent;
@@ -376,19 +376,19 @@ onMounted(() => void loadStats())
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 3.75rem;
-  height: 3.75rem;
+  width: 3.25rem;
+  height: 3.25rem;
   margin: 0 auto;
   border: 0;
-  border-radius: var(--drop-radius-xl);
+  border-radius: var(--drop-radius-lg);
   background: linear-gradient(135deg, var(--drop-brand) 0%, var(--drop-brand-strong) 100%);
   color: #fff;
-  box-shadow: 0 8px 28px -4px rgba(230, 57, 70, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transform: translateY(-0.75rem);
+  box-shadow: 0 6px 20px -4px rgba(230, 57, 70, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-0.5rem);
   transition: transform var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring);
 }
 .tab-upload:active {
-  transform: translateY(-0.625rem) scale(0.96);
-  box-shadow: 0 4px 16px -2px rgba(230, 57, 70, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-0.375rem) scale(0.96);
+  box-shadow: 0 4px 12px -2px rgba(230, 57, 70, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 </style>

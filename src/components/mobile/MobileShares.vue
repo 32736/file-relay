@@ -194,18 +194,18 @@ defineExpose({ load })
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 1rem 1rem 1.5rem;
+  padding: 0.75rem 0.875rem 1rem;
 }
 
 .cards {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 0.5rem;
 }
 .card {
-  padding: 0.875rem 1rem;
+  padding: 0.625rem 0.875rem;
   border: 1px solid rgba(15, 15, 18, 0.06);
-  border-radius: var(--drop-radius-lg);
+  border-radius: var(--drop-radius-sm);
   background: var(--drop-card);
   box-shadow: var(--drop-shadow-1);
   -webkit-tap-highlight-color: transparent;
@@ -218,23 +218,23 @@ defineExpose({ load })
 .card-head {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.625rem;
 }
 .tile {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: var(--drop-radius-md);
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--drop-radius-sm);
   background: var(--drop-brand-tint);
   color: var(--drop-brand);
   box-shadow: inset 0 0 0 1px rgba(230, 57, 70, 0.08);
 }
 .tile :deep(svg) {
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 1rem;
+  height: 1rem;
 }
 .card-name {
   flex: 1;
@@ -242,8 +242,8 @@ defineExpose({ load })
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.9375rem;
-  font-weight: 500;
+  font-size: 0.8125rem;
+  font-weight: 600;
   color: var(--drop-ink);
   letter-spacing: -0.01em;
 }
@@ -252,9 +252,9 @@ defineExpose({ load })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.1875rem 0.5rem;
+  padding: 0.125rem 0.375rem;
   border-radius: var(--drop-radius-pill);
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -271,15 +271,15 @@ defineExpose({ load })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  font-size: 0.75rem;
+  gap: 0.375rem;
+  margin-top: 0.375rem;
+  font-size: 0.6875rem;
   color: var(--drop-ink-3);
 }
 .meta-left {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.25rem;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -292,8 +292,8 @@ defineExpose({ load })
   align-items: center;
 }
 .link-icon {
-  width: 0.875rem;
-  height: 0.875rem;
+  width: 0.75rem;
+  height: 0.75rem;
   color: var(--drop-ink-3);
   flex: none;
 }
@@ -303,15 +303,15 @@ defineExpose({ load })
   white-space: nowrap;
   font-family: ui-monospace, "SFMono-Regular", monospace;
   color: var(--drop-ink-2);
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
 }
 .copy-btn {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border: 0;
   border-radius: var(--drop-radius-sm);
   background: transparent;
@@ -319,8 +319,8 @@ defineExpose({ load })
   transition: background-color var(--drop-dur-base) var(--drop-ease-spring), color var(--drop-dur-base) var(--drop-ease-spring);
 }
 .copy-btn :deep(svg) {
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
 }
 .copy-btn:active {
   background: var(--drop-brand-tint);
@@ -330,15 +330,15 @@ defineExpose({ load })
 .skeleton {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 .skeleton-card {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 1rem;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
   border: 1px solid rgba(15, 15, 18, 0.06);
-  border-radius: var(--drop-radius-lg);
+  border-radius: var(--drop-radius-sm);
   background: var(--drop-card);
 }
 .skeleton-block {
@@ -359,11 +359,11 @@ defineExpose({ load })
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
+  padding: 2rem 1rem;
   text-align: center;
 }
 .empty-text {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--drop-ink-3);
 }
 

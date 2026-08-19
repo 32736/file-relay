@@ -99,7 +99,7 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   border-radius: var(--drop-radius-xl) var(--drop-radius-xl) 0 0;
   background: var(--drop-card);
   box-shadow: var(--drop-shadow-4);
-  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   animation: sheet-in 0.3s var(--drop-ease-spring);
 }
 @keyframes sheet-in {
@@ -110,8 +110,8 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
 .file-head {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.875rem 1rem;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
   border-bottom: 1px solid var(--drop-line);
 }
 .tile {
@@ -119,16 +119,16 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--drop-radius-md);
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--drop-radius-sm);
   background: var(--drop-brand-tint);
   color: var(--drop-brand);
   box-shadow: inset 0 0 0 1px rgba(230, 57, 70, 0.08);
 }
 .tile :deep(.file-icon) {
-  width: 1.375rem;
-  height: 1.375rem;
+  width: 1.125rem;
+  height: 1.125rem;
   color: inherit;
 }
 .file-body {
@@ -139,14 +139,14 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.9375rem;
-  font-weight: 500;
+  font-size: 0.8125rem;
+  font-weight: 600;
   color: var(--drop-ink);
   letter-spacing: -0.01em;
 }
 .file-meta {
   margin-top: 0.125rem;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--drop-ink-3);
 }
 
@@ -157,9 +157,9 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
 .action-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.625rem;
   width: 100%;
-  padding: 1rem;
+  padding: 0.75rem 0.875rem;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -179,9 +179,9 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
 }
 .action-label {
   flex: 1;
-  font-size: 0.9375rem;
+  font-size: 0.8125rem;
   color: var(--drop-ink);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 .action-row.danger .action-icon,

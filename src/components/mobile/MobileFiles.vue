@@ -230,7 +230,7 @@ defineExpose({ load })
 }
 
 .search-row {
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.875rem;
   background: var(--drop-background);
   border-bottom: 1px solid var(--drop-line);
 }
@@ -247,15 +247,15 @@ defineExpose({ load })
 }
 .search-box input {
   width: 100%;
-  height: 2.75rem;
-  padding: 0 2.5rem 0 2.375rem;
+  height: 2.5rem;
+  padding: 0 2.25rem 0 2.125rem;
   border: 1px solid var(--drop-border);
-  border-radius: var(--drop-radius-md);
+  border-radius: var(--drop-radius-sm);
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   color: var(--drop-ink);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   appearance: none;
   transition: border-color var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring);
 }
@@ -297,16 +297,16 @@ defineExpose({ load })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 1rem;
+  padding: 0.375rem 0.875rem;
 }
 .list-title {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--drop-ink-2);
   letter-spacing: -0.01em;
 }
 .list-count {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--drop-ink-3);
   font-variant-numeric: tabular-nums;
 }
@@ -319,9 +319,9 @@ defineExpose({ load })
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.875rem 1rem;
-  min-height: 3.75rem;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  min-height: 3rem;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -342,16 +342,16 @@ defineExpose({ load })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--drop-radius-md);
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--drop-radius-sm);
   background: var(--drop-surface-2);
   color: var(--drop-ink-2);
   box-shadow: var(--drop-shadow-1);
 }
 .tile :deep(.file-icon) {
-  width: 1.375rem;
-  height: 1.375rem;
+  width: 1.125rem;
+  height: 1.125rem;
   color: inherit;
 }
 .tile :deep(.file-icon.image) {
@@ -368,15 +368,15 @@ defineExpose({ load })
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.9375rem;
-  font-weight: 500;
+  font-size: 0.8125rem;
+  font-weight: 600;
   color: var(--drop-ink);
   letter-spacing: -0.01em;
 }
 .file-meta {
   display: flex;
   justify-content: space-between;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--drop-ink-3);
   font-variant-numeric: tabular-nums;
 }
@@ -384,22 +384,24 @@ defineExpose({ load })
   margin-left: auto;
 }
 .chevron {
+  width: 1rem;
+  height: 1rem;
   color: var(--drop-ink-3);
 }
 
 .more {
   display: flex;
   justify-content: center;
-  padding: 0.5rem 0;
+  padding: 0.375rem 0;
 }
 .more button {
-  min-height: 2.5rem;
-  padding: 0 1.25rem;
+  min-height: 2.25rem;
+  padding: 0 1rem;
   border: 1px solid var(--drop-border);
-  border-radius: var(--drop-radius-md);
+  border-radius: var(--drop-radius-sm);
   background: var(--drop-card);
   color: var(--drop-ink-2);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   transition: border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring);
 }
@@ -415,18 +417,18 @@ defineExpose({ load })
 .skeleton-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.875rem 1rem;
-  min-height: 3.75rem;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  min-height: 3rem;
 }
 .skeleton-row + .skeleton-row {
   border-top: 1px solid var(--drop-line);
 }
 .skeleton-tile {
   flex: none;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--drop-radius-md);
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--drop-radius-sm);
   background: linear-gradient(90deg, var(--drop-surface-2) 0%, var(--drop-background) 50%, var(--drop-surface-2) 100%);
   background-size: 200% 100%;
   animation: skeleton-pulse 1.4s ease-in-out infinite;
@@ -435,17 +437,17 @@ defineExpose({ load })
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.375rem;
 }
 .skeleton-block {
-  height: 14px;
-  border-radius: 4px;
+  height: 12px;
+  border-radius: 3px;
   background: linear-gradient(90deg, var(--drop-surface-2) 0%, var(--drop-background) 50%, var(--drop-surface-2) 100%);
   background-size: 200% 100%;
   animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
 .skeleton-block.short {
-  height: 11px;
+  height: 10px;
 }
 @keyframes skeleton-pulse {
   0% { background-position: 200% 0; }
@@ -458,50 +460,52 @@ defineExpose({ load })
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  gap: 0.35rem;
+  padding: 3rem 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--drop-ink-3);
   text-align: center;
 }
 .empty-icon {
-  width: 64px;
-  height: 64px;
+  width: 2.5rem;
+  height: 2.5rem;
   color: var(--drop-ink-3);
-  opacity: 0.6;
+  opacity: 0.5;
 }
 .empty-title {
-  margin: 16px 0 0;
-  font-size: 18px;
+  margin: 0;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--drop-ink);
-  letter-spacing: -0.02em;
 }
 .empty-desc {
-  margin: 8px 0 0;
-  max-width: 280px;
-  font-size: 14px;
+  margin: 0;
+  max-width: 240px;
+  font-size: 0.8125rem;
   line-height: 1.5;
   color: var(--drop-ink-2);
 }
 .empty-hint {
-  margin: 4px 0 0;
-  font-size: 13px;
+  margin: 0;
+  font-size: 0.75rem;
   color: var(--drop-ink-3);
 }
 .empty-cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  width: 100%;
-  max-width: 280px;
-  height: 48px;
-  margin-top: 24px;
+  gap: 0.375rem;
+  height: 2.5rem;
+  margin-top: 1rem;
+  padding: 0 1.25rem;
   border: 0;
-  border-radius: var(--drop-radius-md);
+  border-radius: var(--drop-radius-sm);
   background: linear-gradient(135deg, var(--drop-brand) 0%, var(--drop-brand-strong) 100%);
   color: #fff;
-  font-size: 15px;
+  font-size: 0.8125rem;
   font-weight: 600;
-  box-shadow: 0 8px 24px -4px rgba(230, 57, 70, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 6px 20px -4px rgba(230, 57, 70, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transition: filter var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring);
 }
 .empty-cta:active {
