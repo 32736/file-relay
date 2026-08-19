@@ -173,34 +173,44 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* All colours go through drop-* tokens so the dialog reads correctly in both
+   the light (newspaper white + charcoal) and dark (CRT phosphor) themes. */
 .dialog {
   margin: auto;
-  background: var(--surface);
-  border: 1px solid rgba(15, 15, 18, 0.08);
-  border-radius: var(--radius-lg);
+  background: var(--drop-card);
+  border: 2px solid var(--drop-ink);
+  border-top: 6px solid var(--drop-brand);
+  border-radius: 0;
   padding: 1.5rem 1.75rem;
   max-width: 26rem;
   width: 90%;
-  box-shadow: var(--drop-shadow-4), var(--drop-inner-highlight);
-  animation: dialog-in 0.25s var(--drop-ease-spring);
+  box-shadow: var(--drop-shadow-hard);
+  color: var(--drop-ink-2);
+  animation: dialog-in 0.2s var(--drop-ease-smooth);
 }
 @keyframes dialog-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .dialog::backdrop {
-  background: rgba(15, 15, 18, 0.45);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* A fully neutral dim layer that reads the same in light and dark. */
+  background: color-mix(in srgb, var(--drop-ink) 56%, transparent);
 }
 .dialog-title {
-  margin: 0 0 1rem;
-  font-size: 1rem;
-  font-weight: 650;
-  line-height: 1.4;
-  color: var(--text);
+  margin: 0 0 1.1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 2px solid var(--drop-ink);
+  font-family: var(--font-micro);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: 0.05em;
+  color: var(--drop-ink);
   overflow: hidden;
-  letter-spacing: -0.02em;
+}
+.dialog-title::before {
+  content: ">> ";
+  color: var(--drop-brand);
 }
 .title-text {
   display: block;
@@ -210,99 +220,122 @@ onMounted(() => {
 }
 label {
   display: block;
-  margin-bottom: 0.875rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text);
+  margin-bottom: 0.9rem;
+  font-family: var(--font-micro);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--drop-ink-3);
 }
 label input[type='number'],
 label input[type='password'] {
   display: block;
   width: 100%;
-  margin-top: 0.375rem;
+  margin-top: 0.4rem;
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
+  background: var(--drop-surface);
+  color: var(--drop-ink);
+  font-family: var(--font-micro);
   font-size: 0.9rem;
-  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring);
+}
+label input[type='number']::placeholder,
+label input[type='password']::placeholder {
+  color: var(--drop-ink-3);
 }
 label input[type='number']:focus,
 label input[type='password']:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.1);
+  border: 2px solid var(--drop-brand);
+  padding: calc(0.5rem - 1px) calc(0.75rem - 1px);
 }
 .check {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.6rem;
   align-items: center;
   padding: 0.75rem;
-  border-radius: var(--radius-sm);
-  background: var(--bg-warm);
+  border: 1px dashed var(--drop-line);
+  border-radius: 0;
+  background: var(--drop-surface-muted);
+  color: var(--drop-ink-2);
 }
 .check input[type='checkbox'] {
-  accent-color: var(--primary);
+  accent-color: var(--drop-brand);
 }
 .buttons {
   display: flex;
   gap: 0.6rem;
   justify-content: flex-end;
-  margin-top: 1rem;
+  margin-top: 1.1rem;
 }
 button {
   min-height: 2.75rem;
   padding: 0.5rem 1rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border-radius: 0;
+  border: 1px solid var(--drop-ink);
+  background: var(--drop-surface);
+  color: var(--drop-ink);
   cursor: pointer;
-  font-weight: 500;
-  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring), color var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring);
 }
 button[type='submit'] {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: #fff;
-  border: 0;
-  box-shadow: 0 4px 14px -2px rgba(230, 57, 70, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: var(--drop-brand);
+  color: var(--drop-background);
+  border-color: var(--drop-ink);
+  font-family: var(--font-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: var(--drop-shadow-hard-sm);
 }
 button[type='submit']:not(:disabled):hover {
-  filter: brightness(1.05);
-  box-shadow: 0 6px 20px -2px rgba(230, 57, 70, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  filter: brightness(1.08);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--drop-ink);
 }
-button[type='submit']:active {
-  transform: scale(0.98);
+button[type='submit']:not(:disabled):active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--drop-ink);
 }
 button.ghost {
-  background: var(--surface);
+  font-family: var(--font-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 button.ghost:hover {
-  background: var(--surface-muted);
-  border-color: var(--border-strong);
+  background: var(--drop-ink);
+  color: var(--drop-background);
 }
+/* QR codes must stay on a white page — the outer frame uses theme tokens so
+   the box blends with the dialog in light *and* dark. */
 .qr {
   display: block;
   margin: 0.5rem auto;
   padding: 0.5rem;
-  border-radius: var(--radius-sm);
-  background: var(--bg-warm);
+  border: 1px solid var(--drop-ink);
+  background: #FFFFFF;
+  box-shadow: inset 0 0 0 3px var(--drop-surface);
 }
 .url {
   word-break: break-all;
-  font-size: 0.85rem;
-  font-family: ui-monospace, "SFMono-Regular", monospace;
-  color: var(--text-muted);
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--radius-sm);
-  background: var(--bg-warm);
-  border: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-family: var(--font-micro);
+  color: var(--drop-ink);
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--drop-ink);
+  border-left: 4px solid var(--drop-brand);
+  background: var(--drop-surface);
 }
 .error {
-  color: var(--danger);
+  color: var(--drop-brand);
+  font-family: var(--font-micro);
+  font-size: 0.8rem;
 }
 .hint {
-  color: var(--text-muted);
-  font-size: 0.8rem;
+  color: var(--drop-ink-3);
+  font-family: var(--font-micro);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
 }
 </style>

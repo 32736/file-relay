@@ -127,54 +127,89 @@ onMounted(() => void load())
   max-width: 38rem;
   margin: 8vh auto 2rem;
   padding: 2.5rem;
-  background: var(--surface);
-  border: 2px solid var(--text);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-hard);
+  background: var(--drop-card);
+  color: var(--drop-ink-2);
+  border: 2px solid var(--drop-ink);
+  border-top: 8px solid var(--drop-brand);
+  border-radius: 0;
+  box-shadow: var(--drop-shadow-hard);
 }
 .file-title {
   margin: 0 0 0.25rem;
   font-size: clamp(1.6rem, 4vw, 2.4rem);
-  line-height: 1.3;
+  line-height: 1.15;
+  text-transform: uppercase;
   overflow-wrap: anywhere;
+  color: var(--drop-ink);
+}
+.file-title::before {
+  content: "/// ";
+  color: var(--drop-brand);
 }
 .terminal {
-  color: var(--danger);
-  font-size: 0.9rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--drop-state-error);
+  border-left: 5px solid var(--drop-state-error);
+  background: color-mix(in srgb, var(--drop-state-error) 14%, var(--drop-card));
+  color: var(--drop-state-error);
+  font-family: var(--font-micro);
+  font-size: 0.82rem;
 }
 .meta {
   margin: 1.5rem 0;
-  border-top: 1px solid var(--border);
+  border-top: 2px solid var(--drop-ink);
+  color: var(--drop-ink-2);
 }
 .meta div {
   display: flex;
   gap: 0.75rem;
   justify-content: space-between;
   padding: .7rem 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--drop-line);
 }
 .meta dt {
-  color: var(--text-muted);
+  color: var(--drop-ink-3);
+  font-family: var(--font-micro);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.meta dd {
+  margin: 0;
+  color: var(--drop-ink-2);
+  font-family: var(--font-micro);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
 }
 button {
   width: 100%;
-  padding: 0.8rem 1.1rem;
-  border-radius: var(--radius-sm);
-  border: 2px solid var(--text);
-  background: var(--primary);
-  color: #fff;
+  padding: 0.9rem 1.1rem;
+  border-radius: 0;
+  border: 2px solid var(--drop-ink);
+  background: var(--drop-brand);
+  color: var(--drop-background);
   cursor: pointer;
-  box-shadow: var(--shadow-hard-sm);
+  box-shadow: var(--drop-shadow-hard-sm);
+  font-family: var(--font-micro);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
-button:not(:disabled):hover { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--text); background: var(--primary-dark); }
+button:not(:disabled):hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--drop-ink); filter: brightness(1.08); }
+button:not(:disabled):active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--drop-ink); }
 button:disabled {
   opacity: 0.55;
   cursor: default;
 }
 .error {
-  color: var(--danger);
+  color: var(--drop-state-error);
+  font-family: var(--font-micro);
+  font-size: 0.85rem;
 }
 .ok {
-  color: var(--success);
+  color: var(--drop-state-success);
+  font-family: var(--font-micro);
+  font-size: 0.85rem;
 }
 </style>

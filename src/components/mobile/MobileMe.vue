@@ -80,9 +80,10 @@ defineExpose({ load })
 }
 
 .me-card {
-  border: 1px solid var(--drop-border);
-  border-radius: var(--drop-radius-lg);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
   background: var(--drop-card);
+  box-shadow: var(--drop-shadow-1);
 }
 
 .account {
@@ -90,8 +91,18 @@ defineExpose({ load })
   text-align: center;
 }
 .account-meta {
-  font-size: 0.8125rem;
+  font-family: var(--font-micro);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
   color: var(--drop-ink-3);
+}
+.account-meta::before {
+  content: "[ ";
+  color: var(--drop-brand);
+}
+.account-meta::after {
+  content: " ]";
+  color: var(--drop-brand);
 }
 
 .logout-card {
@@ -107,12 +118,16 @@ defineExpose({ load })
   border: 0;
   background: transparent;
   color: var(--drop-state-error);
-  font-size: 0.9375rem;
-  font-weight: 500;
+  font-family: var(--font-micro);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   -webkit-tap-highlight-color: transparent;
 }
 .logout-btn:active {
-  background: var(--drop-surface-2);
+  background: var(--drop-state-error);
+  color: #FFFFFF;
 }
 .logout-btn:disabled {
   opacity: 0.6;

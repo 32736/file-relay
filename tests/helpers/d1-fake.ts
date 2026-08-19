@@ -434,6 +434,7 @@ export class D1Fake {
         { name: 'id' },
         { name: 'file_id' },
         { name: 'token_hash' },
+        { name: 'encrypted_token' },
         { name: 'expires_at' },
         { name: 'max_downloads' },
         { name: 'download_count' },

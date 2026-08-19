@@ -73,7 +73,9 @@ onMounted(async () => {
   window.history.pushState({ view: 'share-detail' }, '', '')
   window.addEventListener('popstate', onPopState)
 
-  shareUrl.value = loadShareUrls()[props.share.id] ?? ''
+  // Server-recovered URL first (works on any logged-in device); the local
+  // cache only backs up legacy shares created before server-side recovery.
+  shareUrl.value = props.share.url ?? loadShareUrls()[props.share.id] ?? ''
   if (shareUrl.value) {
     await nextTick()
     if (qrCanvas.value) {
@@ -230,7 +232,7 @@ onBeforeUnmount(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.625rem;
   padding: 0 0.875rem 0.875rem;
 }
 
@@ -239,8 +241,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.375rem;
   height: 2.75rem;
-  padding: 0;
-  border-bottom: 1px solid var(--drop-border);
+  border-bottom: 2px solid var(--drop-ink);
   margin: 0 -0.875rem 0.125rem;
   padding-left: 0.125rem;
   padding-right: 0.875rem;
@@ -252,16 +253,16 @@ onBeforeUnmount(() => {
   justify-content: center;
   width: 2.25rem;
   height: 2.25rem;
-  border: 0;
-  border-radius: var(--drop-radius-sm);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
   background: transparent;
   color: var(--drop-ink-2);
   -webkit-tap-highlight-color: transparent;
-  transition: background-color var(--drop-dur-base) var(--drop-ease-spring), color var(--drop-dur-base) var(--drop-ease-spring);
+  transition: background-color var(--drop-dur-fast) linear, color var(--drop-dur-fast) linear;
 }
 .back-btn:active {
-  background: var(--drop-surface-2);
-  color: var(--drop-ink);
+  background: var(--drop-ink);
+  color: var(--drop-background);
 }
 .back-btn :deep(svg) {
   width: 1.125rem;
@@ -270,10 +271,12 @@ onBeforeUnmount(() => {
 
 .detail-title {
   flex: 1;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-family: var(--font-micro);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--drop-ink);
-  letter-spacing: -0.01em;
 }
 
 .manage {
@@ -286,17 +289,23 @@ onBeforeUnmount(() => {
 .revoke {
   width: 100%;
   min-height: 2.75rem;
-  border: 0;
-  border-radius: var(--drop-radius-sm);
-  background: var(--drop-surface-2);
+  border: 1px solid var(--drop-state-error);
+  border-radius: 0;
+  background: transparent;
   color: var(--drop-state-error);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  transition: background-color var(--drop-dur-base) var(--drop-ease-spring), opacity var(--drop-dur-base) var(--drop-ease-spring);
+  font-family: var(--font-micro);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  box-shadow: var(--drop-shadow-1);
+  transition: background-color var(--drop-dur-fast) linear, color var(--drop-dur-fast) linear, transform var(--drop-dur-fast) linear, box-shadow var(--drop-dur-fast) linear;
 }
 .revoke:active {
-  background: var(--drop-brand-tint);
+  background: var(--drop-state-error);
+  color: #FFFFFF;
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 #000000;
 }
 .revoke:disabled {
   opacity: 0.5;
@@ -304,8 +313,8 @@ onBeforeUnmount(() => {
 
 .card {
   padding: 0.75rem;
-  border: 1px solid rgba(15, 15, 18, 0.06);
-  border-radius: var(--drop-radius-sm);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
   background: var(--drop-card);
   box-shadow: var(--drop-shadow-1);
 }
@@ -322,10 +331,10 @@ onBeforeUnmount(() => {
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border-radius: var(--drop-radius-sm);
-  background: var(--drop-brand-tint);
+  border: 1px solid var(--drop-brand);
+  border-radius: 0;
+  background: var(--drop-surface-2);
   color: var(--drop-brand);
-  box-shadow: inset 0 0 0 1px rgba(230, 57, 70, 0.08);
 }
 .tile :deep(svg) {
   width: 1rem;
@@ -342,11 +351,11 @@ onBeforeUnmount(() => {
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--drop-ink);
-  letter-spacing: -0.01em;
 }
 .file-meta {
   margin-top: 0.125rem;
-  font-size: 0.6875rem;
+  font-family: var(--font-micro);
+  font-size: 0.66rem;
   color: var(--drop-ink-3);
 }
 .badge {
@@ -354,19 +363,22 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.125rem 0.375rem;
-  border-radius: var(--drop-radius-pill);
-  font-size: 0.625rem;
-  font-weight: 600;
+  padding: 0.125rem 0.4rem;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  font-family: var(--font-micro);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   white-space: nowrap;
 }
 .badge.active {
-  background: color-mix(in srgb, var(--drop-state-success) 12%, transparent);
+  background: transparent;
   color: var(--drop-state-success);
 }
 .badge.inactive {
-  background: var(--drop-muted);
-  color: var(--drop-ink-3);
+  background: transparent;
+  color: var(--drop-state-error);
 }
 
 .link-row {
@@ -374,9 +386,10 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.25rem;
   padding: 0.375rem 0.5rem;
-  border-radius: var(--drop-radius-sm);
+  border: 1px solid var(--drop-ink);
+  border-left: 4px solid var(--drop-brand);
+  border-radius: 0;
   background: var(--drop-surface-2);
-  border: 1px solid var(--drop-line);
 }
 .link-icon {
   width: 0.75rem;
@@ -390,7 +403,7 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.6875rem;
-  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-family: var(--font-micro);
   color: var(--drop-ink-2);
 }
 .copy-btn {
@@ -400,25 +413,31 @@ onBeforeUnmount(() => {
   justify-content: center;
   width: 1.5rem;
   height: 1.5rem;
-  border: 0;
-  border-radius: var(--drop-radius-sm);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
   background: transparent;
   color: var(--drop-brand);
-  transition: background-color var(--drop-dur-base) var(--drop-ease-spring);
+  transition: background-color var(--drop-dur-fast) linear, color var(--drop-dur-fast) linear;
 }
 .copy-btn :deep(svg) {
   width: 0.875rem;
   height: 0.875rem;
 }
 .copy-btn:active {
-  background: var(--drop-brand-tint);
+  background: var(--drop-brand);
+  color: #FFFFFF;
 }
 
 .url-missing {
   margin: 0;
-  font-size: 0.8125rem;
-  line-height: 1.5;
+  font-family: var(--font-micro);
+  font-size: 0.75rem;
+  line-height: 1.6;
   color: var(--drop-ink-3);
+}
+.url-missing::before {
+  content: ">>> ";
+  color: var(--drop-brand);
 }
 
 .qr-wrap {
@@ -428,9 +447,9 @@ onBeforeUnmount(() => {
 }
 .qr {
   padding: 0.375rem;
-  border-radius: var(--drop-radius-sm);
-  background: var(--drop-surface-2);
-  border: 1px solid var(--drop-line);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
+  background: #FFFFFF;
 }
 
 .stat-grid {
@@ -442,34 +461,38 @@ onBeforeUnmount(() => {
   padding: 0.125rem 0.125rem;
 }
 .stat + .stat {
-  border-left: 1px solid var(--drop-border);
+  border-left: 1px solid var(--drop-line);
 }
 .stat-value {
   line-height: 1.2;
 }
 .stat-number {
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 900;
+  font-family: var(--font-macro);
   color: var(--drop-ink);
-  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 .stat-unit {
   margin-left: 0.125rem;
-  font-size: 0.6875rem;
-  font-weight: 500;
+  font-family: var(--font-micro);
+  font-size: 0.66rem;
+  font-weight: 700;
   color: var(--drop-ink-3);
 }
 .stat-label {
   margin-top: 0.125rem;
-  font-size: 0.625rem;
+  font-family: var(--font-micro);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   color: var(--drop-ink-3);
-  font-weight: 500;
 }
 
 .error {
   margin: 0;
   color: var(--drop-state-error);
-  font-size: 0.875rem;
+  font-family: var(--font-micro);
+  font-size: 0.8rem;
 }
 </style>

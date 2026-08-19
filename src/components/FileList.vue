@@ -150,6 +150,14 @@ defineExpose({ load })
       {{ error }}
     </p>
     <div
+      v-if="loading && files.length > 0"
+      class="list-loading"
+      role="status"
+      aria-label="加载中"
+    >
+      加载中
+    </div>
+    <div
       v-if="loading && files.length === 0"
       class="skeleton-list"
       role="status"
@@ -200,11 +208,13 @@ defineExpose({ load })
           >
             <span class="name-inner">
               <FileTypeIcon :mime="file.mimeType" />
-              <span class="file-name">{{ file.name }}</span>
-            </span>
-            <span class="file-meta">
-              <span>{{ formatBytes(file.size) }}</span>
-              <span>{{ formatDate(file.createdAt) }}</span>
+              <span class="name-text">
+                <span class="file-name">{{ file.name }}</span>
+                <span class="file-meta">
+                  <span>{{ formatBytes(file.size) }}</span>
+                  <span>{{ formatDate(file.createdAt) }}</span>
+                </span>
+              </span>
             </span>
           </td>
           <td class="actions">
@@ -319,7 +329,7 @@ defineExpose({ load })
         :disabled="loading"
         @click="load(false)"
       >
-        加载更多
+        {{ loading ? '加载中…' : '加载更多' }}
       </button>
     </div>
 
@@ -367,6 +377,8 @@ defineExpose({ load })
 </template>
 
 <style scoped>
+/* All theme surfaces use drop-* tokens so both light (newspaper print) and
+   dark (CRT terminal) palettes render with consistent contrast. */
 .toolbar {
   display: flex;
   gap: 0.75rem;
@@ -377,19 +389,18 @@ defineExpose({ load })
   flex: 1;
   min-height: 2.75rem;
   padding: 0.5rem 0.875rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: var(--text);
-  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring);
+  border: 1px solid var(--drop-line);
+  border-radius: 0;
+  background: var(--drop-surface);
+  color: var(--drop-ink);
+  font-family: var(--font-micro);
+  font-size: 0.85rem;
 }
+.search::placeholder { color: var(--drop-ink-3); }
 .search:focus {
   outline: none;
-  border-color: var(--primary);
-  background: var(--surface);
-  box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.1);
+  border: 2px solid var(--drop-brand);
+  padding: calc(0.5rem - 1px) calc(0.875rem - 1px);
 }
 table {
   width: 100%;
@@ -399,10 +410,20 @@ th,
 td {
   text-align: left;
   padding: 0.75rem 0.7rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--drop-line);
+  color: var(--drop-ink-2);
 }
-th { color: var(--text-faint); font-size: .72rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
-tbody tr { transition: background-color var(--drop-dur-base) var(--drop-ease-spring); }
+th {
+  color: var(--drop-ink-2);
+  font-family: var(--font-micro);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--drop-ink);
+  background: var(--drop-surface-2);
+}
+tbody tr { transition: background-color var(--drop-dur-fast) linear; }
 .name {
   max-width: 30rem;
 }
@@ -412,27 +433,26 @@ tbody tr { transition: background-color var(--drop-dur-base) var(--drop-ease-spr
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 600;
-  color: var(--text);
-  letter-spacing: -0.01em;
+  color: var(--drop-ink);
 }
 .file-meta {
   display: flex;
   justify-content: space-between;
   gap: .75rem;
-  margin-top: 0.125rem;
-  font-size: 0.78rem;
-  color: var(--text-faint);
+  font-size: 0.72rem;
+  color: var(--drop-ink-3);
+  font-family: var(--font-micro);
   font-variant-numeric: tabular-nums;
 }
 .file-meta span:last-child { text-align: right; white-space: nowrap; }
 .file-list table {
   width: 100%;
   table-layout: fixed;
-  background: var(--surface);
-  border: 1px solid rgba(15, 15, 18, 0.06);
-  border-radius: var(--radius-md);
+  background: var(--drop-surface);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: var(--drop-shadow-1);
+  color: var(--drop-ink-2);
 }
 .file-list th:last-child, .file-list td:last-child { width: 9rem; }
 .file-list th { text-align: center; }
@@ -445,9 +465,12 @@ tbody tr:hover .actions .icon-btn,
 .actions .icon-btn:focus-visible {
   opacity: 1;
 }
+tbody tr:hover {
+  background: var(--drop-surface-muted);
+}
 tbody tr.selected {
-  background: var(--primary-soft);
-  box-shadow: inset 3px 0 0 var(--primary);
+  background: color-mix(in srgb, var(--drop-brand) 16%, var(--drop-surface));
+  box-shadow: inset 4px 0 0 var(--drop-brand);
 }
 @media (max-width: 520px) {
   .actions .icon-btn {
@@ -460,30 +483,25 @@ tbody tr.selected {
   display: inline-grid;
   place-items: center;
   background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
+  border: 1px solid var(--drop-line);
+  border-radius: 0;
+  color: var(--drop-ink-2);
   cursor: pointer;
   padding: 0;
-  transition: color var(--drop-dur-base) var(--drop-ease-spring), border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring);
 }
 .icon-btn svg {
   width: 1.05rem;
   height: 1.05rem;
 }
 .icon-btn:hover {
-  color: var(--primary-dark);
-  border-color: var(--primary);
-  background: var(--primary-soft);
-  box-shadow: 0 2px 8px -2px rgba(230, 57, 70, 0.2);
-}
-.icon-btn:active {
-  transform: scale(0.96);
+  color: var(--drop-background);
+  border-color: var(--drop-ink);
+  background: var(--drop-ink);
 }
 .icon-btn.select-btn.selected {
-  color: var(--primary-dark);
-  border-color: var(--primary);
-  background: var(--primary-soft);
+  color: var(--drop-background);
+  border-color: var(--drop-brand);
+  background: var(--drop-brand);
 }
 .empty {
   display: flex;
@@ -491,20 +509,25 @@ tbody tr.selected {
   align-items: center;
   gap: 0.35rem;
   padding: 4rem 1rem;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  color: var(--text-muted);
+  border: 1px dashed var(--drop-line);
+  border-radius: 0;
+  background: var(--drop-surface);
+  color: var(--drop-ink-3);
   text-align: center;
 }
 .empty p {
   margin: 0;
-  font-weight: 600;
-  color: var(--text);
+  font-family: var(--font-macro);
+  font-weight: 900;
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
+  color: var(--drop-ink);
 }
+.empty p::before { content: "[ "; color: var(--drop-brand); }
+.empty p::after { content: " ]"; color: var(--drop-brand); }
 .empty-sub {
   font-weight: 400 !important;
-  color: var(--text-muted) !important;
+  color: var(--drop-ink-3) !important;
   font-size: 0.9rem;
 }
 .name-inner {
@@ -513,71 +536,69 @@ tbody tr.selected {
   gap: 0.5rem;
   min-width: 0;
 }
+/* Icon centered vertically across both text lines and horizontally inside
+   its own box (FileTypeIcon uses inline-grid + place-items: center). */
+.name-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
 .skeleton-list {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
   padding: 1rem;
-  border: 1px solid rgba(15, 15, 18, 0.06);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  border: 1px solid var(--drop-line);
+  border-radius: 0;
+  background: var(--drop-surface);
 }
 .skeleton-row {
   display: flex;
   gap: 1rem;
   align-items: center;
   padding: 0.7rem 0.4rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--drop-line);
 }
 .skeleton-block {
-  height: 0.9rem;
-  border-radius: 4px;
-  background: linear-gradient(90deg, var(--surface-muted) 0%, var(--bg-warm) 50%, var(--surface-muted) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
+  height: 0.85rem;
+  border-radius: 0;
+  background: var(--drop-surface-muted);
+  animation: skeleton-blink 1.1s steps(2, start) infinite;
 }
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+@keyframes skeleton-blink {
+  50% { opacity: 0.3; }
 }
 .confirm-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 15, 18, 0.45);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--drop-ink) 56%, transparent);
   display: grid;
   place-items: center;
   z-index: 50;
-  animation: overlay-in 0.2s var(--drop-ease-spring);
-}
-@keyframes overlay-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 .confirm-dialog {
-  background: var(--surface);
-  border: 1px solid rgba(15, 15, 18, 0.08);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--drop-shadow-4), var(--drop-inner-highlight);
+  background: var(--drop-card);
+  border: 2px solid var(--drop-ink);
+  border-top: 6px solid var(--drop-state-error);
+  border-radius: 0;
+  color: var(--drop-ink-2);
+  box-shadow: var(--drop-shadow-hard);
   padding: 1.75rem 2rem;
   max-width: 22rem;
   width: 90%;
-  animation: dialog-in 0.25s var(--drop-ease-spring);
-}
-@keyframes dialog-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .confirm-title {
   margin: 0 0 0.35rem;
-  font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: -0.02em;
+  font-family: var(--font-macro);
+  font-weight: 900;
+  font-size: 1.1rem;
+  letter-spacing: -0.01em;
+  color: var(--drop-ink);
 }
 .confirm-sub {
   margin: 0 0 1.25rem;
-  color: var(--text-muted);
+  color: var(--drop-ink-2);
   font-size: 0.9rem;
 }
 .confirm-actions {
@@ -585,55 +606,35 @@ tbody tr.selected {
   gap: 0.6rem;
   justify-content: flex-end;
 }
-.btn-danger {
-  background: linear-gradient(135deg, var(--danger) 0%, #c92a38 100%);
-  color: #fff;
-  border: 0;
-  border-radius: var(--radius-sm);
-  padding: 0.6rem 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 14px -2px rgba(230, 57, 70, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  transition: filter var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring);
-}
-.btn-danger:not(:disabled):hover {
-  filter: brightness(1.05);
-  box-shadow: 0 6px 20px -2px rgba(230, 57, 70, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
-.btn-danger:active {
-  transform: scale(0.98);
-}
 .actions {
   display: flex;
   gap: 0.4rem;
 }
-tbody tr:hover {
-  background: var(--surface-muted);
-}
 button.ghost {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  background: var(--drop-surface);
+  border: 1px solid var(--drop-ink);
+  color: var(--drop-ink);
+  border-radius: 0;
   padding: 0.45rem 0.875rem;
   cursor: pointer;
-  font-weight: 500;
-  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring), color var(--drop-dur-base) var(--drop-ease-spring);
+  font-family: var(--font-micro);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 button.ghost:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-muted);
+  background: var(--drop-ink);
+  border-color: var(--drop-ink);
+  color: var(--drop-background);
 }
 button.ghost:disabled {
   opacity: 0.5;
   cursor: default;
 }
 button.danger {
-  color: var(--danger);
-}
-.empty {
-  color: var(--text-muted);
+  color: var(--drop-state-error);
 }
 .error {
-  color: var(--danger);
+  color: var(--drop-state-error);
 }
 </style>

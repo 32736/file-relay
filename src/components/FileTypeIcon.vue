@@ -179,30 +179,25 @@ function kind(mime: string | null): string {
   width: 1.8rem;
   height: 1.8rem;
   flex: none;
-  color: var(--text-muted);
-  border-radius: var(--radius-xs);
-  transition: color var(--drop-dur-base) var(--drop-ease-spring);
+  color: var(--drop-ink-3);
+  border: 1px solid var(--drop-line);
+  border-radius: 0;
+  background: var(--drop-surface);
+  transition: color var(--drop-dur-base) linear;
 }
 .file-icon svg {
   width: 1.35rem;
   height: 1.35rem;
 }
 .file-icon.image {
-  color: var(--primary);
+  color: var(--drop-brand);
+  border-color: var(--drop-brand);
 }
-.file-icon.video {
-  color: #7c3aed;
-}
-.file-icon.audio {
-  color: #0d9488;
-}
-.file-icon.pdf {
-  color: #dc2626;
-}
-.file-icon.archive {
-  color: #d97706;
-}
+.file-icon.video,
+.file-icon.audio,
+.file-icon.pdf,
+.file-icon.archive,
 .file-icon.code {
-  color: #2563eb;
+  color: var(--drop-ink);
 }
 </style>

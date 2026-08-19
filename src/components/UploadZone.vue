@@ -281,36 +281,46 @@ defineExpose({ addFiles, tasks })
 <style scoped>
 .upload-zone .drop-area {
   position: relative;
-  border: 1.5px dashed rgba(15, 15, 18, 0.2);
-  border-radius: var(--radius-lg);
+  border: 2px dashed var(--drop-ink);
+  border-radius: 0;
   padding: 2.75rem 1.5rem 2.25rem;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.6rem;
-  background: var(--surface);
-  box-shadow: var(--drop-shadow-1), var(--drop-inner-highlight);
-  transition:
-    border-color var(--drop-dur-base) var(--drop-ease-spring),
-    background-color var(--drop-dur-base) var(--drop-ease-spring),
-    box-shadow var(--drop-dur-base) var(--drop-ease-spring),
-    transform var(--drop-dur-base) var(--drop-ease-spring);
+  background: var(--drop-surface);
+  color: var(--drop-ink-2);
+  cursor: pointer;
+}
+.upload-zone .drop-area::before {
+  content: "+";
+  position: absolute;
+  top: -0.75rem;
+  left: -0.75rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  display: grid;
+  place-items: center;
+  background: var(--drop-brand);
+  color: var(--drop-background);
+  font-family: var(--font-micro);
+  font-weight: 700;
+  line-height: 1;
 }
 .upload-zone .drop-area:hover,
 .upload-zone.dragging .drop-area {
   border-style: solid;
-  border-color: var(--primary);
-  background: var(--bg-warm);
-  box-shadow: var(--drop-shadow-2), var(--drop-inner-highlight);
-  transform: translateY(-1px);
+  border-color: var(--drop-brand);
+  background: var(--drop-surface-muted);
 }
 .drop-title {
   margin: 0;
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.02em;
+  font-family: var(--font-macro);
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: var(--drop-ink);
 }
 .upload-zone .drop-area.compact {
   padding: 1.1rem 1rem;
@@ -319,12 +329,14 @@ defineExpose({ addFiles, tasks })
   gap: 0.25rem;
 }
 .upload-zone .drop-area.compact .drop-title {
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 .drop-sub {
   margin: 0;
-  color: var(--text-muted);
-  font-size: 0.9rem;
+  color: var(--drop-ink-3);
+  font-family: var(--font-micro);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
 }
 .standalone-input {
   display: none;
@@ -338,43 +350,24 @@ defineExpose({ addFiles, tasks })
   gap: 0.5rem;
 }
 .task {
-  border: 1px solid rgba(15, 15, 18, 0.06);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--drop-line);
+  border-radius: 0;
   padding: 0.875rem 1rem;
-  background: var(--surface);
-  box-shadow: var(--drop-shadow-1);
-  transition: box-shadow var(--drop-dur-base) var(--drop-ease-spring);
+  background: var(--drop-surface);
+  color: var(--drop-ink-2);
 }
 .task.completed {
-  opacity: 0.85;
+  border-left: 4px solid var(--drop-state-success);
+}
+.task.failed {
+  border-left: 4px solid var(--drop-state-error);
 }
 .done-dot {
-  width: 0.7rem;
-  height: 0.7rem;
-  border-radius: 50%;
-  background: var(--success);
+  width: 0.65rem;
+  height: 0.65rem;
+  background: var(--drop-state-success);
   position: relative;
   flex: none;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .done-dot::after {
-    content: "";
-    position: absolute;
-    inset: -0.15rem;
-    border-radius: 50%;
-    border: 2px solid var(--success);
-    animation: done-ripple 0.6s ease-out;
-  }
-  @keyframes done-ripple {
-    from {
-      transform: scale(0.6);
-      opacity: 0.8;
-    }
-    to {
-      transform: scale(1.7);
-      opacity: 0;
-    }
-  }
 }
 .row {
   display: flex;
@@ -387,24 +380,23 @@ defineExpose({ addFiles, tasks })
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--drop-ink);
 }
 .meta {
-  color: var(--text-muted);
-  font-size: 0.8rem;
+  color: var(--drop-ink-3);
+  font-family: var(--font-micro);
+  font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
 }
 .status {
-  color: var(--text-muted);
-  font-size: 0.8rem;
+  color: var(--drop-ink-3);
+  font-family: var(--font-micro);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
 }
-.task.uploading .status { color: var(--primary-dark); font-weight: 600; }
-.task.failed .status { color: var(--danger); font-weight: 600; }
-.sub {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  min-height: 1.1rem;
-}
+.task.uploading .status { color: var(--drop-brand); font-weight: 700; }
+.task.failed .status { color: var(--drop-state-error); font-weight: 700; }
 .progress-row {
   display: grid;
   grid-template-columns: minmax(8rem, auto) minmax(5rem, 1fr) auto;
@@ -416,26 +408,26 @@ defineExpose({ addFiles, tasks })
 .progress-info {
   min-width: 0;
   overflow: hidden;
-  color: var(--text-muted);
-  font-size: .78rem;
+  color: var(--drop-ink-3);
+  font-family: var(--font-micro);
+  font-size: .72rem;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 .bar {
-  height: 6px;
-  background: var(--surface-muted);
-  border-radius: 999px;
+  height: 8px;
+  background: var(--drop-surface-muted);
+  border: 1px solid var(--drop-line);
   margin: 0.4rem 0;
   overflow: hidden;
 }
 .fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: var(--drop-brand);
   transform: scaleX(var(--progress, 0));
   transform-origin: left;
-  transition: transform 0.25s var(--drop-ease-spring);
-  border-radius: 999px;
+  transition: transform 0.25s linear;
 }
 .actions {
   display: flex;
@@ -443,20 +435,24 @@ defineExpose({ addFiles, tasks })
   justify-content: flex-end;
 }
 .actions button {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  background: var(--drop-surface);
+  border: 1px solid var(--drop-line);
+  color: var(--drop-ink-2);
+  border-radius: 0;
   padding: 0.3rem 0.65rem;
-  font-size: 0.8rem;
+  font-family: var(--font-micro);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   cursor: pointer;
-  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring), color var(--drop-dur-base) var(--drop-ease-spring);
 }
-.actions button:hover { border-color: var(--border-strong); background: var(--surface-muted); }
+.actions button:hover { background: var(--drop-ink); border-color: var(--drop-ink); color: var(--drop-background); }
 .actions button.danger {
-  color: var(--danger);
+  color: var(--drop-state-error);
 }
+.actions button.danger:hover { background: var(--drop-state-error); border-color: var(--drop-ink); color: var(--drop-background); }
 .error {
-  color: var(--danger);
+  color: var(--drop-state-error);
 }
 .hidden-input {
   position: absolute;

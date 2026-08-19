@@ -107,7 +107,9 @@ describe('App', () => {
     const wrapper = mount(App)
     await flushPromises()
 
-    const logoutButton = wrapper.findAll('button').find((button) => button.text() === '退出登录')
+    const logoutButton = wrapper
+      .findAll('.topbar-actions .action-btn')
+      .find((button) => button.find('.action-label').text() === '退出登录')
     expect(logoutButton).toBeDefined()
     await logoutButton?.trigger('click')
     await flushPromises()
@@ -127,10 +129,11 @@ describe('App', () => {
     const wrapper = mount(App)
     await flushPromises()
 
-    const buttons = wrapper.findAll('nav.tabs button')
-    const shareTab = buttons.find((b) => b.text() === '分享')
-    expect(shareTab).toBeDefined()
-    await shareTab?.trigger('click')
+    const shareButton = wrapper
+      .findAll('.topbar-actions .action-btn')
+      .find((button) => button.find('.action-label').text() === '分享管理')
+    expect(shareButton).toBeDefined()
+    await shareButton?.trigger('click')
     await flushPromises()
     await flushPromises()
 
@@ -142,8 +145,10 @@ describe('App', () => {
     const wrapper = mount(App)
     await flushPromises()
 
-    const shareTab = wrapper.findAll('nav.tabs button').find((button) => button.text() === '分享')
-    await shareTab?.trigger('click')
+    const shareButton = wrapper
+      .findAll('.topbar-actions .action-btn')
+      .find((button) => button.find('.action-label').text() === '分享管理')
+    await shareButton?.trigger('click')
     await flushPromises()
 
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))

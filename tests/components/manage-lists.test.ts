@@ -10,6 +10,12 @@ describe('ShareList', () => {
   })
 
   it('lists shares and revokes one', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+
     const mock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url === '/api/shares' && (init?.method ?? 'GET') === 'GET') {
@@ -26,6 +32,7 @@ describe('ShareList', () => {
                 downloadCount: 1,
                 deleteFileAfterExhausted: false,
                 revokedAt: null,
+                url: 'https://drop.28207.cc/s/cross-device-token',
               },
             ],
           }),
@@ -44,6 +51,12 @@ describe('ShareList', () => {
     expect(wrapper.text()).toContain('a.pdf')
     expect(wrapper.text()).toContain('1 / 3')
     expect(wrapper.text()).toContain('有效')
+    // Server-recovered URL (same account, any device) enables the copy button.
+    const copyButton = wrapper.find('button[title="复制链接"]')
+    expect(copyButton.exists()).toBe(true)
+    await copyButton.trigger('click')
+    await flushPromises()
+    expect(writeText).toHaveBeenCalledWith('https://drop.28207.cc/s/cross-device-token')
 
     await wrapper.find('button.danger').trigger('click')
     await flushPromises()

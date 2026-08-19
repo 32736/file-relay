@@ -162,7 +162,7 @@ describe('FileList', () => {
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('分享已创建')
+    expect(wrapper.text()).toContain('复制链接')
     expect(wrapper.text()).toContain('https://drop.28207.cc/s/ABC123')
     expect(wrapper.find('canvas').exists()).toBe(true)
   })

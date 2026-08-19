@@ -81,10 +81,8 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   z-index: 80;
   display: flex;
   align-items: flex-end;
-  background: rgba(15, 15, 18, 0.45);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  animation: overlay-in 0.2s var(--drop-ease-spring);
+  background: rgba(10, 10, 10, 0.55);
+  animation: overlay-in 0.2s linear;
 }
 @keyframes overlay-in {
   from { opacity: 0; }
@@ -95,12 +93,12 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   width: 100%;
   display: flex;
   flex-direction: column;
-  border-top: 1px solid rgba(15, 15, 18, 0.08);
-  border-radius: var(--drop-radius-xl) var(--drop-radius-xl) 0 0;
+  border-top: 2px solid var(--drop-ink);
+  border-radius: 0;
   background: var(--drop-card);
   box-shadow: var(--drop-shadow-4);
   padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
-  animation: sheet-in 0.3s var(--drop-ease-spring);
+  animation: sheet-in 0.25s var(--drop-ease-smooth);
 }
 @keyframes sheet-in {
   from { transform: translateY(100%); }
@@ -112,7 +110,8 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   align-items: center;
   gap: 0.5rem;
   padding: 0.625rem 0.875rem;
-  border-bottom: 1px solid var(--drop-line);
+  border-bottom: 2px solid var(--drop-ink);
+  background: var(--drop-surface-2);
 }
 .tile {
   flex: none;
@@ -121,15 +120,21 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border-radius: var(--drop-radius-sm);
-  background: var(--drop-brand-tint);
-  color: var(--drop-brand);
-  box-shadow: inset 0 0 0 1px rgba(230, 57, 70, 0.08);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
+  background: var(--drop-card);
+  color: var(--drop-ink-2);
 }
 .tile :deep(.file-icon) {
   width: 1.125rem;
   height: 1.125rem;
+  border: 0;
+  background: transparent;
   color: inherit;
+}
+.tile :deep(.file-icon svg) {
+  width: 1rem;
+  height: 1rem;
 }
 .file-body {
   flex: 1;
@@ -142,11 +147,11 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--drop-ink);
-  letter-spacing: -0.01em;
 }
 .file-meta {
   margin-top: 0.125rem;
-  font-size: 0.6875rem;
+  font-family: var(--font-micro);
+  font-size: 0.66rem;
   color: var(--drop-ink-3);
 }
 
@@ -161,28 +166,34 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   width: 100%;
   padding: 0.75rem 0.875rem;
   border: 0;
+  border-left: 4px solid transparent;
   border-radius: 0;
   background: transparent;
   text-align: left;
   font: inherit;
   -webkit-tap-highlight-color: transparent;
-  transition: background-color var(--drop-dur-base) var(--drop-ease-spring);
+  transition: background-color var(--drop-dur-fast) linear, border-color var(--drop-dur-fast) linear;
 }
 .action-row + .action-row {
   border-top: 1px solid var(--drop-line);
 }
 .action-row:active {
   background: var(--drop-surface-2);
+  border-left-color: var(--drop-ink);
 }
 .action-icon {
   color: var(--drop-ink-2);
 }
 .action-label {
   flex: 1;
-  font-size: 0.8125rem;
+  font-family: var(--font-micro);
+  font-size: 0.8rem;
   color: var(--drop-ink);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.action-row.danger:active {
+  border-left-color: var(--drop-state-error);
 }
 .action-row.danger .action-icon,
 .action-row.danger .action-label {

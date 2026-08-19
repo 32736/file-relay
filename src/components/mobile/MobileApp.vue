@@ -258,10 +258,9 @@ onMounted(() => void loadStats())
   position: sticky;
   top: 0;
   z-index: 20;
-  border-bottom: 1px solid rgba(15, 15, 18, 0.06);
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border-top: 5px solid var(--drop-brand);
+  border-bottom: 2px solid var(--drop-ink);
+  background: var(--drop-surface);
 }
 .header-row {
   display: flex;
@@ -282,10 +281,11 @@ onMounted(() => void loadStats())
 }
 .wordmark {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: -0.045em;
-  font-family: "Geist", "Plus Jakarta Sans", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  font-family: var(--font-macro);
   color: var(--drop-ink);
 }
 .wordmark .o {
@@ -297,10 +297,20 @@ onMounted(() => void loadStats())
   gap: 0.625rem;
 }
 .usage {
-  font-size: 0.6875rem;
-  font-weight: 500;
+  font-family: var(--font-micro);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   color: var(--drop-ink-2);
   font-variant-numeric: tabular-nums;
+}
+.usage::before {
+  content: "[ ";
+  color: var(--drop-brand);
+}
+.usage::after {
+  content: " ]";
+  color: var(--drop-brand);
 }
 .logout-btn {
   display: inline-flex;
@@ -308,17 +318,17 @@ onMounted(() => void loadStats())
   justify-content: center;
   width: 1.875rem;
   height: 1.875rem;
-  border: 0;
-  border-radius: var(--drop-radius-sm);
+  border: 1px solid var(--drop-border);
+  border-radius: 0;
   background: transparent;
   color: var(--drop-ink-3);
   -webkit-tap-highlight-color: transparent;
-  transition: background-color var(--drop-dur-base) var(--drop-ease-spring), color var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring);
+  transition: background-color var(--drop-dur-fast) linear, color var(--drop-dur-fast) linear, border-color var(--drop-dur-fast) linear;
 }
 .logout-btn:active {
-  transform: scale(0.94);
-  background: var(--drop-brand-tint);
-  color: var(--drop-state-error);
+  background: var(--drop-state-error);
+  border-color: var(--drop-state-error);
+  color: #FFFFFF;
 }
 .logout-btn:disabled {
   opacity: 0.5;
@@ -345,10 +355,8 @@ onMounted(() => void loadStats())
   max-width: 30rem;
   height: calc(4rem + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  border-top: 1px solid rgba(15, 15, 18, 0.06);
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border-top: 2px solid var(--drop-ink);
+  background: var(--drop-surface);
 }
 .tab-item {
   display: flex;
@@ -356,21 +364,23 @@ onMounted(() => void loadStats())
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
+  gap: 0.3rem;
   height: 4rem;
   padding: 0 0.25rem;
   border: 0;
   background: transparent;
   color: var(--drop-ink-3);
-  font-size: 0.625rem;
-  font-weight: 500;
+  font-family: var(--font-micro);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   line-height: 1;
   -webkit-tap-highlight-color: transparent;
-  transition: color var(--drop-dur-base) var(--drop-ease-spring);
+  transition: color var(--drop-dur-fast) linear;
 }
 .tab-item.active {
   color: var(--drop-brand);
-  font-weight: 600;
 }
 .tab-upload {
   display: flex;
@@ -379,16 +389,16 @@ onMounted(() => void loadStats())
   width: 3.25rem;
   height: 3.25rem;
   margin: 0 auto;
-  border: 0;
-  border-radius: var(--drop-radius-lg);
-  background: linear-gradient(135deg, var(--drop-brand) 0%, var(--drop-brand-strong) 100%);
-  color: #fff;
-  box-shadow: 0 6px 20px -4px rgba(230, 57, 70, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--drop-ink);
+  border-radius: 0;
+  background: var(--drop-brand);
+  color: #FFFFFF;
+  box-shadow: var(--drop-shadow-2);
   transform: translateY(-0.5rem);
-  transition: transform var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring);
+  transition: transform var(--drop-dur-fast) linear, box-shadow var(--drop-dur-fast) linear;
 }
 .tab-upload:active {
-  transform: translateY(-0.375rem) scale(0.96);
-  box-shadow: 0 4px 12px -2px rgba(230, 57, 70, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-0.25rem);
+  box-shadow: 1px 1px 0 #000000;
 }
 </style>

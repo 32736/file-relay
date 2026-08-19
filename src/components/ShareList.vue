@@ -15,6 +15,8 @@ interface ShareItem {
   downloadCount: number
   deleteFileAfterExhausted: boolean
   revokedAt: number | null
+  /** Server-recovered link (same account, any device); null for legacy shares. */
+  url: string | null
 }
 
 const shares = ref<ShareItem[]>([])
@@ -23,19 +25,33 @@ const error = ref<string | null>(null)
 const busyId = ref<string | null>(null)
 const copiedId = ref<string | null>(null)
 const shareUrls = ref<Record<string, string>>({})
+const query = ref('')
 
 async function load(): Promise<void> {
   loading.value = true
   error.value = null
   try {
-    const body = await api<{ shares: ShareItem[] }>('/api/shares')
+    const qs = query.value.trim() ? `?q=${encodeURIComponent(query.value.trim())}` : ''
+    const body = await api<{ shares: ShareItem[] }>(`/api/shares${qs}`)
     shares.value = body.shares
-    shareUrls.value = loadShareUrls()
+    // Server URL first (cross-device); the local cache only backs up legacy
+    // shares created before server-side link recovery existed.
+    const urls = loadShareUrls()
+    for (const share of body.shares) {
+      if (share.url) urls[share.id] = share.url
+    }
+    shareUrls.value = urls
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
   } finally {
     loading.value = false
   }
+}
+
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+function onSearch(): void {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => void load(), 250)
 }
 
 async function copyUrl(id: string): Promise<void> {
@@ -74,6 +90,14 @@ defineExpose({ load })
   <section class="share-list">
     <div class="toolbar">
       <h2>分享管理</h2>
+      <input
+        v-model="query"
+        class="search"
+        type="search"
+        placeholder="搜索分享文件…"
+        aria-label="搜索分享文件"
+        @input="onSearch"
+      >
     </div>
 
     <p
@@ -83,6 +107,14 @@ defineExpose({ load })
     >
       {{ error }}
     </p>
+    <div
+      v-if="loading && shares.length > 0"
+      class="list-loading"
+      role="status"
+      aria-label="加载中"
+    >
+      加载中
+    </div>
     <div
       v-if="loading && shares.length === 0"
       class="skeleton-list"
@@ -112,7 +144,7 @@ defineExpose({ load })
       v-else-if="shares.length === 0"
       class="empty"
     >
-      还没有分享链接。
+      {{ query.trim() ? '未找到相关分享' : '还没有分享链接。' }}
     </p>
 
     <table v-else>
@@ -209,6 +241,9 @@ defineExpose({ load })
 </template>
 
 <style scoped>
+/* All colours use drop-* tokens to survive both light/dark themes *and* the
+   <dialog showModal> top-layer custom-property inheritance quirks. See note
+   in styles.css under `.share-management-dialog`. */
 .toolbar {
   display: flex;
   gap: 0.75rem;
@@ -218,6 +253,37 @@ defineExpose({ load })
 .toolbar h2 {
   margin: 0;
   font-size: 1.35rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--drop-ink);
+}
+.toolbar h2::before {
+  content: "[ ";
+  color: var(--drop-brand);
+}
+.toolbar h2::after {
+  content: " ]";
+  color: var(--drop-brand);
+}
+.search {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--drop-line);
+  border-radius: 0;
+  background: var(--drop-surface);
+  color: var(--drop-ink);
+  font-family: var(--font-micro);
+  font-size: 0.85rem;
+}
+.search::placeholder {
+  color: var(--drop-ink-3);
+}
+.search:focus {
+  outline: none;
+  border: 2px solid var(--drop-brand);
+  padding: calc(0.5rem - 1px) calc(0.875rem - 1px);
 }
 table {
   width: 100%;
@@ -227,33 +293,70 @@ th,
 td {
   text-align: left;
   padding: 0.75rem 0.7rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--drop-line);
+  color: var(--drop-ink-2);
 }
-th { color: var(--text-faint); font-size: .72rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
-.share-list table { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+th {
+  color: var(--drop-ink);
+  font-family: var(--font-micro);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--drop-ink);
+  background: var(--drop-surface-2);
+}
+.share-list table {
+  background: var(--drop-surface);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
+  overflow: hidden;
+}
 .share-list { min-height: 100%; display: flex; flex-direction: column; }
-.share-list > .empty { flex: 1; display: grid; place-items: center; margin: 0; text-align: center; }
+.share-list > .empty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-micro);
+  font-size: .85rem;
+  color: var(--drop-ink-3);
+}
+.share-list > .empty::before { content: "[ "; color: var(--drop-brand); }
+.share-list > .empty::after { content: " ]"; color: var(--drop-brand); }
+tbody tr:hover {
+  background: var(--drop-surface-muted);
+}
 .name {
   max-width: 20rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--drop-ink);
+}
+td {
+  font-family: var(--font-micro);
+  font-size: 0.82rem;
 }
 .state {
-  font-size: 0.8rem;
-  padding: 0.1rem 0.45rem;
-  border-radius: 4px;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  font-family: var(--font-micro);
   font-weight: 700;
+  letter-spacing: 0.06em;
 }
 .state.有效 {
-  background: var(--success-soft);
-  color: var(--success);
+  background: color-mix(in srgb, var(--drop-state-success) 16%, var(--drop-surface));
+  color: var(--drop-state-success);
 }
 .state.已撤销,
 .state.已过期,
 .state.已耗尽 {
-  background: var(--danger-soft);
-  color: var(--danger);
+  background: color-mix(in srgb, var(--drop-state-error) 16%, var(--drop-surface));
+  color: var(--drop-state-error);
 }
 .skeleton-list {
   display: flex;
@@ -266,23 +369,24 @@ th { color: var(--text-faint); font-size: .72rem; font-weight: 750; letter-spaci
   gap: 1rem;
   align-items: center;
   padding: 0.7rem 0.4rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--drop-line);
 }
 .skeleton-block {
   height: 0.9rem;
-  border-radius: 4px;
-  background: var(--surface-muted);
-  animation: shimmer 1.2s ease-in-out infinite;
+  border-radius: 0;
+  background: var(--drop-surface-muted);
+  animation: shimmer 1.2s steps(2, jump-none) infinite;
 }
 @keyframes shimmer {
   50% {
-    opacity: 0.5;
+    opacity: 0.4;
   }
 }
 button.ghost {
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
+  background: var(--drop-surface);
+  color: var(--drop-ink);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
   padding: 0.45rem 0.7rem;
   cursor: pointer;
 }
@@ -291,7 +395,7 @@ button.ghost:disabled {
   cursor: default;
 }
 button.danger {
-  color: var(--danger);
+  color: var(--drop-brand);
 }
 .actions {
   display: flex;
@@ -316,9 +420,9 @@ tbody tr:hover .actions .icon-btn,
   display: inline-grid;
   place-items: center;
   background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
+  border: 1px solid var(--drop-line);
+  border-radius: 0;
+  color: var(--drop-ink-2);
   cursor: pointer;
   padding: 0;
 }
@@ -327,27 +431,33 @@ tbody tr:hover .actions .icon-btn,
   height: 1.05rem;
 }
 .icon-btn:hover {
-  color: var(--primary-dark);
-  border-color: var(--border-strong);
+  background: var(--drop-ink);
+  color: var(--drop-background);
+  border-color: var(--drop-ink);
 }
 .icon-btn.danger:hover {
-  color: var(--danger);
-  border-color: var(--danger);
+  background: var(--drop-brand);
+  color: var(--drop-background);
+  border-color: var(--drop-brand);
 }
 .copied-tag {
   position: absolute;
   right: -0.4rem;
   top: -0.6rem;
-  font-size: 0.65rem;
-  padding: 0.1rem 0.35rem;
-  border-radius: 999px;
-  background: var(--success);
-  color: #fff;
+  font-size: 0.62rem;
+  padding: 0.08rem 0.3rem;
+  border-radius: 0;
+  background: var(--drop-state-success);
+  color: #0A0A0A;
+  font-family: var(--font-micro);
+  font-weight: 700;
 }
 .empty {
-  color: var(--text-muted);
+  color: var(--drop-ink-3);
 }
 .error {
-  color: var(--danger);
+  color: var(--drop-state-error);
+  font-family: var(--font-micro);
+  font-size: 0.85rem;
 }
 </style>

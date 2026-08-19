@@ -81,15 +81,17 @@ export const uploadParts = sqliteTable(
   ],
 )
 
-// Shares store only the SHA-256 hash of the raw token, which appears exactly
-// once in the creation response. Download limits use atomic claims; cleanup
-// removes exhausted and expired records.
+// Shares store the SHA-256 hash of the raw token plus the token itself
+// encrypted with a Worker secret (AES-GCM), so the owner can recover links on
+// any logged-in device without exposing plaintext tokens at rest. Download
+// limits use atomic claims; cleanup removes exhausted and expired records.
 export const shares = sqliteTable(
   'shares',
   {
     id: text('id').primaryKey(),
     fileId: text('file_id').notNull(),
     tokenHash: text('token_hash').notNull().unique(),
+    encryptedToken: text('encrypted_token'),
     expiresAt: integer('expires_at'),
     maxDownloads: integer('max_downloads'),
     downloadCount: integer('download_count').notNull().default(0),

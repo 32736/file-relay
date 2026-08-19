@@ -8,6 +8,8 @@ export interface MobileShareItem {
   maxDownloads: number | null
   downloadCount: number
   revokedAt: number | null
+  /** Server-recovered link (same account, any device); null for legacy shares. */
+  url: string | null
 }
 </script>
 
@@ -26,19 +28,39 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const copiedId = ref<string | null>(null)
 const shareUrls = ref<Record<string, string>>({})
+const query = ref('')
 
 async function load(): Promise<void> {
   loading.value = true
   error.value = null
   try {
-    const body = await api<{ shares: MobileShareItem[] }>('/api/shares')
+    const qs = query.value.trim() ? `?q=${encodeURIComponent(query.value.trim())}` : ''
+    const body = await api<{ shares: MobileShareItem[] }>(`/api/shares${qs}`)
     shares.value = body.shares
-    shareUrls.value = loadShareUrls()
+    // Server URL first (cross-device); the local cache only backs up legacy
+    // shares created before server-side link recovery existed.
+    const urls = loadShareUrls()
+    for (const share of body.shares) {
+      if (share.url) urls[share.id] = share.url
+    }
+    shareUrls.value = urls
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
   } finally {
     loading.value = false
   }
+}
+
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+function onSearch(): void {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => void load(), 250)
+}
+
+function clearSearch(): void {
+  if (!query.value) return
+  query.value = ''
+  void load()
 }
 
 async function copyUrl(id: string): Promise<void> {
@@ -93,6 +115,35 @@ defineExpose({ load })
     class="mobile-shares"
     aria-label="分享列表"
   >
+    <div class="search-row">
+      <div class="search-box">
+        <AppIcon
+          class="search-icon"
+          name="search"
+        />
+        <label
+          class="sr-only"
+          for="mobile-shares-search"
+        >搜索分享文件</label>
+        <input
+          id="mobile-shares-search"
+          v-model="query"
+          type="search"
+          placeholder="搜索分享文件"
+          @input="onSearch"
+        >
+        <button
+          v-if="query"
+          type="button"
+          class="clear-btn"
+          aria-label="清除搜索"
+          @click="clearSearch"
+        >
+          <AppIcon name="x" />
+        </button>
+      </div>
+    </div>
+
     <p
       v-if="error"
       class="error"
@@ -101,6 +152,16 @@ defineExpose({ load })
       {{ error }}
     </p>
 
+    <!-- Refresh indicator while cards are already visible -->
+    <div
+      v-if="loading && shares.length > 0"
+      class="list-loading"
+      role="status"
+      aria-label="加载中"
+    >
+      加载中
+    </div>
+
     <div
       v-if="loading && shares.length === 0"
       class="skeleton"
@@ -108,23 +169,26 @@ defineExpose({ load })
       aria-label="加载中"
     >
       <div
-        v-for="n in 3"
+        v-for="n in 5"
         :key="n"
-        class="skeleton-card"
+        class="skeleton-row"
       >
-        <span
-          class="skeleton-block"
-          :style="{ width: n === 2 ? '48%' : '60%' }"
-        />
-        <span
-          class="skeleton-block"
-          style="width: 100%; height: 36px"
-        />
+        <span class="skeleton-tile" />
+        <span class="skeleton-lines">
+          <span
+            class="skeleton-block"
+            :style="{ width: n % 2 ? '58%' : '42%' }"
+          />
+          <span
+            class="skeleton-block short"
+            style="width: 30%"
+          />
+        </span>
       </div>
     </div>
 
     <div
-      v-else-if="shares.length === 0"
+      v-else-if="shares.length === 0 && !query"
       class="empty"
     >
       <p class="empty-text">
@@ -132,57 +196,74 @@ defineExpose({ load })
       </p>
     </div>
 
+    <!-- Search without results -->
+    <div
+      v-else-if="shares.length === 0"
+      class="empty"
+    >
+      <AppIcon
+        class="empty-icon"
+        name="search-x"
+      />
+      <h2 class="empty-title">
+        未找到相关分享
+      </h2>
+      <p class="empty-desc">
+        没有找到与“{{ query.trim() }}”匹配的分享
+      </p>
+      <p class="empty-hint">
+        试试其他关键词
+      </p>
+    </div>
+
     <template v-else>
-      <div class="cards">
-        <article
+      <div class="list-head">
+        <span class="list-title">{{ query.trim() ? '搜索结果' : '全部分享' }}</span>
+        <span class="list-count">{{ shares.length }}</span>
+      </div>
+      <div class="file-rows">
+        <button
           v-for="share in shares"
           :key="share.id"
-          class="card"
-          role="button"
-          tabindex="0"
+          type="button"
+          class="file-row"
           @click="onCardClick(share, $event)"
-          @keydown.enter="emit('open', share)"
         >
-          <div class="card-head">
-            <span class="tile">
-              <AppIcon name="link" />
+          <span class="tile">
+            <AppIcon name="link" />
+          </span>
+          <span class="share-body">
+            <span class="share-name-row">
+              <span class="share-name">{{ share.fileName ?? share.fileId }}</span>
+              <span
+                class="badge"
+                :class="isActive(share) ? 'active' : 'inactive'"
+              >{{ stateLabel(share) }}</span>
             </span>
-            <span class="card-name">{{ share.fileName ?? share.fileId }}</span>
-            <span
-              class="badge"
-              :class="isActive(share) ? 'active' : 'inactive'"
-            >{{ stateLabel(share) }}</span>
-          </div>
-          <div class="card-meta">
-            <span class="meta-left">
-              <template v-if="shareUrls[share.id] && isActive(share)">
-                <AppIcon
-                  class="link-icon"
-                  name="link"
-                />
-                <span class="link-text">{{ shareUrls[share.id] }}</span>
-              </template>
-              <template v-else>
+            <span class="share-meta">
+              <span class="meta-left">
                 {{ daysLeft(share) }} · {{ share.downloadCount }} 次下载
-              </template>
+              </span>
+              <span class="meta-right">
+                <button
+                  v-if="shareUrls[share.id] && isActive(share)"
+                  type="button"
+                  data-stop
+                  class="copy-btn"
+                  :aria-label="copiedId === share.id ? '已复制' : '复制链接'"
+                  @click="copyUrl(share.id)"
+                >
+                  <AppIcon :name="copiedId === share.id ? 'check' : 'copy'" />
+                </button>
+                <span v-else>{{ relativeTime(share.createdAt) }}</span>
+              </span>
             </span>
-            <span class="meta-right">
-              <button
-                v-if="shareUrls[share.id] && isActive(share)"
-                type="button"
-                data-stop
-                class="copy-btn"
-                :aria-label="copiedId === share.id ? '已复制' : '复制链接'"
-                @click="copyUrl(share.id)"
-              >
-                <AppIcon :name="copiedId === share.id ? 'check' : 'copy'" />
-              </button>
-              <template v-else>
-                {{ relativeTime(share.createdAt) }}
-              </template>
-            </span>
-          </div>
-        </article>
+          </span>
+          <AppIcon
+            class="chevron"
+            name="chevron-right"
+          />
+        </button>
       </div>
     </template>
   </section>
@@ -194,31 +275,177 @@ defineExpose({ load })
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 0.75rem 0.875rem 1rem;
 }
 
-.cards {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
-.card {
-  padding: 0.625rem 0.875rem;
-  border: 1px solid rgba(15, 15, 18, 0.06);
-  border-radius: var(--drop-radius-sm);
-  background: var(--drop-card);
-  box-shadow: var(--drop-shadow-1);
-  -webkit-tap-highlight-color: transparent;
-  transition: box-shadow var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring);
+
+.search-row {
+  padding: 0.5rem 0.875rem;
+  background: var(--drop-background);
+  border-bottom: 2px solid var(--drop-ink);
 }
-.card:active {
-  background: var(--drop-surface-2);
-  transform: scale(0.99);
-}
-.card-head {
+.search-box {
+  position: relative;
   display: flex;
   align-items: center;
+}
+.search-box .search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--drop-ink-3);
+  pointer-events: none;
+}
+.search-box input {
+  width: 100%;
+  height: 2.5rem;
+  padding: 0 2.25rem 0 2.125rem;
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
+  background: var(--drop-surface);
+  color: var(--drop-ink);
+  font-family: var(--font-micro);
+  font-size: 0.8125rem;
+  appearance: none;
+  transition: border-color var(--drop-dur-fast) linear;
+}
+.search-box input::-webkit-search-cancel-button {
+  display: none;
+}
+.search-box input::placeholder {
+  color: var(--drop-ink-3);
+}
+.search-box input:focus {
+  outline: none;
+  border: 2px solid var(--drop-brand);
+  padding-right: calc(2.25rem - 1px);
+  padding-left: calc(2.125rem - 1px);
+}
+.clear-btn {
+  position: absolute;
+  right: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--drop-ink-2);
+  transition: background-color var(--drop-dur-fast) linear, color var(--drop-dur-fast) linear;
+}
+.clear-btn:active {
+  background: var(--drop-ink);
+  color: var(--drop-background);
+}
+.clear-btn :deep(svg) {
+  width: 1rem;
+  height: 1rem;
+}
+
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.875rem 0.375rem;
+}
+.list-title {
+  font-family: var(--font-micro);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--drop-ink-2);
+}
+.list-title::before {
+  content: "[ ";
+  color: var(--drop-brand);
+}
+.list-title::after {
+  content: " ]";
+  color: var(--drop-brand);
+}
+.list-count {
+  font-family: var(--font-micro);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--drop-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  color: var(--drop-ink-3);
+  opacity: 0.5;
+}
+.empty-title {
+  margin: 0;
+  font-family: var(--font-micro);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--drop-ink);
+}
+.empty-title::before {
+  content: "[ ";
+  color: var(--drop-brand);
+}
+.empty-title::after {
+  content: " ]";
+  color: var(--drop-brand);
+}
+.empty-desc {
+  margin: 0;
+  max-width: 240px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--drop-ink-2);
+}
+.empty-hint {
+  margin: 0;
+  font-family: var(--font-micro);
+  font-size: 0.7rem;
+  color: var(--drop-ink-3);
+}
+
+.file-rows {
+  display: flex;
+  flex-direction: column;
+}
+.file-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
   gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  min-height: 3rem;
+  border: 0;
+  border-left: 4px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--drop-dur-fast) linear, border-color var(--drop-dur-fast) linear;
+}
+.file-row + .file-row {
+  border-top: 1px solid var(--drop-line);
+}
+.file-row:active {
+  background: var(--drop-surface-2);
+  border-left-color: var(--drop-brand);
 }
 .tile {
   flex: none;
@@ -227,16 +454,29 @@ defineExpose({ load })
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border-radius: var(--drop-radius-sm);
-  background: var(--drop-brand-tint);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
+  background: var(--drop-surface-2);
   color: var(--drop-brand);
-  box-shadow: inset 0 0 0 1px rgba(230, 57, 70, 0.08);
 }
 .tile :deep(svg) {
   width: 1rem;
   height: 1rem;
 }
-.card-name {
+.share-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.share-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.share-name {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -245,42 +485,41 @@ defineExpose({ load })
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--drop-ink);
-  letter-spacing: -0.01em;
 }
 .badge {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.125rem 0.375rem;
-  border-radius: var(--drop-radius-pill);
-  font-size: 0.625rem;
-  font-weight: 600;
+  padding: 0.125rem 0.4rem;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  font-family: var(--font-micro);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   white-space: nowrap;
 }
 .badge.active {
-  background: color-mix(in srgb, var(--drop-state-success) 12%, transparent);
+  background: transparent;
   color: var(--drop-state-success);
 }
 .badge.inactive {
-  background: var(--drop-muted);
-  color: var(--drop-ink-3);
+  background: transparent;
+  color: var(--drop-state-error);
 }
 
-.card-meta {
+.share-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.375rem;
-  margin-top: 0.375rem;
-  font-size: 0.6875rem;
+  font-family: var(--font-micro);
+  font-size: 0.66rem;
   color: var(--drop-ink-3);
+  font-variant-numeric: tabular-nums;
 }
 .meta-left {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -290,67 +529,78 @@ defineExpose({ load })
   flex: none;
   display: flex;
   align-items: center;
-}
-.link-icon {
-  width: 0.75rem;
-  height: 0.75rem;
-  color: var(--drop-ink-3);
-  flex: none;
-}
-.link-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: ui-monospace, "SFMono-Regular", monospace;
-  color: var(--drop-ink-2);
-  font-size: 0.625rem;
+  gap: 0.25rem;
 }
 .copy-btn {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border: 0;
-  border-radius: var(--drop-radius-sm);
+  width: 1.625rem;
+  height: 1.25rem;
+  border: 1px solid var(--drop-line);
+  border-radius: 0;
   background: transparent;
   color: var(--drop-ink-2);
-  transition: background-color var(--drop-dur-base) var(--drop-ease-spring), color var(--drop-dur-base) var(--drop-ease-spring);
+  transition: background-color var(--drop-dur-fast) linear, color var(--drop-dur-fast) linear;
 }
 .copy-btn :deep(svg) {
-  width: 0.875rem;
-  height: 0.875rem;
+  width: 0.75rem;
+  height: 0.75rem;
 }
 .copy-btn:active {
-  background: var(--drop-brand-tint);
-  color: var(--drop-brand);
+  background: var(--drop-brand);
+  border-color: var(--drop-brand);
+  color: var(--drop-background);
+}
+.chevron {
+  width: 1rem;
+  height: 1rem;
+  color: var(--drop-ink-3);
 }
 
 .skeleton {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
 }
-.skeleton-card {
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  min-height: 3rem;
+}
+.skeleton-row + .skeleton-row {
+  border-top: 1px solid var(--drop-line);
+}
+.skeleton-tile {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--drop-line);
+  border-radius: 0;
+  background: var(--drop-surface-2);
+}
+.skeleton-lines {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.625rem 0.875rem;
-  border: 1px solid rgba(15, 15, 18, 0.06);
-  border-radius: var(--drop-radius-sm);
-  background: var(--drop-card);
+  gap: 0.25rem;
 }
 .skeleton-block {
-  height: 0.875rem;
-  border-radius: 0.25rem;
-  background: linear-gradient(90deg, var(--drop-surface-2) 0%, var(--drop-background) 50%, var(--drop-surface-2) 100%);
-  background-size: 200% 100%;
-  animation: skeleton-pulse 1.4s ease-in-out infinite;
+  height: 0.75rem;
+  border-radius: 0;
+  background: var(--drop-surface-2);
+  animation: skeleton-blink 1.2s steps(2, jump-none) infinite;
 }
-@keyframes skeleton-pulse {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+.skeleton-block.short {
+  height: 0.625rem;
+  width: 40%;
+}
+@keyframes skeleton-blink {
+  50% {
+    opacity: 0.45;
+  }
 }
 
 .empty {
@@ -363,13 +613,24 @@ defineExpose({ load })
   text-align: center;
 }
 .empty-text {
-  font-size: 0.8125rem;
+  font-family: var(--font-micro);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
   color: var(--drop-ink-3);
+}
+.empty-text::before {
+  content: "[ ";
+  color: var(--drop-brand);
+}
+.empty-text::after {
+  content: " ]";
+  color: var(--drop-brand);
 }
 
 .error {
   margin: 0.75rem 0 0;
   color: var(--drop-state-error);
-  font-size: 14px;
+  font-family: var(--font-micro);
+  font-size: 0.8rem;
 }
 </style>

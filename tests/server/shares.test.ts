@@ -95,7 +95,7 @@ describe('Phase 05 sharing', () => {
     expect(crossOrigin.status).toBe(403)
   })
 
-  it('creates a share storing only the token hash', async () => {
+  it('creates a share storing a token hash and an encrypted token copy', async () => {
     const fileId = await seedFile()
     const response = await createShare(fileId, { expiresIn: 3600, maxDownloads: 5 })
     expect(response.status).toBe(200)
@@ -114,6 +114,10 @@ describe('Phase 05 sharing', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].token_hash).not.toBe(token)
     expect(rows[0].token_hash).toBe(await sha256Hex(token))
+    // The recoverable copy is ciphertext — never the raw token in plaintext.
+    expect(rows[0].encrypted_token).toBeTruthy()
+    expect(rows[0].encrypted_token).not.toBe(token)
+    expect(String(rows[0].encrypted_token)).not.toContain(token)
   })
 
   it('rejects shares for missing or deleted files', async () => {
@@ -254,21 +258,79 @@ describe('Phase 05 sharing', () => {
     expect(bucket.keys()).toHaveLength(1)
   })
 
-  it('lists shares without raw tokens and paginates', async () => {
+  it('lists shares with recovered URLs for the owner and paginates', async () => {
     const fileId = await seedFile()
-    const { shareId } = await createShareOk(fileId, { maxDownloads: 2 })
+    const { shareId, token } = await createShareOk(fileId, { maxDownloads: 2 })
+
+    // A legacy row created before encrypted storage: its URL cannot be
+    // recovered server-side, so the list must report null instead of failing.
+    const legacyFileId = await seedFile('legacy.txt')
+    const legacy = await createShareOk(legacyFileId)
+    await db
+      .prepare('UPDATE shares SET encrypted_token = NULL WHERE id = ?')
+      .bind(legacy.shareId)
+      .run()
 
     const response = await app.request('/api/shares', { headers: { Cookie: cookie } }, env)
     expect(response.status).toBe(200)
     const body = (await response.json()) as {
-      shares: Record<string, unknown>[]
+      shares: { id: string; fileName: string | null; url: string | null }[]
       nextCursor: string | null
     }
-    expect(body.shares).toHaveLength(1)
+    expect(body.shares).toHaveLength(2)
     expect(body.nextCursor).toBeNull()
-    expect(body.shares[0].id).toBe(shareId)
-    expect(body.shares[0].fileName).toBe('shareme.txt')
-    expect(JSON.stringify(body)).not.toMatch(/\/s\//)
+
+    const recovered = body.shares.find((share) => share.id === shareId)
+    expect(recovered?.fileName).toBe('shareme.txt')
+    expect(recovered?.url).toBe(`https://drop.28207.cc/s/${token}`)
+
+    const legacyShare = body.shares.find((share) => share.id === legacy.shareId)
+    expect(legacyShare?.url).toBeNull()
+  })
+
+  it('searches shares by file name and returns empty for no match', async () => {
+    const reportId = await seedFile('annual-report.pdf')
+    const report = await createShareOk(reportId)
+    const photoId = await seedFile('vacation-photo.jpg')
+    const photo = await createShareOk(photoId)
+
+    const hit = await app.request(
+      '/api/shares?q=report',
+      { headers: { Cookie: cookie } },
+      env,
+    )
+    expect(hit.status).toBe(200)
+    const hitBody = (await hit.json()) as { shares: { id: string; fileName: string | null }[] }
+    expect(hitBody.shares).toHaveLength(1)
+    expect(hitBody.shares[0].id).toBe(report.shareId)
+    expect(hitBody.shares[0].fileName).toBe('annual-report.pdf')
+
+    // LIKE wildcards in the query are treated literally (escaped).
+    const wildcard = await app.request(
+      '/api/shares?q=%100%',
+      { headers: { Cookie: cookie } },
+      env,
+    )
+    const wildcardBody = (await wildcard.json()) as { shares: unknown[] }
+    expect(wildcardBody.shares).toHaveLength(0)
+
+    const miss = await app.request(
+      '/api/shares?q=nomatch',
+      { headers: { Cookie: cookie } },
+      env,
+    )
+    expect(miss.status).toBe(200)
+    const missBody = (await miss.json()) as { shares: unknown[]; nextCursor: string | null }
+    expect(missBody.shares).toHaveLength(0)
+    expect(missBody.nextCursor).toBeNull()
+
+    // Unfiltered list still returns both shares.
+    const all = await app.request('/api/shares', { headers: { Cookie: cookie } }, env)
+    const allBody = (await all.json()) as { shares: { id: string }[] }
+    expect(allBody.shares).toHaveLength(2)
+    expect(allBody.shares.map((share) => share.id).sort()).toEqual(
+      [photo.shareId, report.shareId].sort(),
+    )
   })
 
   it('revokes shares idempotently', async () => {

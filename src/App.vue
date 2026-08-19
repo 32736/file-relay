@@ -166,6 +166,24 @@ function onPageDragOver(): void {
   if (auth.value === 'owner' && !shareDialogOpen.value) pageDragging.value = true
 }
 
+// dragleave on the shell fires when the pointer leaves any child, so we only
+// treat a leave as "left the window" when the relatedTarget is null (outside
+// the viewport) AND the pointer coordinates are at or past the viewport edge.
+function onPageDragLeave(event: DragEvent): void {
+  const target = event.relatedTarget as Node | null
+  if (target && (event.target as Node | null)?.contains?.(target)) return
+  const { clientX, clientY } = event
+  if (
+    clientX <= 0 ||
+    clientY <= 0 ||
+    clientX >= window.innerWidth - 1 ||
+    clientY >= window.innerHeight - 1 ||
+    target === null
+  ) {
+    pageDragging.value = false
+  }
+}
+
 function onPageDrop(event: DragEvent): void {
   pageDragging.value = false
   if (auth.value !== 'owner' || shareDialogOpen.value) return
@@ -227,6 +245,7 @@ async function requestMagicLink(): Promise<void> {
     class="shell"
     :class="{ 'page-dragging': pageDragging }"
     @dragover.prevent="onPageDragOver"
+    @dragleave.prevent="onPageDragLeave"
     @drop.prevent="onPageDrop"
   >
     <!-- Public share page: slim header + download card -->
@@ -262,6 +281,7 @@ async function requestMagicLink(): Promise<void> {
             alt=""
             aria-hidden="true"
           >
+          <span class="tech-tag">PRIVATE FILE RELAY / REV 2.6</span>
           <h1
             id="page-title"
             class="wordmark"
@@ -364,6 +384,10 @@ async function requestMagicLink(): Promise<void> {
             <h1 class="wordmark">
               Dr<span class="o">o</span>p
             </h1>
+            <span
+              class="topbar-tag"
+              aria-hidden="true"
+            >/// <b>FILE RELAY</b> — UNIT D-01</span>
           </div>
           <span
             v-if="stats"
@@ -372,27 +396,41 @@ async function requestMagicLink(): Promise<void> {
           >
             {{ stats.fileCount }} 个文件 · 已用 {{ formatBytes(stats.totalBytes) }}
           </span>
-          <nav
-            class="tabs top-tabs"
-            aria-label="工作区导航"
+          <div
+            class="topbar-actions"
+            role="group"
+            aria-label="工作区操作"
           >
             <button
+              class="action-btn action-share"
               :class="{ active: shareDialogOpen }"
               :aria-expanded="shareDialogOpen"
               type="button"
               @click="toggleShareDialog"
             >
-              分享
+              <span
+                class="action-kicker"
+                aria-hidden="true"
+              >>>> SHARES</span>
+              <span class="action-label">{{ shareDialogOpen ? '关闭面板' : '分享管理' }}</span>
             </button>
+            <span
+              class="action-sep"
+              aria-hidden="true"
+            />
             <button
-              class="logout-button"
+              class="action-btn action-logout"
               type="button"
               :disabled="logoutBusy"
               @click="logout"
             >
-              {{ logoutBusy ? '退出中…' : '退出登录' }}
+              <span
+                class="action-kicker"
+                aria-hidden="true"
+              >[ EXIT ]</span>
+              <span class="action-label">{{ logoutBusy ? '退出中…' : '退出登录' }}</span>
             </button>
-          </nav>
+          </div>
         </header>
 
         <dialog
@@ -473,7 +511,7 @@ async function requestMagicLink(): Promise<void> {
 
 <style scoped>
 .shared-notice {
-  color: var(--success);
+  color: var(--drop-state-success);
   margin-bottom: 0.6rem;
 }
 </style>

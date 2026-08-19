@@ -93,6 +93,16 @@ defineExpose({ load })
       {{ error }}
     </p>
 
+    <!-- Refresh indicator while rows are already visible -->
+    <div
+      v-if="loading && files.length > 0"
+      class="list-loading"
+      role="status"
+      aria-label="加载中"
+    >
+      加载中
+    </div>
+
     <!-- Loading skeleton -->
     <div
       v-if="loading && files.length === 0"
@@ -232,7 +242,7 @@ defineExpose({ load })
 .search-row {
   padding: 0.5rem 0.875rem;
   background: var(--drop-background);
-  border-bottom: 1px solid var(--drop-line);
+  border-bottom: 2px solid var(--drop-ink);
 }
 .search-box {
   position: relative;
@@ -249,15 +259,14 @@ defineExpose({ load })
   width: 100%;
   height: 2.5rem;
   padding: 0 2.25rem 0 2.125rem;
-  border: 1px solid var(--drop-border);
-  border-radius: var(--drop-radius-sm);
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
+  background: var(--drop-surface);
   color: var(--drop-ink);
+  font-family: var(--font-micro);
   font-size: 0.8125rem;
   appearance: none;
-  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring);
+  transition: border-color var(--drop-dur-fast) linear;
 }
 .search-box input::-webkit-search-cancel-button {
   display: none;
@@ -267,9 +276,9 @@ defineExpose({ load })
 }
 .search-box input:focus {
   outline: none;
-  border-color: var(--drop-brand);
-  background: var(--drop-surface);
-  box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.1);
+  border: 2px solid var(--drop-brand);
+  padding-right: calc(2.25rem - 1px);
+  padding-left: calc(2.125rem - 1px);
 }
 .clear-btn {
   position: absolute;
@@ -279,14 +288,15 @@ defineExpose({ load })
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border: 0;
-  border-radius: var(--drop-radius-sm);
+  border: 1px solid transparent;
+  border-radius: 0;
   background: transparent;
   color: var(--drop-ink-2);
-  transition: background-color var(--drop-dur-base) var(--drop-ease-spring);
+  transition: background-color var(--drop-dur-fast) linear;
 }
 .clear-btn:active {
-  background: var(--drop-muted);
+  background: var(--drop-ink);
+  color: var(--drop-background);
 }
 .clear-btn :deep(svg) {
   width: 1rem;
@@ -297,16 +307,28 @@ defineExpose({ load })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.375rem 0.875rem;
+  padding: 0.5rem 0.875rem 0.375rem;
 }
 .list-title {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-family: var(--font-micro);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--drop-ink-2);
-  letter-spacing: -0.01em;
+}
+.list-title::before {
+  content: "[ ";
+  color: var(--drop-brand);
+}
+.list-title::after {
+  content: " ]";
+  color: var(--drop-brand);
 }
 .list-count {
-  font-size: 0.6875rem;
+  font-family: var(--font-micro);
+  font-size: 0.7rem;
+  font-weight: 700;
   color: var(--drop-ink-3);
   font-variant-numeric: tabular-nums;
 }
@@ -323,19 +345,21 @@ defineExpose({ load })
   padding: 0.625rem 0.875rem;
   min-height: 3rem;
   border: 0;
+  border-left: 4px solid transparent;
   border-radius: 0;
   background: transparent;
   text-align: left;
   font: inherit;
   color: inherit;
   -webkit-tap-highlight-color: transparent;
-  transition: background-color var(--drop-dur-base) var(--drop-ease-spring);
+  transition: background-color var(--drop-dur-fast) linear, border-color var(--drop-dur-fast) linear;
 }
 .file-row + .file-row {
   border-top: 1px solid var(--drop-line);
 }
 .file-row:active {
   background: var(--drop-surface-2);
+  border-left-color: var(--drop-brand);
 }
 .tile {
   flex: none;
@@ -344,15 +368,21 @@ defineExpose({ load })
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border-radius: var(--drop-radius-sm);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
   background: var(--drop-surface-2);
   color: var(--drop-ink-2);
-  box-shadow: var(--drop-shadow-1);
 }
 .tile :deep(.file-icon) {
   width: 1.125rem;
   height: 1.125rem;
+  border: 0;
+  background: transparent;
   color: inherit;
+}
+.tile :deep(.file-icon svg) {
+  width: 1rem;
+  height: 1rem;
 }
 .tile :deep(.file-icon.image) {
   color: var(--drop-brand);
@@ -371,12 +401,12 @@ defineExpose({ load })
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--drop-ink);
-  letter-spacing: -0.01em;
 }
 .file-meta {
   display: flex;
   justify-content: space-between;
-  font-size: 0.6875rem;
+  font-family: var(--font-micro);
+  font-size: 0.66rem;
   color: var(--drop-ink-3);
   font-variant-numeric: tabular-nums;
 }
@@ -392,22 +422,26 @@ defineExpose({ load })
 .more {
   display: flex;
   justify-content: center;
-  padding: 0.375rem 0;
+  padding: 0.5rem 0;
 }
 .more button {
   min-height: 2.25rem;
   padding: 0 1rem;
-  border: 1px solid var(--drop-border);
-  border-radius: var(--drop-radius-sm);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
   background: var(--drop-card);
   color: var(--drop-ink-2);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring);
+  font-family: var(--font-micro);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: var(--drop-shadow-1);
+  transition: background-color var(--drop-dur-fast) linear, color var(--drop-dur-fast) linear;
 }
 .more button:hover {
-  border-color: var(--drop-brand);
-  background: var(--drop-brand-tint);
+  background: var(--drop-ink);
+  color: var(--drop-background);
 }
 
 .skeleton {
@@ -428,10 +462,10 @@ defineExpose({ load })
   flex: none;
   width: 2rem;
   height: 2rem;
-  border-radius: var(--drop-radius-sm);
-  background: linear-gradient(90deg, var(--drop-surface-2) 0%, var(--drop-background) 50%, var(--drop-surface-2) 100%);
-  background-size: 200% 100%;
-  animation: skeleton-pulse 1.4s ease-in-out infinite;
+  border: 1px solid var(--drop-line);
+  border-radius: 0;
+  background: var(--drop-surface-2);
+  animation: skeleton-blink 1.2s steps(2, jump-none) infinite;
 }
 .skeleton-lines {
   flex: 1;
@@ -441,17 +475,17 @@ defineExpose({ load })
 }
 .skeleton-block {
   height: 12px;
-  border-radius: 3px;
-  background: linear-gradient(90deg, var(--drop-surface-2) 0%, var(--drop-background) 50%, var(--drop-surface-2) 100%);
-  background-size: 200% 100%;
-  animation: skeleton-pulse 1.4s ease-in-out infinite;
+  border-radius: 0;
+  background: var(--drop-surface-2);
+  animation: skeleton-blink 1.2s steps(2, jump-none) infinite;
 }
 .skeleton-block.short {
   height: 10px;
 }
-@keyframes skeleton-pulse {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+@keyframes skeleton-blink {
+  50% {
+    opacity: 0.45;
+  }
 }
 
 .empty {
@@ -475,9 +509,19 @@ defineExpose({ load })
 }
 .empty-title {
   margin: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-family: var(--font-micro);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   color: var(--drop-ink);
+}
+.empty-title::before {
+  content: "[ ";
+  color: var(--drop-brand);
+}
+.empty-title::after {
+  content: " ]";
+  color: var(--drop-brand);
 }
 .empty-desc {
   margin: 0;
@@ -488,7 +532,8 @@ defineExpose({ load })
 }
 .empty-hint {
   margin: 0;
-  font-size: 0.75rem;
+  font-family: var(--font-micro);
+  font-size: 0.7rem;
   color: var(--drop-ink-3);
 }
 .empty-cta {
@@ -499,23 +544,27 @@ defineExpose({ load })
   height: 2.5rem;
   margin-top: 1rem;
   padding: 0 1.25rem;
-  border: 0;
-  border-radius: var(--drop-radius-sm);
-  background: linear-gradient(135deg, var(--drop-brand) 0%, var(--drop-brand-strong) 100%);
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
+  background: var(--drop-brand);
   color: #fff;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  box-shadow: 0 6px 20px -4px rgba(230, 57, 70, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transition: filter var(--drop-dur-base) var(--drop-ease-spring), transform var(--drop-dur-base) var(--drop-ease-spring);
+  font-family: var(--font-micro);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: var(--drop-shadow-1);
+  transition: transform var(--drop-dur-fast) linear, box-shadow var(--drop-dur-fast) linear;
 }
 .empty-cta:active {
-  filter: brightness(0.96);
-  transform: scale(0.98);
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 #000000;
 }
 
 .error {
   margin: 12px 0 0;
   color: var(--drop-state-error);
-  font-size: 14px;
+  font-family: var(--font-micro);
+  font-size: 0.8rem;
 }
 </style>

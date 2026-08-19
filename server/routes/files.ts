@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import type { AppEnv } from '../env'
 import { buildDownloadResponse, parseRange } from '../lib/download'
-import { randomToken, sha256Hex } from '../lib/crypto'
+import { encryptWithSecret, randomToken, sha256Hex } from '../lib/crypto'
 import { apiError } from '../lib/errors'
 import { requireAuth, requireSameOrigin } from '../middleware/auth'
 import { createShareSchema } from './shares'
@@ -188,20 +188,28 @@ export const fileRoutes = new Hono<AppEnv>()
 
     const token = randomToken(32)
     const tokenHash = await sha256Hex(token)
+    // Encrypted with the Worker secret so the owner can recover the link on
+    // any logged-in device; never stored in plaintext.
+    const encryptedToken = await encryptWithSecret(
+      token,
+      c.env.EMAIL_ENCRYPTION_KEY,
+      'drop:share-token:v1',
+    )
     const shareId = crypto.randomUUID()
     const now = Math.floor(Date.now() / 1000)
     const expiresAt = expiresIn ? now + expiresIn : null
 
     await c.env.DB.prepare(
       `INSERT INTO shares
-       (id, file_id, token_hash, expires_at, max_downloads, download_count,
+       (id, file_id, token_hash, encrypted_token, expires_at, max_downloads, download_count,
         delete_file_after_exhausted, created_at, revoked_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         shareId,
         fileId,
         tokenHash,
+        encryptedToken,
         expiresAt,
         maxDownloads ?? null,
         0,
@@ -211,7 +219,8 @@ export const fileRoutes = new Hono<AppEnv>()
       )
       .run()
 
-    // The raw token appears exactly once, inside the share URL.
+    // The raw token appears exactly once, inside the share URL; the stored
+    // copy is AES-GCM ciphertext that only the Worker secret can open.
     return c.json({
       id: shareId,
       url: `${c.env.APP_ORIGIN}/s/${token}`,

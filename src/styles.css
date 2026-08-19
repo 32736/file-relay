@@ -1,277 +1,657 @@
-/* Drop — High-End Visual System (Soft Structuralism archetype). */
+/* Drop — Industrial Brutalist / Tactical Telemetry visual system.
+   Light substrate: Swiss Industrial Print (unbleached paper, carbon ink,
+   hazard red). Dark substrate: deactivated CRT terminal (phosphor white,
+   hazard red, scanlines). One archetype per substrate; never mixed.
+   Theme flips via prefers-color-scheme; [data-theme] on <html> overrides
+   it for a future manual toggle. */
 
-/* Google Fonts: Geist + Plus Jakarta Sans */
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,500&display=swap");
-
-/* Drop Mobile design tokens (drop-mobile prototype). Used by the mobile
-   component tree under the 767px breakpoint; harmless on desktop. */
+/* ---------------------------------------------------------------- tokens */
 :root {
-  --drop-brand: #E63946;
-  --drop-brand-strong: #C92A38;
-  --drop-brand-tint: #FDECEE;
-  --drop-background: #FAFAFB;
-  --drop-foreground: #0F0F12;
-  --drop-card: #FFFFFF;
-  --drop-muted: #F4F4F6;
-  --drop-muted-foreground: #8A8A93;
-  --drop-border: #E8E8EC;
-  --drop-ink: #0F0F12;
-  --drop-ink-2: #4A4A52;
-  --drop-ink-3: #8F8F98;
-  --drop-line: #E8E8EC;
-  --drop-surface: #FFFFFF;
-  --drop-surface-2: #F5F5F7;
-  --drop-surface-sunken: #F9F9FB;
-  --drop-state-success: #10B981;
-  --drop-state-error: #E63946;
+  /* Typography — system stacks only (no network fonts). Macro: heavy
+     neo-grotesque for structural headers. Micro: monospace for data,
+     labels and telemetry. Body: neutral sans for prose. */
+  --font-macro: "Arial Black", "Arial", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Segoe UI", "Helvetica Neue", system-ui, -apple-system, sans-serif;
+  --font-micro: ui-monospace, "Cascadia Mono", "JetBrains Mono", "IBM Plex Mono", Menlo, Consolas, "Courier New", monospace;
 
-  /* Radii — larger, squircle-like */
-  --drop-radius-xs: 8px;
-  --drop-radius-sm: 12px;
-  --drop-radius-md: 16px;
-  --drop-radius-lg: 22px;
-  --drop-radius-xl: 28px;
-  --drop-radius-pill: 999px;
+  /* Drop scale — Swiss Industrial Print (light). */
+  --drop-brand: #E61919;
+  --drop-brand-strong: #B91414;
+  --drop-brand-tint: #EAE8E2;
+  --drop-background: #F4F4F0;
+  --drop-foreground: #0A0A0A;
+  --drop-card: #F4F4F0;
+  --drop-muted: #E2E0D8;
+  --drop-muted-foreground: #74736C;
+  --drop-border: #0A0A0A;
+  --drop-ink: #0A0A0A;
+  --drop-ink-2: #45443F;
+  --drop-ink-3: #74736C;
+  --drop-line: #0A0A0A;
+  --drop-surface: #F4F4F0;
+  --drop-surface-2: #EAE8E2;
+  --drop-surface-sunken: #EAE8E2;
+  --drop-state-success: #1E7A34;
+  --drop-state-error: #E61919;
 
-  /* Diffused ambient shadows — layered for haptic depth */
-  --drop-shadow-1: 0 1px 2px rgba(15, 15, 18, 0.04);
-  --drop-shadow-2: 0 4px 16px -4px rgba(15, 15, 18, 0.08), 0 2px 4px -2px rgba(15, 15, 18, 0.04);
-  --drop-shadow-3: 0 12px 32px -8px rgba(15, 15, 18, 0.12), 0 4px 8px -4px rgba(15, 15, 18, 0.06);
-  --drop-shadow-4: 0 24px 48px -12px rgba(15, 15, 18, 0.16), 0 8px 16px -8px rgba(15, 15, 18, 0.08);
+  /* Geometry — mechanical rigidity: 90° corners only. */
+  --drop-radius-xs: 0;
+  --drop-radius-sm: 0;
+  --drop-radius-md: 0;
+  --drop-radius-lg: 0;
+  --drop-radius-xl: 0;
+  --drop-radius-pill: 0;
 
-  /* Inner highlight for Double-Bezel effect */
-  --drop-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  --drop-inner-shadow: inset 0 0 0 1px rgba(15, 15, 18, 0.04);
+  /* Hard offset shadows — physical plate depth, no diffusion. */
+  --drop-shadow-1: 2px 2px 0 #0A0A0A;
+  --drop-shadow-2: 4px 4px 0 #0A0A0A;
+  --drop-shadow-3: 6px 6px 0 #0A0A0A;
+  --drop-shadow-4: 8px 8px 0 #0A0A0A;
 
-  /* Custom cubic-bezier transitions */
+  /* Desktop scale (legacy names, same substrate). */
+  --bg: #F4F4F0;
+  --bg-warm: #EAE8E2;
+  --surface: #F4F4F0;
+  --surface-muted: #EAE8E2;
+  --text: #0A0A0A;
+  --text-muted: #45443F;
+  --text-faint: #74736C;
+  --primary: #E61919;
+  --primary-dark: #B91414;
+  --primary-soft: #EAE8E2;
+  --border: #0A0A0A;
+  --border-strong: #0A0A0A;
+  --danger: #E61919;
+  --danger-soft: #EAE8E2;
+  --success: #1E7A34;
+  --success-soft: #E4EBE2;
+
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+
+  --shadow-soft: 4px 4px 0 #0A0A0A;
+  --shadow-hard: 8px 8px 0 #0A0A0A;
+  --shadow-hard-sm: 3px 3px 0 #0A0A0A;
+
+  /* Motion. */
   --drop-ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
   --drop-ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
   --drop-ease-snap: cubic-bezier(0.16, 1, 0.3, 1);
-  --drop-dur-fast: 160ms;
-  --drop-dur-base: 240ms;
-  --drop-dur-slow: 400ms;
+  --drop-dur-fast: 120ms;
+  --drop-dur-base: 160ms;
+  --drop-dur-slow: 240ms;
+
+  /* Hard shadows: theme-scoped so the dark CRT mode dims them. */
+  --drop-shadow-hard: 8px 8px 0 var(--drop-ink);
+  --drop-shadow-hard-sm: 3px 3px 0 var(--drop-ink);
 }
 
+/* Dark substrate — Tactical Telemetry CRT. Activated by device theme or
+   data-theme="dark"; data-theme="light" forces the print substrate. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --drop-brand: #FF2A2A;
+    --drop-brand-strong: #E61919;
+    --drop-brand-tint: #1A1A1A;
+    --drop-background: #0A0A0A;
+    --drop-foreground: #EAEAEA;
+    --drop-card: #101010;
+    --drop-muted: #1E1E1E;
+    --drop-muted-foreground: #6E6E6E;
+    --drop-border: #3C3C3C;
+    --drop-ink: #EAEAEA;
+    --drop-ink-2: #B0B0B0;
+    --drop-ink-3: #6E6E6E;
+    --drop-line: #3C3C3C;
+    --drop-surface: #101010;
+    --drop-surface-2: #181818;
+    --drop-surface-muted: #1E1E1E;
+    --drop-surface-sunken: #141414;
+    --drop-state-success: #4AF626;
+    --drop-state-error: #FF2A2A;
+
+    --drop-shadow-1: 2px 2px 0 #000000;
+    --drop-shadow-2: 4px 4px 0 #000000;
+    --drop-shadow-3: 6px 6px 0 #000000;
+    --drop-shadow-4: 8px 8px 0 #000000;
+
+    --bg: #0A0A0A;
+    --bg-warm: #181818;
+    --surface: #101010;
+    --surface-muted: #181818;
+    --text: #EAEAEA;
+    --text-muted: #B0B0B0;
+    --text-faint: #6E6E6E;
+    --primary: #FF2A2A;
+    --primary-dark: #E61919;
+    --primary-soft: #1A1A1A;
+    --border: #3C3C3C;
+    --border-strong: #EAEAEA;
+    --danger: #FF2A2A;
+    --danger-soft: #1A1A1A;
+    --success: #4AF626;
+    --success-soft: #14261A;
+
+    --shadow-soft: 4px 4px 0 #000000;
+    --shadow-hard: 8px 8px 0 #000000;
+    --shadow-hard-sm: 3px 3px 0 #000000;
+  }
+}
+:root[data-theme="dark"] {
+  --drop-brand: #FF2A2A;
+  --drop-brand-strong: #E61919;
+  --drop-brand-tint: #1A1A1A;
+  --drop-background: #0A0A0A;
+  --drop-foreground: #EAEAEA;
+  --drop-card: #101010;
+  --drop-muted: #1E1E1E;
+  --drop-muted-foreground: #6E6E6E;
+  --drop-border: #3C3C3C;
+  --drop-ink: #EAEAEA;
+  --drop-ink-2: #B0B0B0;
+  --drop-ink-3: #6E6E6E;
+  --drop-line: #3C3C3C;
+  --drop-surface: #101010;
+  --drop-surface-2: #181818;
+  --drop-surface-muted: #1E1E1E;
+  --drop-surface-sunken: #141414;
+  --drop-state-success: #4AF626;
+  --drop-state-error: #FF2A2A;
+
+  --drop-shadow-1: 2px 2px 0 #000000;
+  --drop-shadow-2: 4px 4px 0 #000000;
+  --drop-shadow-3: 6px 6px 0 #000000;
+  --drop-shadow-4: 8px 8px 0 #000000;
+
+  --bg: #0A0A0A;
+  --bg-warm: #181818;
+  --surface: #101010;
+  --surface-muted: #181818;
+  --text: #EAEAEA;
+  --text-muted: #B0B0B0;
+  --text-faint: #6E6E6E;
+  --primary: #FF2A2A;
+  --primary-dark: #E61919;
+  --primary-soft: #1A1A1A;
+  --border: #3C3C3C;
+  --border-strong: #EAEAEA;
+  --danger: #FF2A2A;
+  --danger-soft: #1A1A1A;
+  --success: #4AF626;
+  --success-soft: #14261A;
+
+  --shadow-soft: 4px 4px 0 #000000;
+  --shadow-hard: 8px 8px 0 #000000;
+  --shadow-hard-sm: 3px 3px 0 #000000;
+}
+
+/* ------------------------------------------------------------- substrate */
 :root {
-  --bg: #F5F5F7;
-  --bg-warm: #FAFAFB;
-  --surface: #FFFFFF;
-  --surface-muted: #EEF0F2;
-  --text: #0F0F12;
-  --text-muted: #5A5A63;
-  --text-faint: #9A9AA3;
-  --primary: #E63946;
-  --primary-dark: #C92A38;
-  --primary-soft: #FDECEE;
-  --border: #E5E5EA;
-  --border-strong: #0F0F12;
-  --danger: #E63946;
-  --danger-soft: #FDECEE;
-  --success: #10B981;
-  --success-soft: #E6FAF1;
-
-  /* Radii — enlarged for premium feel */
-  --radius-xs: 10px;
-  --radius-sm: 14px;
-  --radius-md: 20px;
-  --radius-lg: 28px;
-
-  /* Diffused shadows replacing harsh block shadows */
-  --shadow-soft: 0 12px 36px -8px rgba(15, 15, 18, 0.12), 0 4px 8px -4px rgba(15, 15, 18, 0.06);
-  --shadow-hard: 0 24px 60px -12px rgba(15, 15, 18, 0.16), 0 8px 16px -8px rgba(15, 15, 18, 0.08);
-  --shadow-hard-sm: 0 8px 20px -4px rgba(15, 15, 18, 0.14), 0 2px 4px -2px rgba(15, 15, 18, 0.04);
-
-  color: var(--text);
-  background: var(--bg);
-  font-family: "Plus Jakarta Sans", "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--drop-ink-2);
+  background: var(--drop-background);
+  font-family: var(--font-body);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.005em;
 }
 
 * { box-sizing: border-box; }
 html, body, #app { width: 100%; height: 100%; overflow: hidden; }
-body { margin: 0; min-width: 320px; min-height: 100%; font-size: 15px; line-height: 1.6; font-family: "Plus Jakarta Sans", "Geist", ui-sans-serif, system-ui, sans-serif; }
-h1, h2, h3 { letter-spacing: -0.035em; line-height: 1.2; font-weight: 700; }
-button, input { font: inherit; }
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100%;
+  font-size: 15px;
+  line-height: 1.6;
+  font-family: var(--font-body);
+  color: var(--drop-ink-2);
+  background: var(--drop-background);
+}
+h1, h2, h3 { font-family: var(--font-macro); font-weight: 900; letter-spacing: -0.03em; line-height: 1.05; color: var(--drop-ink); }
+button, input { font: inherit; color: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
-:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: var(--radius-xs); }
+::selection { background: var(--drop-brand); color: var(--drop-background); }
+:focus-visible { outline: 2px solid var(--drop-brand); outline-offset: 2px; }
 button:disabled { cursor: default; }
 button:not(:disabled), a, input {
   transition:
-    border-color var(--drop-dur-base) var(--drop-ease-spring),
-    background-color var(--drop-dur-base) var(--drop-ease-spring),
-    color var(--drop-dur-base) var(--drop-ease-spring),
-    transform var(--drop-dur-base) var(--drop-ease-spring),
-    box-shadow var(--drop-dur-base) var(--drop-ease-spring),
-    opacity var(--drop-dur-base) var(--drop-ease-spring);
+    border-color var(--drop-dur-fast) linear,
+    background-color var(--drop-dur-fast) linear,
+    color var(--drop-dur-fast) linear,
+    transform var(--drop-dur-fast) linear,
+    box-shadow var(--drop-dur-fast) linear,
+    opacity var(--drop-dur-fast) linear;
 }
-button:not(:disabled):active { transform: scale(0.98); }
 
+/* Mechanical noise — unified physical grain over the whole document. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* CRT scanlines — dark substrate only (electron beam sweeps). */
+@media (prefers-color-scheme: dark) {
+  body:not([data-theme="light"])::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 2147483001;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.16) 2px,
+      rgba(0, 0, 0, 0.16) 4px
+    );
+  }
+}
+:root[data-theme="dark"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483001;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.16) 2px,
+    rgba(0, 0, 0, 0.16) 4px
+  );
+}
+
+/* -------------------------------------------------------------- controls */
 .btn-primary, .btn-secondary, .signin, .ghost, .btn-danger {
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   cursor: pointer;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-family: var(--font-micro);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .btn-primary {
-  border: 0;
-  padding: 0.72rem 1.25rem;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: #FFFFFF;
-  box-shadow: 0 4px 14px -2px rgba(230, 57, 70, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--drop-ink);
+  padding: 0.75rem 1.4rem;
+  background: var(--drop-brand);
+  color: var(--drop-background);
+  box-shadow: var(--drop-shadow-hard-sm);
 }
-.btn-primary:not(:disabled):hover, .signin:hover {
-  box-shadow: 0 6px 20px -2px rgba(230, 57, 70, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  filter: brightness(1.04);
+.btn-primary:not(:disabled):hover {
+  filter: brightness(1.08);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--drop-ink);
 }
-.btn-primary:disabled { opacity: .5; }
-.btn-secondary {
-  border: 1px solid var(--border);
-  padding: 0.65rem 1.25rem;
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--drop-shadow-1);
+.btn-primary:not(:disabled):active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--drop-ink);
 }
-.btn-secondary:not(:disabled):hover {
-  background: var(--surface-muted);
-  border-color: var(--border-strong);
+.btn-primary:disabled { opacity: 0.5; }
+.btn-secondary, .ghost {
+  border: 1px solid var(--drop-ink);
+  padding: 0.7rem 1.2rem;
+  background: var(--drop-surface);
+  color: var(--drop-ink);
+}
+.btn-secondary:not(:disabled):hover, .ghost:not(:disabled):hover {
+  background: var(--drop-ink);
+  color: var(--drop-background);
+}
+.btn-secondary:not(:disabled):active, .ghost:not(:disabled):active {
+  background: var(--drop-brand);
+  border-color: var(--drop-brand);
+  color: var(--drop-background);
 }
 .btn-danger {
-  border: 0;
-  padding: 0.65rem 1.25rem;
-  background: var(--danger);
-  color: #FFFFFF;
-  box-shadow: 0 4px 14px -2px rgba(230, 57, 70, 0.35);
+  border: 1px solid var(--drop-ink);
+  padding: 0.7rem 1.2rem;
+  background: var(--drop-brand);
+  color: var(--drop-background);
+  box-shadow: var(--drop-shadow-hard-sm);
 }
+.btn-danger:not(:disabled):hover { filter: brightness(1.08); }
+.btn-danger:not(:disabled):active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--drop-ink); }
 
-.shell { height: 100dvh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-.page-content { flex: 1; width: 100%; min-height: 0; margin: 0; padding: 1.25rem; display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; }
+/* ----------------------------------------------------------------- shell */
+.shell { height: 100dvh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--drop-background); color: var(--drop-ink-2); }
+.page-content { flex: 1; width: 100%; min-height: 0; margin: 0; padding: 1.25rem; display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; color: var(--drop-ink-2); }
 .page-content > section[aria-label="文件工作区"] { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.page-content::-webkit-scrollbar, .upload-panel > .upload-zone::-webkit-scrollbar, .files-panel > .file-list::-webkit-scrollbar { width: 6px; }
-.page-content::-webkit-scrollbar-thumb, .upload-panel > .upload-zone::-webkit-scrollbar-thumb, .files-panel > .file-list::-webkit-scrollbar-thumb {
-  border: 2px solid transparent;
-  border-radius: 999px;
-  background: rgba(15, 15, 18, 0.15);
-  background-clip: content-box;
-}
+.page-content::-webkit-scrollbar, .upload-panel > .upload-zone::-webkit-scrollbar, .files-panel > .file-list::-webkit-scrollbar { width: 10px; }
+.page-content::-webkit-scrollbar-track, .upload-panel > .upload-zone::-webkit-scrollbar-track, .files-panel > .file-list::-webkit-scrollbar-track { background: var(--drop-surface-muted); border-left: 1px solid var(--drop-line); }
+.page-content::-webkit-scrollbar-thumb, .upload-panel > .upload-zone::-webkit-scrollbar-thumb, .files-panel > .file-list::-webkit-scrollbar-thumb { background: var(--drop-ink); }
 .logo { display: block; width: 2.65rem; height: 2.65rem; flex: none; object-fit: contain; }
-.wordmark { margin: 0; font-size: 1.25rem; font-weight: 800; letter-spacing: -0.045em; font-family: "Geist", "Plus Jakarta Sans", sans-serif; }
-.wordmark .o { color: var(--primary); }
+.wordmark {
+  margin: 0;
+  font-family: var(--font-macro);
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  color: var(--drop-ink);
+}
+.wordmark .o { color: var(--drop-brand); }
 
+/* --------------------------------------------------------------- topbars */
 .topbar {
   position: sticky; top: 0; z-index: 40;
   display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1rem;
-  height: 5rem; min-height: 5rem; padding: 1rem;
-  background: rgba(255, 255, 255, 0.72);
-  border-bottom: 1px solid rgba(15, 15, 18, 0.06);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  height: 4.5rem; min-height: 4.5rem; padding: 0 1rem;
+  background: var(--drop-surface);
+  border-top: 5px solid var(--drop-brand);
+  border-bottom: 2px solid var(--drop-ink);
+  color: var(--drop-ink-2);
 }
+.topbar-tag {
+  font-family: var(--font-micro);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--drop-ink-3);
+  white-space: nowrap;
+}
+.topbar-tag b { color: var(--drop-brand); font-weight: 700; }
 .public-header {
-  position: sticky; top: 0; z-index: 40;
+  position: static;
   display: flex; align-items: center; gap: 1rem; padding: 1rem;
-  background: rgba(255, 255, 255, 0.72);
-  border-bottom: 1px solid rgba(15, 15, 18, 0.06);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  background: var(--drop-surface);
+  border-top: 5px solid var(--drop-brand);
+  border-bottom: 2px solid var(--drop-ink);
+  color: var(--drop-ink-2);
 }
 .brand-lockup { display: flex; align-items: center; gap: .75rem; min-width: max-content; }
-.topbar .top-tabs { justify-self: end; margin: 0; border-bottom: 0; }
-.topbar .stats { justify-self: end; margin-left: 0; color: var(--text-muted); font-size: .82rem; font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 500; }
+.topbar .stats {
+  justify-self: end; margin-left: 0; color: var(--drop-ink-3);
+  font-family: var(--font-micro); font-size: .74rem; letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
 
+/* Industrial top-right action group: share management + logout.
+   Each button is a brutalist label-over-label chip stacked vertically, with
+   an ASCII tech kicker and a bold human-readable label. Danger semantics for
+   logout are conveyed with a dashed outline + red kicker; hover collapses it
+   to a solid pill — no huge red block until the user actually presses. */
+.topbar-actions {
+  justify-self: end;
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  border: 1px solid var(--drop-ink);
+  background: var(--drop-surface);
+  box-shadow: var(--drop-shadow-hard-sm);
+}
+.topbar-actions .action-btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  min-height: 100%;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.05rem;
+  cursor: pointer;
+  color: var(--drop-ink-2);
+  transition: background-color var(--drop-dur-fast) linear, color var(--drop-dur-fast) linear;
+}
+.topbar-actions .action-kicker {
+  font-family: var(--font-micro);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--drop-ink-3);
+}
+.topbar-actions .action-label {
+  font-family: var(--font-macro);
+  font-size: 0.88rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.topbar-actions .action-sep {
+  width: 1px;
+  background: var(--drop-ink);
+  align-self: stretch;
+}
+.topbar-actions .action-share:hover {
+  background: var(--drop-ink);
+  color: var(--drop-background);
+}
+.topbar-actions .action-share:hover .action-kicker { color: var(--drop-brand); }
+.topbar-actions .action-share.active {
+  background: var(--drop-ink);
+  color: var(--drop-background);
+  position: relative;
+}
+.topbar-actions .action-share.active .action-kicker { color: var(--drop-brand); }
+.topbar-actions .action-share.active::before {
+  content: "";
+  position: absolute;
+  inset: 3px 3px auto 3px;
+  height: 2px;
+  background: var(--drop-brand);
+}
+.topbar-actions .action-logout {
+  border: 1px dashed transparent;
+  margin: 3px;
+  padding: 0.35rem 0.85rem;
+}
+.topbar-actions .action-logout .action-kicker { color: var(--drop-brand); }
+.topbar-actions .action-logout:hover:not(:disabled) {
+  background: var(--drop-brand);
+  border-style: solid;
+  border-color: var(--drop-ink);
+  color: var(--drop-background);
+}
+.topbar-actions .action-logout:hover:not(:disabled) .action-kicker {
+  color: var(--drop-background);
+}
+.topbar-actions .action-logout:disabled { opacity: 0.55; cursor: progress; }
+
+/* ------------------------------------------------- share management dialog */
+/* NOTE: <dialog showModal> pushes the element into the browser's top layer.
+   To avoid top-layer custom-property inheritance quirks (some Chromium
+   builds resolve media-scoped :root overrides unreliably inside top-layer
+   descendants), every themeable surface is declared explicitly with
+   drop-* tokens here *and* in the scoped styles of ShareList.vue. */
 .share-management-dialog {
   position: fixed; top: 5.5rem; right: .5rem; bottom: .5rem; left: .5rem; z-index: 45;
   width: auto; max-width: none; max-height: none; height: auto;
   margin: 0; padding: 1.25rem; overflow: auto;
-  border: 0;
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  box-shadow: var(--shadow-hard);
-  opacity: 0; transform: translateY(-0.5rem) scale(0.98);
+  border: 2px solid var(--drop-ink);
+  border-radius: 0;
+  background: var(--drop-card);
+  color: var(--drop-ink-2);
+  box-shadow: var(--drop-shadow-hard);
+  opacity: 0; transform: translateY(-0.5rem);
   transition: opacity var(--drop-dur-slow) var(--drop-ease-spring), transform var(--drop-dur-slow) var(--drop-ease-spring);
 }
-.share-management-dialog.is-visible { opacity: 1; transform: translateY(0) scale(1); }
-.share-management-dialog::backdrop { background: rgba(15, 15, 18, 0.35); backdrop-filter: blur(8px); }
+.share-management-dialog.is-visible { opacity: 1; transform: translateY(0); }
+.share-management-dialog::backdrop {
+  background: color-mix(in srgb, var(--drop-ink) 56%, transparent);
+}
 
-.tabs { display: flex; gap: .35rem; margin: .25rem 0 2rem; border-bottom: 1px solid var(--border); }
+/* Enforce drop-* tokens also on the theme overrides so top-layer rendering
+   always sees the correct substrate regardless of @media order.
+
+   BOTH the share-management panel dialog (<dialog class=share-management-dialog>)
+   AND the per-file create-share dialog (<dialog class=dialog>) must be covered
+   here. Scoped ::backdrop rules in SFCs never reach top-layer pseudo-elements,
+   so backdrops are declared globally too. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .share-management-dialog,
+  :root:not([data-theme="light"]) dialog.dialog {
+    background: var(--drop-card);
+    color: var(--drop-ink-2);
+    border-color: var(--drop-ink);
+  }
+  :root:not([data-theme="light"]) .share-management-dialog::backdrop,
+  :root:not([data-theme="light"]) dialog.dialog::backdrop {
+    background: color-mix(in srgb, #000000 64%, transparent);
+  }
+}
+:root[data-theme="dark"] .share-management-dialog,
+:root[data-theme="dark"] dialog.dialog {
+  background: var(--drop-card);
+  color: var(--drop-ink-2);
+  border-color: var(--drop-ink);
+}
+:root[data-theme="dark"] .share-management-dialog::backdrop,
+:root[data-theme="dark"] dialog.dialog::backdrop {
+  background: color-mix(in srgb, #000000 64%, transparent);
+}
+:root[data-theme="light"] .share-management-dialog,
+:root[data-theme="light"] dialog.dialog {
+  background: var(--drop-card);
+  color: var(--drop-ink-2);
+  border-color: var(--drop-ink);
+}
+:root[data-theme="light"] .share-management-dialog::backdrop,
+:root[data-theme="light"] dialog.dialog::backdrop {
+  background: color-mix(in srgb, #0A0A0A 46%, transparent);
+}
+
+/* ------------------------------------------------------------------ tabs */
+.tabs { display: flex; gap: 0; margin: .25rem 0 2rem; border-bottom: 2px solid var(--drop-ink); }
 .tabs button {
-  min-height: 2.65rem; padding: .55rem 1rem;
-  border: 1px solid transparent; border-bottom: 0;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  background: transparent; color: var(--text-muted);
-  cursor: pointer; font-weight: 600;
-  transition: color var(--drop-dur-base) var(--drop-ease-spring), background-color var(--drop-dur-base) var(--drop-ease-spring), border-color var(--drop-dur-base) var(--drop-ease-spring);
+  min-height: 2.6rem; padding: .5rem 1.1rem;
+  border: 1px solid var(--drop-ink); border-bottom: 0;
+  border-radius: 0;
+  background: transparent; color: var(--drop-ink-3);
+  cursor: pointer;
+  font-family: var(--font-micro); font-size: .78rem; font-weight: 700;
+  letter-spacing: .1em;
 }
-.tabs button:hover { color: var(--text); background: var(--surface-muted); }
+.tabs button + button { margin-left: -1px; }
+.tabs button:hover { color: var(--drop-ink); background: var(--drop-surface-muted); }
 .tabs button.active {
-  color: var(--text);
-  border-color: var(--border);
-  background: var(--surface);
-  box-shadow: 0 -2px 0 var(--primary) inset;
+  color: var(--drop-background);
+  border-color: var(--drop-ink);
+  background: var(--drop-ink);
+  position: relative;
+}
+.tabs button.active::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: -2px;
+  height: 2px; background: var(--drop-ink);
 }
 
+/* ---------------------------------------------------------- login (brand) */
 .brand-panel {
-  width: min(42rem, 100%); margin: 12vh auto 0; padding: 3.5rem;
-  border: 1px solid rgba(15, 15, 18, 0.06);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  box-shadow: var(--shadow-soft), var(--drop-inner-highlight);
-  display: grid; grid-template-columns: auto 1fr; gap: .6rem 1.2rem; align-items: center;
+  width: min(42rem, 100%); margin: 12vh auto 0; padding: 3rem 3.5rem;
+  border: 2px solid var(--drop-ink);
+  border-top: 8px solid var(--drop-brand);
+  border-radius: 0;
+  background: var(--drop-surface);
+  color: var(--drop-ink-2);
+  box-shadow: var(--drop-shadow-hard);
+  display: grid; grid-template-columns: auto 1fr; gap: .6rem 1.4rem; align-items: center;
 }
-.brand-panel .logo { grid-row: span 2; width: 4.4rem; height: 4.4rem; }
-.brand-panel .wordmark { font-size: 2.3rem; }
-.brand-panel .promise { grid-column: 2; max-width: 34rem; margin: .35rem 0 .75rem; color: var(--text-muted); }
+.brand-panel .logo { grid-row: span 3; width: 4.4rem; height: 4.4rem; }
+.brand-panel .wordmark { font-size: 2.8rem; }
+.tech-tag {
+  grid-column: 2;
+  font-family: var(--font-micro);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--drop-ink-3);
+}
+.tech-tag::before { content: "[ "; color: var(--drop-brand); }
+.tech-tag::after { content: " ]"; color: var(--drop-brand); }
+.brand-panel .promise { grid-column: 2; max-width: 34rem; margin: .35rem 0 .75rem; color: var(--drop-ink-2); }
 .login-actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; }
 .signin {
   display: inline-block; width: fit-content; padding: .85rem 1.5rem;
-  border: 0;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: #FFFFFF; text-decoration: none;
-  box-shadow: 0 6px 20px -4px rgba(230, 57, 70, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-sm);
-  font-weight: 650;
+  border: 1px solid var(--drop-ink);
+  background: var(--drop-brand);
+  color: var(--drop-background); text-decoration: none;
+  box-shadow: var(--drop-shadow-hard-sm);
+  font-weight: 700;
+}
+.signin:hover {
+  filter: brightness(1.08);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--drop-ink);
+  color: var(--drop-background);
 }
 .magic-link-form { display: grid; gap: .5rem; min-width: min(100%, 27rem); }
-.magic-link-form label { color: var(--text-muted); font-size: .82rem; font-weight: 600; }
+.magic-link-form label {
+  color: var(--drop-ink-3);
+  font-family: var(--font-micro);
+  font-size: .72rem; font-weight: 700;
+  letter-spacing: .1em;
+}
 .magic-link-controls { display: flex; gap: .5rem; }
 .magic-link-controls input {
-  min-width: 0; flex: 1; padding: .75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  font-family: "Plus Jakarta Sans", sans-serif;
-  transition: border-color var(--drop-dur-base) var(--drop-ease-spring), box-shadow var(--drop-dur-base) var(--drop-ease-spring);
+  min-width: 0; flex: 1; padding: .75rem .9rem;
+  border: 1px solid var(--drop-ink);
+  border-radius: 0;
+  background: var(--drop-surface);
+  font-family: var(--font-micro); font-size: .88rem;
+  color: var(--drop-ink);
 }
+.magic-link-controls input::placeholder { color: var(--drop-ink-3); }
 .magic-link-controls input:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(230, 57, 70, 0.12);
+  border: 2px solid var(--drop-brand);
+  padding: calc(0.75rem - 1px) calc(0.9rem - 1px);
 }
 .magic-link-notice, .magic-link-error { grid-column: 2; margin: 0; }
-.magic-link-notice { color: var(--success); }
+.magic-link-notice { color: var(--drop-state-success); }
 .connection-error { grid-column: 2; margin: 0; }
-.logout-button { color: var(--danger) !important; }
-.logout-button:hover { background: var(--danger-soft) !important; }
-.public-header { position: static; }
+.logout-button { color: var(--drop-brand) !important; }
+.logout-button:hover { background: var(--drop-brand) !important; border-color: var(--drop-ink) !important; color: var(--drop-background) !important; }
 .public-header .logo { width: 2rem; height: 2rem; }
 
-.shared-notice { margin: -1rem 0 1rem; padding: .75rem 1rem; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-sm); background: var(--success-soft); color: var(--success); }
+.shared-notice {
+  margin: -1rem 0 1rem; padding: .6rem .9rem;
+  border: 1px solid var(--drop-state-success); border-left: 5px solid var(--drop-state-success);
+  background: color-mix(in srgb, var(--drop-state-success) 14%, var(--drop-surface));
+  color: var(--drop-state-success);
+  font-family: var(--font-micro); font-size: .8rem;
+}
 
+/* ------------------------------------------------------------- workspace */
 .workspace-grid { flex: 1; min-height: 0; display: flex; gap: 1.25rem; align-items: stretch; }
 .workspace-panel {
   min-width: 0; flex: 1; height: auto;
   display: flex; flex-direction: column;
-  border: 1px solid rgba(15, 15, 18, 0.06);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  box-shadow: var(--shadow-soft), var(--drop-inner-highlight);
+  border: 1px solid var(--drop-ink);
+  border-top: 4px solid var(--drop-ink);
+  border-radius: 0;
+  background: var(--drop-surface);
+  color: var(--drop-ink-2);
 }
 .upload-panel, .files-panel { min-height: 0; }
-.panel-head { display: flex; justify-content: space-between; gap: 1rem; align-items: start; padding: 1.25rem 1.25rem 1rem; border-bottom: 1px solid var(--border); }
-.panel-kicker { display: block; margin-bottom: .35rem; color: var(--text); font-size: .95rem; font-weight: 700; letter-spacing: -0.02em; }
+.panel-head {
+  display: flex; justify-content: space-between; gap: 1rem; align-items: start;
+  padding: 1rem 1.25rem .8rem;
+  border-bottom: 2px solid var(--drop-ink);
+  background: var(--drop-surface-muted);
+}
+.panel-kicker {
+  display: block; margin-bottom: 0;
+  color: var(--drop-ink);
+  font-family: var(--font-micro);
+  font-size: .78rem; font-weight: 700;
+  letter-spacing: .12em;
+}
+.panel-kicker::before { content: "[ "; color: var(--drop-brand); }
+.panel-kicker::after { content: " ]"; color: var(--drop-brand); }
 .upload-panel > .upload-zone, .files-panel > .file-list { flex: 1; min-height: 0; max-height: none; overflow-x: hidden; overflow-y: auto; }
 .upload-panel > .upload-zone { padding: 1rem; }
 .files-panel > .file-list { padding: 1rem; }
@@ -279,38 +659,116 @@ button:not(:disabled):active { transform: scale(0.98); }
 .files-panel table { border: 0; }
 .files-panel .empty { min-height: 15rem; }
 
+/* -------------------------------------------------------- drop overlay */
 .page-drop-overlay {
   position: fixed; inset: 0; z-index: 55;
   display: grid; place-items: center; pointer-events: none;
-  background: rgba(15, 15, 18, 0.45);
-  backdrop-filter: blur(8px);
+  /* Softer industrial hazard strip: tinted base with thin, translucent alert-red
+     stripes (16px period, 4px stroke) instead of the harsh full-contrast
+     crimson/charcoal checker. The base layer uses theme tokens so the screen
+     behind remains readable through the overlay. */
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0 12px,
+      color-mix(in srgb, var(--drop-brand) 22%, transparent) 12px 16px
+    ),
+    color-mix(in srgb, var(--drop-background) 72%, transparent);
+  backdrop-filter: saturate(0.8);
+}
+.page-drop-overlay::before {
+  /* Thin outer frame so the overlay is visually bounded (brutalist look)
+     without any new DOM. */
+  content: "";
+  position: absolute; inset: 14px;
+  border: 2px dashed color-mix(in srgb, var(--drop-brand) 45%, var(--drop-ink-2));
+  pointer-events: none;
 }
 .page-drop-overlay span {
+  position: relative;
   min-width: min(32rem, calc(100vw - 3rem));
-  padding: 2rem 2.5rem;
-  border: 0;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: #FFFFFF;
-  box-shadow: 0 16px 48px -8px rgba(230, 57, 70, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  font-size: clamp(1.5rem, 4vw, 3rem);
-  font-weight: 800;
+  padding: 1.6rem 2.25rem;
+  border: 2px solid var(--drop-ink);
+  border-left: 6px solid var(--drop-brand);
+  border-radius: 0;
+  background: var(--drop-card);
+  color: var(--drop-ink);
+  box-shadow: var(--drop-shadow-hard);
+  font-family: var(--font-macro);
+  font-size: clamp(1.3rem, 3.6vw, 2.35rem);
+  font-weight: 900;
+  letter-spacing: -0.01em;
   text-align: center;
 }
+.page-drop-overlay span::before {
+  content: "[ DROP ZONE ACTIVE ]\A";
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--drop-brand);
+  font-family: var(--font-micro);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  white-space: pre;
+}
 
+/* ----------------------------------------------------------------- toasts */
 .toasts { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 60; display: flex; flex-direction: column; gap: .5rem; }
 .toast {
   max-width: 22rem; padding: .75rem 1.1rem;
-  border: 1px solid rgba(15, 15, 18, 0.06);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  box-shadow: var(--shadow-hard-sm);
+  border: 1px solid var(--drop-ink); border-left-width: 5px;
+  border-radius: 0;
+  background: var(--drop-card);
+  color: var(--drop-ink-2);
+  box-shadow: var(--drop-shadow-hard-sm);
   font-weight: 600;
 }
-.toast.success { border-color: rgba(16, 185, 129, 0.3); color: var(--success); }
-.toast.error { border-color: rgba(230, 57, 70, 0.3); color: var(--danger); }
-.error { color: var(--danger); }
-.ok { color: var(--success); }
+.toast.success { border-left-color: var(--drop-state-success); color: var(--drop-state-success); }
+.toast.error { border-left-color: var(--drop-state-error); color: var(--drop-state-error); }
+.error { color: var(--drop-state-error); }
+.ok { color: var(--drop-state-success); }
+
+/* --------------------------------------------------------- list loading */
+/* Inline loading strip for lists that already show content (search refresh,
+   load-more). Industrial style: bordered mono label + hazard stripes with a
+   mechanical steps() blink. Used by FileList, ShareList and the mobile
+   counterparts. */
+.list-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--drop-ink);
+  border-left: 4px solid var(--drop-brand);
+  border-radius: 0;
+  background: var(--drop-card);
+  font-family: var(--font-micro);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--drop-ink-2);
+  animation: list-loading-blink 0.9s steps(2, jump-none) infinite;
+}
+.list-loading::before { content: "///"; color: var(--drop-brand); flex: none; }
+.list-loading::after {
+  content: "";
+  flex: 1;
+  height: 0.55rem;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--drop-brand) 0 0.4rem,
+    transparent 0.4rem 0.8rem
+  );
+  animation: list-loading-stripes 0.8s linear infinite;
+}
+@keyframes list-loading-blink {
+  50% { opacity: 0.55; }
+}
+@keyframes list-loading-stripes {
+  to { background-position: 1.14rem 0; } /* 0.8rem stripe period × √2 */
+}
 
 @media (max-width: 620px) {
   .page-content { padding: 1rem; }
@@ -322,8 +780,8 @@ button:not(:disabled):active { transform: scale(0.98); }
   .tabs { margin-bottom: 1.35rem; overflow-x: auto; }
   .tabs button { flex: none; min-height: 2.75rem; }
   .brand-panel { margin-top: 7vh; padding: 2rem 1.25rem; grid-template-columns: auto 1fr; }
-  .brand-panel .logo { width: 3.25rem; height: 3.25rem; }
-  .brand-panel .wordmark { font-size: 1.8rem; }
+  .brand-panel .logo { grid-row: span 3; width: 3.25rem; height: 3.25rem; }
+  .brand-panel .wordmark { font-size: 2rem; }
   .login-actions { grid-column: 1 / -1; flex-direction: column; align-items: stretch; }
   .login-actions .signin { width: 100%; text-align: center; }
   .magic-link-form { width: 100%; }
@@ -337,14 +795,14 @@ button:not(:disabled):active { transform: scale(0.98); }
   .toast { max-width: none; }
 }
 
-/* Mobile breakpoint (drop-mobile prototype). The mobile component tree is
-   mounted by App.vue below 767px; these shared adjustments style the
-   login panel, toasts, and the reusable ShareDialog bottom sheet. */
+/* Mobile breakpoint. The mobile component tree is mounted by App.vue below
+   767px; these shared adjustments style the login panel, toasts, and the
+   reusable ShareDialog bottom sheet. */
 @media (max-width: 767px) {
   html, body, #app { overflow: visible; }
   .shell { height: auto; min-height: 100dvh; overflow: visible; }
 
-  /* Login panel: centered brand column per login.html prototype. */
+  /* Login panel: centered brand column. */
   .brand-panel {
     margin: 0 auto;
     padding: 2.75rem 1.75rem;
@@ -352,24 +810,25 @@ button:not(:disabled):active { transform: scale(0.98); }
     justify-items: center;
     text-align: center;
     border: 0;
+    border-top: 0;
     box-shadow: none;
     background: transparent;
   }
   .brand-panel .logo { grid-row: auto; width: 3rem; height: 3rem; }
-  .brand-panel .wordmark { font-size: 2rem; }
+  .brand-panel .wordmark { font-size: 2.2rem; }
+  .tech-tag { grid-column: 1; }
   .brand-panel .promise { grid-column: 1; }
   .login-actions { grid-column: 1; }
   .magic-link-notice, .magic-link-error, .connection-error { grid-column: 1; }
   .signin {
     width: 100%;
-    border: 0;
-    box-shadow: 0 8px 24px -4px rgba(230, 57, 70, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-    background: linear-gradient(135deg, var(--drop-brand) 0%, var(--drop-brand-strong) 100%);
-    color: #FFFFFF;
+    border: 1px solid var(--drop-ink);
+    box-shadow: var(--drop-shadow-2);
+    background: var(--drop-brand);
+    color: var(--drop-background);
     text-align: center;
     padding: 1rem 1.25rem;
-    border-radius: var(--drop-radius-md);
-    font-weight: 650;
+    font-weight: 700;
   }
 
   /* Toasts sit above the bottom navigation. */
@@ -381,10 +840,14 @@ button:not(:disabled):active { transform: scale(0.98); }
     width: 100%;
     max-width: 100%;
     border: 0;
-    border-top: 1px solid var(--drop-border);
-    border-radius: var(--drop-radius-xl) var(--drop-radius-xl) 0 0;
+    border-top: 2px solid var(--drop-ink);
+    border-radius: 0;
     box-shadow: var(--drop-shadow-4);
+    background: var(--drop-card);
+    color: var(--drop-ink-2);
     padding: 1.5rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
   }
-  .mobile-app dialog.dialog::backdrop { background: rgba(15, 15, 18, 0.4); backdrop-filter: blur(6px); }
+  .mobile-app dialog.dialog::backdrop {
+    background: color-mix(in srgb, #000000 60%, transparent);
+  }
 }
