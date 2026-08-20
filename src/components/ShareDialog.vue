@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 
 const dialogRef = ref<HTMLDialogElement | null>(null)
 
-import { api } from '../lib/api'
+import { api, getUserErrorMessage } from '../lib/api'
+import { copyText } from '../lib/clipboard'
+import { COPY } from '../lib/copy'
 import { formatDate } from '../lib/format'
 import { saveShareUrl } from '../lib/share-urls'
 import { toast } from '../lib/toast'
@@ -28,6 +30,16 @@ const error = ref<string | null>(null)
 const result = ref<ShareResult | null>(null)
 const qrCanvas = ref<HTMLCanvasElement | null>(null)
 const copied = ref(false)
+const initialField = ref<HTMLInputElement | null>(null)
+const resultCopyButton = ref<HTMLButtonElement | null>(null)
+const errorMessage = ref<HTMLElement | null>(null)
+const returnFocus = typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
+  ? document.activeElement
+  : null
+
+function onBurnChange(): void {
+  if (burnAfterReading.value) maxDownloads.value = 1
+}
 
 async function createShare(): Promise<void> {
   busy.value = true
@@ -45,15 +57,23 @@ async function createShare(): Promise<void> {
       body: JSON.stringify(body),
     })
     saveShareUrl(result.value.id, result.value.url)
-    toast('分享已创建', 'success')
+    toast(COPY.feedback.shareCreated, 'success')
     emit('shared')
     await nextTick()
-    if (qrCanvas.value) {
-      const { default: QRCode } = await import('qrcode')
-      await QRCode.toCanvas(qrCanvas.value, result.value.url, { width: 160 })
+    resultCopyButton.value?.focus()
+    try {
+      if (qrCanvas.value) {
+        const { default: QRCode } = await import('qrcode')
+        await QRCode.toCanvas(qrCanvas.value, result.value.url, { width: 160 })
+      }
+    } catch {
+      toast(COPY.errors.qrCode, 'error')
     }
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : String(cause)
+    error.value = getUserErrorMessage(cause, COPY.errors.shareCreate)
+    toast(error.value, 'error')
+    await nextTick()
+    errorMessage.value?.focus()
   } finally {
     busy.value = false
   }
@@ -61,16 +81,33 @@ async function createShare(): Promise<void> {
 
 async function copyUrl(): Promise<void> {
   if (!result.value) return
-  await navigator.clipboard.writeText(result.value.url)
-  toast('链接已复制', 'success')
-  copied.value = true
-  setTimeout(() => (copied.value = false), 1500)
+  try {
+    await copyText(result.value.url)
+    toast(COPY.feedback.linkCopied, 'success')
+    copied.value = true
+    setTimeout(() => (copied.value = false), 1500)
+  } catch (cause) {
+    toast(getUserErrorMessage(cause, COPY.errors.copy), 'error')
+  }
 }
 
 onMounted(() => {
   nextTick(() => {
-    if (dialogRef.value && !dialogRef.value.open) dialogRef.value.showModal?.()
+    const dialog = dialogRef.value
+    if (dialog && !dialog.open) {
+      try {
+        if (typeof dialog.showModal === 'function') dialog.showModal()
+        else dialog.setAttribute('open', '')
+      } catch {
+        dialog.setAttribute('open', '')
+      }
+    }
+    initialField.value?.focus()
   })
+})
+
+onBeforeUnmount(() => {
+  if (returnFocus?.isConnected) returnFocus.focus()
 })
 </script>
 
@@ -78,48 +115,81 @@ onMounted(() => {
   <dialog
     ref="dialogRef"
     class="dialog"
-    aria-label="分享文件"
+    aria-labelledby="share-dialog-title"
+    aria-describedby="share-dialog-description"
+    aria-modal="true"
     @cancel.prevent="emit('close')"
     @click.self="emit('close')"
   >
-    <h3 class="dialog-title">
+    <h2
+      id="share-dialog-title"
+      class="dialog-title"
+    >
       <span
         class="title-text"
         :title="file.name"
       >{{ file.name }}</span>
-    </h3>
+    </h2>
+    <p
+      id="share-dialog-description"
+      class="sr-only"
+    >
+      设置分享链接的有效期、下载次数和自动清理规则。
+    </p>
 
     <form
       v-if="!result"
+      :aria-busy="busy"
+      :aria-describedby="error ? 'share-dialog-error' : undefined"
       @submit.prevent="createShare"
     >
-      <label>
-        有效期（小时，留空为永久）
+      <label for="share-expires-hours">
+        链接有效期（小时，留空为永久有效）
         <input
+          id="share-expires-hours"
+          ref="initialField"
           v-model.number="expiresHours"
+          name="expiresHours"
           type="number"
           min="1"
         >
       </label>
-      <label>
-        下载次数上限（留空不限）
+      <label for="share-max-downloads">
+        下载次数上限（留空表示不限）
         <input
+          id="share-max-downloads"
           v-model.number="maxDownloads"
+          name="maxDownloads"
           type="number"
           min="1"
+          :disabled="burnAfterReading"
         >
+        <span
+          v-if="burnAfterReading"
+          class="field-hint"
+        >启用后仅允许下载 1 次，链接失效后文件将自动清理</span>
       </label>
-      <label class="check">
+      <label
+        class="check"
+        for="share-burn-after-reading"
+      >
         <input
+          id="share-burn-after-reading"
           v-model="burnAfterReading"
+          name="burnAfterReading"
           type="checkbox"
+          @change="onBurnChange"
         >
-        阅后即焚（下载 1 次后失效并删除）
+        下载 1 次后链接失效，文件将自动清理
       </label>
       <p
         v-if="error"
+        id="share-dialog-error"
+        ref="errorMessage"
         class="error"
         role="alert"
+        aria-atomic="true"
+        tabindex="-1"
       >
         {{ error }}
       </p>
@@ -129,7 +199,7 @@ onMounted(() => {
           type="submit"
           :disabled="busy"
         >
-          {{ busy ? '创建中…' : '创建分享' }}
+          {{ busy ? '创建中…' : COPY.actions.createShare }}
         </button>
       </div>
     </form>
@@ -146,26 +216,28 @@ onMounted(() => {
       <p class="url">
         {{ result.url }}
       </p>
-      <p
-        v-if="result.expiresAt"
-        class="hint"
-      >
-        有效期至 {{ formatDate(result.expiresAt) }}
+      <p class="hint">
+        {{ result.expiresAt ? `链接有效期至 ${formatDate(result.expiresAt)}` : COPY.shares.permanent }}
       </p>
+      <div class="result-meta">
+        <span>{{ result.maxDownloads === null ? '不限下载次数' : `最多下载 ${result.maxDownloads} 次` }}</span>
+        <span v-if="result.deleteFileAfterExhausted">下载 1 次后链接失效，文件将自动清理</span>
+      </div>
       <div class="buttons">
         <button
+          ref="resultCopyButton"
           type="button"
           class="ghost"
           @click="copyUrl"
         >
-          {{ copied ? '已复制' : '复制链接' }}
+          {{ copied ? COPY.actions.copied : COPY.actions.copyLink }}
         </button>
         <button
           type="button"
           class="ghost"
           @click="emit('close')"
         >
-          完成
+          {{ COPY.actions.complete }}
         </button>
       </div>
     </div>
@@ -250,6 +322,23 @@ label input[type='password']:focus {
   outline: none;
   border: 2px solid var(--drop-brand);
   padding: calc(0.5rem - 1px) calc(0.75rem - 1px);
+}
+label input[type='number']:focus-visible,
+label input[type='password']:focus-visible {
+  outline: 2px solid var(--drop-brand);
+  outline-offset: 2px;
+}
+label input[type='number']:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.field-hint {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--drop-brand);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 .check {
   display: flex;
@@ -337,5 +426,19 @@ button.ghost:hover {
   font-family: var(--font-micro);
   font-size: 0.75rem;
   letter-spacing: 0.05em;
+}
+.result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  margin: 0.65rem 0 0;
+  color: var(--drop-ink-3);
+  font-family: var(--font-micro);
+  font-size: 0.7rem;
+}
+.result-meta span + span::before {
+  content: "·";
+  margin-right: 0.75rem;
+  color: var(--drop-brand);
 }
 </style>

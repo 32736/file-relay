@@ -122,10 +122,29 @@ export const uploadSessions = sqliteTable(
     status: text('status').notNull(),
     createdAt: integer('created_at').notNull(),
     expiresAt: integer('expires_at').notNull(),
+    fileExpiresAt: integer('file_expires_at'),
     completedAt: integer('completed_at'),
   },
   (table) => [
     index('idx_upload_sessions_status').on(table.status),
     index('idx_upload_sessions_expires_at').on(table.expiresAt),
+  ],
+)
+
+export const auditLogs = sqliteTable(
+  'audit_logs',
+  {
+    id: text('id').primaryKey(),
+    actorGithubId: text('actor_github_id'),
+    action: text('action').notNull(),
+    targetType: text('target_type').notNull(),
+    targetId: text('target_id'),
+    metadata: text('metadata'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [
+    index('idx_audit_logs_created_at').on(table.createdAt),
+    index('idx_audit_logs_action_created_at').on(table.action, table.createdAt),
+    index('idx_audit_logs_target').on(table.targetType, table.targetId),
   ],
 )

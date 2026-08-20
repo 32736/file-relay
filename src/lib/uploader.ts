@@ -28,6 +28,7 @@ export interface PendingUploadRecord {
   chunkSize: number
   totalParts: number
   createdAt: number
+  expiresIn?: number | null
 }
 
 export class HttpError extends Error {
@@ -68,12 +69,18 @@ export function isRetryable(status: number): boolean {
 
 export async function withRetry<T>(
   attempt: () => Promise<T>,
-  options: { retries?: number; delayMs?: number; onRetry?: (attemptNumber: number, error: unknown) => void } = {},
+  options: {
+    retries?: number
+    delayMs?: number
+    onRetry?: (attemptNumber: number, error: unknown) => void
+    signal?: AbortSignal
+  } = {},
 ): Promise<T> {
   const retries = options.retries ?? 3
   let delay = options.delayMs ?? 1000
   let lastError: unknown
   for (let attemptNumber = 0; attemptNumber <= retries; attemptNumber++) {
+    if (options.signal?.aborted) throw new AbortUploadError()
     try {
       return await attempt()
     } catch (error) {
@@ -82,11 +89,35 @@ export async function withRetry<T>(
       if (error instanceof HttpError && !isRetryable(error.status)) throw error
       if (attemptNumber === retries) break
       options.onRetry?.(attemptNumber + 1, error)
-      await new Promise((resolve) => setTimeout(resolve, delay))
+      await waitForRetry(delay, options.signal)
       delay *= 2 // 1s, 2s, 4s
     }
   }
   throw lastError
+}
+
+function waitForRetry(delayMs: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new AbortUploadError())
+      return
+    }
+
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort)
+      resolve()
+    }, delayMs)
+    const cleanup = () => {
+      clearTimeout(timer)
+      signal?.removeEventListener('abort', onAbort)
+    }
+    const onAbort = () => {
+      cleanup()
+      reject(new AbortUploadError())
+    }
+
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
 }
 
 export interface XhrResult {
@@ -126,7 +157,7 @@ export function xhrPut(
     }
     xhr.onerror = () => {
       signal?.removeEventListener('abort', onAbort)
-      reject(new Error('network error'))
+      reject(new Error('网络连接失败，请稍后重试'))
     }
     xhr.onabort = () => {
       signal?.removeEventListener('abort', onAbort)
@@ -136,10 +167,18 @@ export function xhrPut(
   })
 }
 
-export function createUploadSession(file: { name: string; size: number; type: string }): Promise<UploadSessionInfo> {
+export function createUploadSession(
+  file: { name: string; size: number; type: string },
+  expiresIn?: number | null,
+): Promise<UploadSessionInfo> {
   return api<UploadSessionInfo>('/api/uploads', {
     method: 'POST',
-    body: JSON.stringify({ name: file.name, size: file.size, type: file.type }),
+    body: JSON.stringify({
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      ...(expiresIn === undefined ? {} : { expiresIn }),
+    }),
   })
 }
 
@@ -196,7 +235,7 @@ export async function uploadFileCore(options: UploadFileOptions): Promise<void> 
       )
       if (result.status >= 400) throw uploadHttpError(result.status, result.text)
       return result
-    })
+    }, { signal })
     return
   }
 
@@ -231,7 +270,7 @@ export async function uploadFileCore(options: UploadFileOptions): Promise<void> 
         )
         if (result.status >= 400) throw uploadHttpError(result.status, result.text)
         return result
-      })
+      }, { signal })
       progressBase += thisPartSize
       onProgress?.(progressBase)
     }

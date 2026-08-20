@@ -13,6 +13,7 @@ export interface Bindings {
   MAX_FILE_SIZE: string
   SESSION_TTL_SECONDS: string
   DEFAULT_RETENTION_DAYS: string
+  STORAGE_QUOTA_BYTES?: string
 }
 
 export interface SessionContext {

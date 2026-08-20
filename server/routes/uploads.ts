@@ -5,6 +5,7 @@ import { apiError } from '../lib/errors'
 import { chunkSize, maxFileSize, objectKeyFor, retentionSeconds } from '../lib/r2'
 import { createUploadSchema } from '../lib/validate'
 import { requireAuth, requireSameOrigin } from '../middleware/auth'
+import { recordAudit } from '../services/audit'
 
 const UPLOAD_SESSION_TTL_SECONDS = 24 * 60 * 60
 const DEFAULT_CONTENT_TYPE = 'application/octet-stream'
@@ -24,6 +25,7 @@ interface UploadSessionRow {
   r2_upload_id: string | null
   status: string
   expires_at: number
+  file_expires_at: number | null
 }
 
 interface UploadedPartRow {
@@ -45,7 +47,8 @@ async function findSession(
   return (
     (await env.DB.prepare(
       `SELECT id, file_id, object_key, original_name, mime_type, total_size,
-              chunk_size, total_parts, mode, r2_upload_id, status, expires_at
+              chunk_size, total_parts, mode, r2_upload_id, status, expires_at,
+              file_expires_at
        FROM upload_sessions WHERE id = ?`,
     )
       .bind(sessionId)
@@ -67,13 +70,14 @@ function insertSessionStatement(
     mode: string
     r2UploadId: string | null
     now: number
+    fileExpiresAt: number | null
   },
 ) {
   return env.DB.prepare(
     `INSERT INTO upload_sessions
      (id, file_id, object_key, original_name, mime_type, total_size, chunk_size,
-      total_parts, mode, r2_upload_id, status, created_at, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     total_parts, mode, r2_upload_id, status, created_at, expires_at, file_expires_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).bind(
     params.sessionId,
     params.fileId,
@@ -88,6 +92,7 @@ function insertSessionStatement(
     'created',
     params.now,
     params.now + UPLOAD_SESSION_TTL_SECONDS,
+    params.fileExpiresAt,
   )
 }
 
@@ -110,12 +115,27 @@ function insertFileStatement(
     size,
     etag,
     now,
-    now + retentionSeconds(env.DEFAULT_RETENTION_DAYS),
+    session.file_expires_at,
   )
 }
 
 function toFileJson(file: FileRecordRow) {
   return { id: file.id, name: file.original_name, size: file.size, etag: file.etag }
+}
+
+async function auditCompletedUpload(
+  env: AppEnv['Bindings'],
+  actorGithubId: string,
+  session: UploadSessionRow,
+  size: number,
+): Promise<void> {
+  await recordAudit(env, {
+    actorGithubId,
+    action: 'file.uploaded',
+    targetType: 'file',
+    targetId: session.file_id,
+    metadata: { size },
+  })
 }
 
 async function findFileRecord(
@@ -149,7 +169,7 @@ export const uploadRoutes = new Hono<AppEnv>()
     if (!parsed.success) {
       return apiError(c, 400, 'VALIDATION_ERROR', 'Invalid upload request')
     }
-    const { name, size, type } = parsed.data
+    const { name, size, type, expiresIn } = parsed.data
 
     const maxSize = maxFileSize(c.env.MAX_FILE_SIZE)
     if (size > maxSize) {
@@ -160,6 +180,9 @@ export const uploadRoutes = new Hono<AppEnv>()
     const fileId = crypto.randomUUID()
     const sessionId = crypto.randomUUID()
     const now = Math.floor(Date.now() / 1000)
+    const fileExpiresAt = expiresIn === null
+      ? null
+      : now + (expiresIn ?? retentionSeconds(c.env.DEFAULT_RETENTION_DAYS))
     const objectKey = objectKeyFor(fileId, new Date())
 
     if (size <= chunk) {
@@ -175,6 +198,7 @@ export const uploadRoutes = new Hono<AppEnv>()
         mode: 'single',
         r2UploadId: null,
         now,
+        fileExpiresAt,
       }).run()
       return c.json({ uploadId: sessionId, mode: 'single', chunkSize: chunk, totalParts: 1 })
     }
@@ -207,6 +231,7 @@ export const uploadRoutes = new Hono<AppEnv>()
       mode: 'multipart',
       r2UploadId,
       now,
+      fileExpiresAt,
     }).run()
 
     return c.json({ uploadId: sessionId, mode: 'multipart', chunkSize: chunk, totalParts })
@@ -275,6 +300,7 @@ export const uploadRoutes = new Hono<AppEnv>()
         'UPDATE upload_sessions SET status = ?, completed_at = ? WHERE id = ?',
       ).bind('completed', now, session.id),
     ])
+    await auditCompletedUpload(c.env, c.var.session.githubUserId, session, object.size)
 
     return c.json({
       id: session.file_id,
@@ -381,6 +407,7 @@ export const uploadRoutes = new Hono<AppEnv>()
       if (object) {
         const now = Math.floor(Date.now() / 1000)
         await insertFileStatement(c.env, session, object.size, object.etag, now).run()
+        await auditCompletedUpload(c.env, c.var.session.githubUserId, session, object.size)
         return c.json({
           id: session.file_id,
           name: session.original_name,
@@ -435,6 +462,7 @@ export const uploadRoutes = new Hono<AppEnv>()
         'UPDATE upload_sessions SET status = ?, completed_at = ? WHERE id = ?',
       ).bind('completed', now, session.id),
     ])
+    await auditCompletedUpload(c.env, c.var.session.githubUserId, session, object.size)
 
     return c.json({
       id: session.file_id,

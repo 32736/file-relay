@@ -25,6 +25,7 @@ export function makeTestEnv(
     MAX_FILE_SIZE: '2147483648',
     SESSION_TTL_SECONDS: '2592000',
     DEFAULT_RETENTION_DAYS: '30',
+    STORAGE_QUOTA_BYTES: '10737418240',
     ...overrides,
   }
 }

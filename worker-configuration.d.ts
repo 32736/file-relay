@@ -13,6 +13,7 @@ interface __BaseEnv_Env {
 	MAX_FILE_SIZE: "2147483648";
 	SESSION_TTL_SECONDS: "2592000";
 	DEFAULT_RETENTION_DAYS: "30";
+	STORAGE_QUOTA_BYTES: "10737418240";
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
@@ -25,7 +26,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "APP_ORIGIN" | "OWNER_GITHUB_ID" | "GITHUB_CLIENT_ID" | "MAGIC_LINK_FROM" | "UPLOAD_CHUNK_SIZE" | "MAX_FILE_SIZE" | "SESSION_TTL_SECONDS" | "DEFAULT_RETENTION_DAYS">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "APP_ORIGIN" | "OWNER_GITHUB_ID" | "GITHUB_CLIENT_ID" | "MAGIC_LINK_FROM" | "UPLOAD_CHUNK_SIZE" | "MAX_FILE_SIZE" | "SESSION_TTL_SECONDS" | "DEFAULT_RETENTION_DAYS" | "STORAGE_QUOTA_BYTES">> {}
 }
 
 // Begin runtime types

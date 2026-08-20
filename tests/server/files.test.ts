@@ -132,14 +132,15 @@ describe('Phase 02 files', () => {
       expect(file.size).toBeGreaterThan(0)
       expect(file.mimeType).toBe('application/octet-stream')
       expect(file.createdAt).toBeGreaterThan(0)
-      expect(Object.keys(file).sort()).toEqual(['createdAt', 'id', 'mimeType', 'name', 'size'])
+      expect(Object.keys(file).sort()).toEqual(['createdAt', 'expiresAt', 'id', 'mimeType', 'name', 'size'])
     }
   })
 
   it('paginates with limit and cursor', async () => {
-    seedFile(db, { id: 'f1', created_at: 100 })
-    seedFile(db, { id: 'f2', created_at: 200 })
-    seedFile(db, { id: 'f3', created_at: 300 })
+    const future = Math.floor(Date.now() / 1000) + 3600
+    seedFile(db, { id: 'f1', created_at: future - 200 })
+    seedFile(db, { id: 'f2', created_at: future - 100 })
+    seedFile(db, { id: 'f3', created_at: future })
 
     const first = await app.request(
       '/api/files?limit=2',

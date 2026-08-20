@@ -25,6 +25,7 @@ import {
 import { sendMagicLinkEmail } from '../lib/resend'
 import { createSession, deleteSessionByToken, findSession } from '../lib/session'
 import { isSameOrigin, requireSameOrigin } from '../middleware/auth'
+import { recordAudit } from '../services/audit'
 
 const GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize'
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token'
@@ -172,6 +173,11 @@ export const authRoutes = new Hono<AppEnv>()
     const sessionToken = randomToken(32)
     await createSession(c.env, String(githubUserId), sessionToken)
     setSessionCookie(c, sessionToken)
+    await recordAudit(c.env, {
+      actorGithubId: String(githubUserId),
+      action: 'auth.login',
+      targetType: 'session',
+    })
 
     return c.redirect(`${new URL(c.req.url).origin}/`, 302)
   })
@@ -191,7 +197,16 @@ export const authRoutes = new Hono<AppEnv>()
 
     const token = getCookie(c, sessionCookieName(c.req.url))
     if (token) {
+      const session = await findSession(c.env, token)
       await deleteSessionByToken(c.env, token)
+      if (session) {
+        await recordAudit(c.env, {
+          actorGithubId: session.github_user_id,
+          action: 'auth.logout',
+          targetType: 'session',
+          targetId: session.id,
+        })
+      }
     }
     clearSessionCookie(c)
     return c.body(null, 204)
@@ -245,5 +260,10 @@ export const authRoutes = new Hono<AppEnv>()
     const sessionToken = randomToken(32)
     await createSession(c.env, c.env.OWNER_GITHUB_ID, sessionToken)
     setSessionCookie(c, sessionToken)
+    await recordAudit(c.env, {
+      actorGithubId: c.env.OWNER_GITHUB_ID,
+      action: 'auth.login_magic_link',
+      targetType: 'session',
+    })
     return c.json({ ok: true })
   })

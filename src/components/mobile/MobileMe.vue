@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
-import { api } from '../../lib/api'
+import { api, getUserErrorMessage } from '../../lib/api'
+import { COPY } from '../../lib/copy'
 import { toast } from '../../lib/toast'
 import AppIcon from './AppIcon.vue'
 
@@ -33,7 +34,7 @@ async function logout(): Promise<void> {
     })
     emit('logout')
   } catch (cause) {
-    toast(cause instanceof Error ? cause.message : '退出登录失败，请重试', 'error')
+    toast(getUserErrorMessage(cause, COPY.errors.logout), 'error')
   } finally {
     logoutBusy.value = false
   }
@@ -46,8 +47,14 @@ defineExpose({ load })
 <template>
   <section
     class="mobile-me"
-    aria-label="我的"
+    aria-labelledby="mobile-me-title"
   >
+    <h2
+      id="mobile-me-title"
+      class="sr-only"
+    >
+      我的账户
+    </h2>
     <div class="me-card account">
       <div class="account-meta">
         通过 GitHub 登录{{ githubUserId ? ` · ID ${githubUserId}` : '' }}
@@ -75,7 +82,7 @@ defineExpose({ load })
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  padding: 1rem 1rem 1.5rem;
+  padding: 1rem var(--drop-mobile-gutter) 1.5rem;
   background: var(--drop-surface-sunken);
 }
 
@@ -127,7 +134,7 @@ defineExpose({ load })
 }
 .logout-btn:active {
   background: var(--drop-state-error);
-  color: #FFFFFF;
+  color: var(--drop-background);
 }
 .logout-btn:disabled {
   opacity: 0.6;

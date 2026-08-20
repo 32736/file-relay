@@ -14,29 +14,39 @@ export interface MobileShareItem {
 </script>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-import { api } from '../../lib/api'
+import { api, getUserErrorMessage } from '../../lib/api'
+import { copyText } from '../../lib/clipboard'
+import { COPY, formatFileCount, getShareStatusLabel } from '../../lib/copy'
 import { loadShareUrls } from '../../lib/share-urls'
 import { toast } from '../../lib/toast'
 import AppIcon from './AppIcon.vue'
 
 const emit = defineEmits<{ open: [share: MobileShareItem]; gofiles: [] }>()
 
+const MOBILE_PAGE_SIZE = 20
 const shares = ref<MobileShareItem[]>([])
+const nextCursor = ref<string | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 const copiedId = ref<string | null>(null)
 const shareUrls = ref<Record<string, string>>({})
 const query = ref('')
 
-async function load(): Promise<void> {
+async function load(reset = true): Promise<void> {
+  if (loading.value || (!reset && !nextCursor.value)) return
   loading.value = true
   error.value = null
   try {
-    const qs = query.value.trim() ? `?q=${encodeURIComponent(query.value.trim())}` : ''
-    const body = await api<{ shares: MobileShareItem[] }>(`/api/shares${qs}`)
-    shares.value = body.shares
+    const params = new URLSearchParams({ limit: String(MOBILE_PAGE_SIZE) })
+    if (query.value.trim()) params.set('q', query.value.trim())
+    if (!reset && nextCursor.value) params.set('cursor', nextCursor.value)
+    const body = await api<{ shares: MobileShareItem[]; nextCursor: string | null }>(
+      `/api/shares?${params.toString()}`,
+    )
+    shares.value = reset ? body.shares : [...shares.value, ...body.shares]
+    nextCursor.value = body.nextCursor
     // Server URL first (cross-device); the local cache only backs up legacy
     // shares created before server-side link recovery existed.
     const urls = loadShareUrls()
@@ -45,39 +55,46 @@ async function load(): Promise<void> {
     }
     shareUrls.value = urls
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : String(cause)
+    error.value = getUserErrorMessage(cause, COPY.errors.shareList)
   } finally {
     loading.value = false
   }
 }
 
 let searchTimer: ReturnType<typeof setTimeout> | undefined
+onBeforeUnmount(() => clearTimeout(searchTimer))
 function onSearch(): void {
   clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => void load(), 250)
+  searchTimer = setTimeout(() => void load(true), 250)
 }
 
 function clearSearch(): void {
   if (!query.value) return
   query.value = ''
-  void load()
+  void load(true)
+}
+
+function onListScroll(event: Event): void {
+  const container = event.currentTarget as HTMLElement
+  const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight
+  if (distanceToBottom <= 160) void load(false)
 }
 
 async function copyUrl(id: string): Promise<void> {
   const url = shareUrls.value[id]
   if (!url) return
-  await navigator.clipboard.writeText(url)
-  toast('链接已复制', 'success')
-  copiedId.value = id
-  setTimeout(() => (copiedId.value = null), 1500)
+  try {
+    await copyText(url)
+    toast(COPY.feedback.linkCopied, 'success')
+    copiedId.value = id
+    setTimeout(() => (copiedId.value = null), 1500)
+  } catch (cause) {
+    toast(getUserErrorMessage(cause, COPY.errors.copy), 'error')
+  }
 }
 
 function stateLabel(share: MobileShareItem): string {
-  if (share.revokedAt !== null) return '已撤销'
-  if (share.expiresAt !== null && share.expiresAt <= Math.floor(Date.now() / 1000)) return '已过期'
-  return share.maxDownloads !== null && share.downloadCount >= share.maxDownloads
-    ? '已耗尽'
-    : '有效'
+  return getShareStatusLabel(share)
 }
 
 function isActive(share: MobileShareItem): boolean {
@@ -100,13 +117,11 @@ function relativeTime(epochSeconds: number): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-function onCardClick(share: MobileShareItem, event: MouseEvent): void {
-  // The copy button inside the card must not open the detail view.
-  if ((event.target as HTMLElement).closest('[data-stop]')) return
+function onCardClick(share: MobileShareItem): void {
   emit('open', share)
 }
 
-onMounted(() => void load())
+onMounted(() => void load(true))
 defineExpose({ load })
 </script>
 
@@ -114,6 +129,7 @@ defineExpose({ load })
   <section
     class="mobile-shares"
     aria-label="分享列表"
+    :aria-busy="loading"
   >
     <div class="search-row">
       <div class="search-box">
@@ -124,12 +140,12 @@ defineExpose({ load })
         <label
           class="sr-only"
           for="mobile-shares-search"
-        >搜索分享文件</label>
+        >{{ COPY.shares.searchPlaceholder }}</label>
         <input
           id="mobile-shares-search"
           v-model="query"
           type="search"
-          placeholder="搜索分享文件"
+          :placeholder="COPY.shares.searchPlaceholder"
           @input="onSearch"
         >
         <button
@@ -148,6 +164,7 @@ defineExpose({ load })
       v-if="error"
       class="error"
       role="alert"
+      aria-atomic="true"
     >
       {{ error }}
     </p>
@@ -157,16 +174,18 @@ defineExpose({ load })
       v-if="loading && shares.length > 0"
       class="list-loading"
       role="status"
-      aria-label="加载中"
+      :aria-label="COPY.common.loading"
+      aria-live="polite"
     >
-      加载中
+      {{ COPY.common.loading }}
     </div>
 
     <div
       v-if="loading && shares.length === 0"
       class="skeleton"
       role="status"
-      aria-label="加载中"
+      :aria-label="COPY.common.loading"
+      aria-live="polite"
     >
       <div
         v-for="n in 5"
@@ -190,9 +209,11 @@ defineExpose({ load })
     <div
       v-else-if="shares.length === 0 && !query"
       class="empty"
+      role="status"
+      aria-live="polite"
     >
       <p class="empty-text">
-        暂无分享
+        {{ COPY.shares.empty }}
       </p>
     </div>
 
@@ -200,16 +221,18 @@ defineExpose({ load })
     <div
       v-else-if="shares.length === 0"
       class="empty"
+      role="status"
+      aria-live="polite"
     >
       <AppIcon
         class="empty-icon"
         name="search-x"
       />
       <h2 class="empty-title">
-        未找到相关分享
+        {{ COPY.shares.noResults }}
       </h2>
       <p class="empty-desc">
-        没有找到与“{{ query.trim() }}”匹配的分享
+        没有找到与“{{ query.trim() }}”匹配的分享链接
       </p>
       <p class="empty-hint">
         试试其他关键词
@@ -218,52 +241,70 @@ defineExpose({ load })
 
     <template v-else>
       <div class="list-head">
-        <span class="list-title">{{ query.trim() ? '搜索结果' : '全部分享' }}</span>
-        <span class="list-count">{{ shares.length }}</span>
+        <h2 class="list-title">
+          {{ query.trim() ? COPY.shares.searchResults : COPY.shares.all }}
+        </h2>
+        <span class="list-count">{{ formatFileCount(shares.length) }}</span>
       </div>
-      <div class="file-rows">
-        <button
-          v-for="share in shares"
-          :key="share.id"
-          type="button"
-          class="file-row"
-          @click="onCardClick(share, $event)"
+      <div
+        class="list-scroll"
+        @scroll.passive="onListScroll"
+      >
+        <ul class="file-rows">
+          <li
+            v-for="share in shares"
+            :key="share.id"
+            class="file-row"
+          >
+            <button
+              type="button"
+              class="file-row-main"
+              @click="onCardClick(share)"
+            >
+              <span class="tile">
+                <AppIcon name="link" />
+              </span>
+              <span class="share-body">
+                <span class="share-name-row">
+                  <span class="share-name">{{ share.fileName || '未命名文件' }}</span>
+                  <span
+                    class="badge"
+                    :class="isActive(share) ? 'active' : 'inactive'"
+                  >{{ stateLabel(share) }}</span>
+                </span>
+                <span class="share-meta">
+                  <span class="meta-left">
+                    {{ daysLeft(share) }} · {{ share.downloadCount }} 次下载
+                  </span>
+                  <span class="meta-right">
+                    <span v-if="!shareUrls[share.id] || !isActive(share)">{{ relativeTime(share.createdAt) }}</span>
+                  </span>
+                </span>
+              </span>
+              <AppIcon
+                class="chevron"
+                name="chevron-right"
+              />
+            </button>
+            <button
+              v-if="shareUrls[share.id] && isActive(share)"
+              type="button"
+              class="copy-btn"
+              :aria-label="copiedId === share.id ? '已复制' : '复制链接'"
+              @click="copyUrl(share.id)"
+            >
+              <AppIcon :name="copiedId === share.id ? 'check' : 'copy'" />
+            </button>
+          </li>
+        </ul>
+        <div
+          v-if="loading && shares.length > 0"
+          class="load-more-status"
+          role="status"
+          aria-live="polite"
         >
-          <span class="tile">
-            <AppIcon name="link" />
-          </span>
-          <span class="share-body">
-            <span class="share-name-row">
-              <span class="share-name">{{ share.fileName ?? share.fileId }}</span>
-              <span
-                class="badge"
-                :class="isActive(share) ? 'active' : 'inactive'"
-              >{{ stateLabel(share) }}</span>
-            </span>
-            <span class="share-meta">
-              <span class="meta-left">
-                {{ daysLeft(share) }} · {{ share.downloadCount }} 次下载
-              </span>
-              <span class="meta-right">
-                <button
-                  v-if="shareUrls[share.id] && isActive(share)"
-                  type="button"
-                  data-stop
-                  class="copy-btn"
-                  :aria-label="copiedId === share.id ? '已复制' : '复制链接'"
-                  @click="copyUrl(share.id)"
-                >
-                  <AppIcon :name="copiedId === share.id ? 'check' : 'copy'" />
-                </button>
-                <span v-else>{{ relativeTime(share.createdAt) }}</span>
-              </span>
-            </span>
-          </span>
-          <AppIcon
-            class="chevron"
-            name="chevron-right"
-          />
-        </button>
+          {{ COPY.common.loadingEllipsis }}
+        </div>
       </div>
     </template>
   </section>
@@ -290,9 +331,9 @@ defineExpose({ load })
 }
 
 .search-row {
-  padding: 0.5rem 0.875rem;
+  padding: 0.625rem var(--drop-mobile-gutter) 0.5rem;
   background: var(--drop-background);
-  border-bottom: 2px solid var(--drop-ink);
+  border-bottom: 1px solid var(--drop-line);
 }
 .search-box {
   position: relative;
@@ -307,8 +348,8 @@ defineExpose({ load })
 }
 .search-box input {
   width: 100%;
-  height: 2.25rem;
-  padding: 0 2rem 0 1.875rem;
+  height: 2.5rem;
+  padding: 0 2.5rem 0 2rem;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: var(--drop-surface);
@@ -326,18 +367,24 @@ defineExpose({ load })
 }
 .search-box input:focus {
   outline: none;
-  border: 2px solid var(--drop-brand);
-  padding-right: calc(2.25rem - 1px);
-  padding-left: calc(2.125rem - 1px);
+  border-color: var(--drop-brand);
+  box-shadow: inset 0 0 0 1px var(--drop-brand);
+}
+.search-box input:focus-visible {
+  outline: 2px solid var(--drop-brand);
+  outline-offset: 2px;
 }
 .clear-btn {
   position: absolute;
   right: 0.375rem;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
+  width: auto;
   height: 1.75rem;
+  aspect-ratio: 1;
+  box-sizing: border-box;
   border: 1px solid transparent;
   border-radius: 0;
   background: transparent;
@@ -357,27 +404,41 @@ defineExpose({ load })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0.75rem 0.375rem;
+  padding: 0.75rem var(--drop-mobile-gutter) 0.5rem;
+}
+.list-scroll {
+  flex: 1;
+  min-height: 0;
+  padding-inline: var(--drop-mobile-gutter);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--drop-ink-3) transparent;
+  scrollbar-width: thin;
+}
+.list-scroll::-webkit-scrollbar { width: 4px; }
+.list-scroll::-webkit-scrollbar-track { background: transparent; }
+.list-scroll::-webkit-scrollbar-thumb { background: var(--drop-ink-3); }
+.load-more-status {
+  padding: 0.6rem 0;
+  color: var(--drop-ink-3);
+  font-family: var(--font-micro);
+  font-size: 0.7rem;
+  text-align: center;
 }
 .list-title {
+  margin: 0;
   font-family: var(--font-micro);
-  font-size: 0.72rem;
+  padding-left: 0.5rem;
+  border-left: 3px solid var(--drop-brand);
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--drop-ink-2);
-}
-.list-title::before {
-  content: "[ ";
-  color: var(--drop-brand);
-}
-.list-title::after {
-  content: " ]";
-  color: var(--drop-brand);
 }
 .list-count {
   font-family: var(--font-micro);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--drop-ink-3);
   font-variant-numeric: tabular-nums;
@@ -422,42 +483,63 @@ defineExpose({ load })
 .file-rows {
   display: flex;
   flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 .file-row {
   display: flex;
-  width: 100%;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  min-height: 2.5rem;
+  width: 100%;
+  min-height: 4.25rem;
   border: 0;
-  border-left: 4px solid transparent;
+  border-bottom: 1px solid var(--drop-line);
   border-radius: 0;
   background: transparent;
-  text-align: left;
-  font: inherit;
   color: inherit;
   -webkit-tap-highlight-color: transparent;
   transition: background-color var(--drop-dur-fast) linear, border-color var(--drop-dur-fast) linear;
 }
 .file-row + .file-row {
-  border-top: 1px solid var(--drop-line);
+  border-top: 0;
 }
-.file-row:active {
+.file-row-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 4.25rem;
+  padding: 0.625rem 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.file-row-main:active,
+.file-row:focus-within {
   background: var(--drop-surface-2);
-  border-left-color: var(--drop-brand);
+}
+.file-row:last-child {
+  border-bottom: none;
+}
+.file-row > .copy-btn {
+  margin-right: 0;
 }
 .tile {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border: 1px solid var(--drop-ink);
+  width: 2rem;
+  height: 2rem;
+  border: 0;
   border-radius: 0;
   background: var(--drop-surface-2);
-  color: var(--drop-brand);
+  color: var(--drop-ink-2);
 }
 .tile :deep(svg) {
   width: 0.875rem;
@@ -482,8 +564,8 @@ defineExpose({ load })
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.8125rem;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 700;
   color: var(--drop-ink);
 }
 .badge {
@@ -491,9 +573,9 @@ defineExpose({ load })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.125rem 0.4rem;
-  border: 1px solid currentColor;
-  border-radius: 0;
+  padding: 0.125rem 0.5rem;
+  border: 0;
+  border-radius: 999px;
   font-family: var(--font-micro);
   font-size: 0.62rem;
   font-weight: 700;
@@ -501,11 +583,11 @@ defineExpose({ load })
   white-space: nowrap;
 }
 .badge.active {
-  background: transparent;
+  background: color-mix(in srgb, var(--drop-state-success) 14%, transparent);
   color: var(--drop-state-success);
 }
 .badge.inactive {
-  background: transparent;
+  background: color-mix(in srgb, var(--drop-state-error) 12%, transparent);
   color: var(--drop-state-error);
 }
 
@@ -532,31 +614,43 @@ defineExpose({ load })
   gap: 0.25rem;
 }
 .copy-btn {
-  flex: none;
+  position: relative;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1rem;
-  border: 1px solid var(--drop-line);
+  width: 2.75rem;
+  height: 2.75rem;
+  box-sizing: border-box;
+  border: 0;
   border-radius: 0;
   background: transparent;
   color: var(--drop-ink-2);
   transition: background-color var(--drop-dur-fast) linear, color var(--drop-dur-fast) linear;
 }
+.copy-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0.25rem;
+  border: 1px solid var(--drop-border);
+  background: transparent;
+  transition: background-color var(--drop-dur-fast) linear, border-color var(--drop-dur-fast) linear;
+}
 .copy-btn :deep(svg) {
+  position: relative;
+  z-index: 1;
   width: 0.75rem;
   height: 0.75rem;
 }
 .copy-btn:active {
-  background: var(--drop-brand);
+  color: var(--drop-brand);
+}
+.copy-btn:active::before {
   border-color: var(--drop-brand);
-  color: var(--drop-background);
+  background: var(--drop-brand-tint);
 }
 .chevron {
-  width: 0.875rem;
-  height: 0.875rem;
-  color: var(--drop-ink-3);
+  display: none;
 }
 
 .skeleton {
@@ -567,7 +661,7 @@ defineExpose({ load })
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0;
   min-height: 2.5rem;
 }
 .skeleton-row + .skeleton-row {

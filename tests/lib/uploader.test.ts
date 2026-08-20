@@ -110,6 +110,20 @@ describe('uploader lib', () => {
     ).rejects.toBeInstanceOf(AbortUploadError)
   })
 
+  it('aborts while waiting between retry attempts', async () => {
+    const controller = new AbortController()
+    const promise = withRetry(
+      async () => {
+        throw new HttpError(503, 'temporary')
+      },
+      { retries: 3, delayMs: 10_000, signal: controller.signal },
+    )
+
+    await Promise.resolve()
+    controller.abort()
+    await expect(promise).rejects.toBeInstanceOf(AbortUploadError)
+  })
+
   it('uploads single-mode files through the content endpoint', async () => {
     stubXhr(200)
     MockXhr.autoRespond = false

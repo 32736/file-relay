@@ -17,6 +17,7 @@ coverage/
 .history/
 
 .body.bin
+/backup.sql
 
 # Impeccable critique snapshots (local working artifacts, not source)
 .impeccable/

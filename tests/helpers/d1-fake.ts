@@ -355,6 +355,7 @@ export class D1Fake {
     upload_sessions?: Row[]
     upload_parts?: Row[]
     shares?: Row[]
+    audit_logs?: Row[]
   } = {}) {
     this.tables.set('sessions', {
       columns: [
@@ -444,6 +445,18 @@ export class D1Fake {
         { name: 'revoked_at' },
       ],
       rows: seed.shares ? seed.shares.map((row) => ({ ...row })) : [],
+    })
+    this.tables.set('audit_logs', {
+      columns: [
+        { name: 'id' },
+        { name: 'actor_github_id' },
+        { name: 'action' },
+        { name: 'target_type' },
+        { name: 'target_id' },
+        { name: 'metadata' },
+        { name: 'created_at' },
+      ],
+      rows: seed.audit_logs ? seed.audit_logs.map((row) => ({ ...row })) : [],
     })
   }
 

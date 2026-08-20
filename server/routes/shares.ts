@@ -5,6 +5,7 @@ import type { AppEnv } from '../env'
 import { decryptWithSecret } from '../lib/crypto'
 import { apiError } from '../lib/errors'
 import { requireAuth, requireSameOrigin } from '../middleware/auth'
+import { recordAudit } from '../services/audit'
 
 const DEFAULT_LIMIT = 30
 const MAX_LIMIT = 100
@@ -110,6 +111,13 @@ export const shareRoutes = new Hono<AppEnv>()
 
     const hasMore = result.results.length > limit
     const shares = result.results.slice(0, limit)
+    const totalRow = await c.env.DB.prepare(
+      `SELECT COUNT(*) AS total
+       FROM shares
+       ${searchFileIds ? `WHERE file_id IN (${searchFileIds.map(() => '?').join(', ')})` : ''}`,
+    )
+      .bind(...(searchFileIds ?? []))
+      .first<{ total: number }>()
 
     // Resolve file names for the listed shares in one IN query.
     const fileIds = [...new Set(shares.map((share) => share.file_id))]
@@ -141,6 +149,7 @@ export const shareRoutes = new Hono<AppEnv>()
           url: await shareUrl(c.env, share.encrypted_token),
         })),
       ),
+      total: totalRow?.total ?? 0,
       nextCursor: hasMore ? String(offset + limit) : null,
     })
   })
@@ -159,6 +168,14 @@ export const shareRoutes = new Hono<AppEnv>()
       if (!exists) {
         return apiError(c, 404, 'NOT_FOUND', 'Share not found')
       }
+    }
+    if (result.meta.changes > 0) {
+      await recordAudit(c.env, {
+        actorGithubId: c.var.session.githubUserId,
+        action: 'share.revoked',
+        targetType: 'share',
+        targetId: c.req.param('id'),
+      })
     }
     return c.body(null, 204)
   })

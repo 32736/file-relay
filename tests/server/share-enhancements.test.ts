@@ -55,12 +55,22 @@ describe('Phase 07 share enhancements', () => {
 
     const response = await app.request('/api/stats', { headers: { Cookie: cookie } }, env)
     expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toEqual({ fileCount: 2, totalBytes: 3000 })
+    await expect(response.json()).resolves.toEqual({
+      fileCount: 2,
+      totalBytes: 3000,
+      quotaBytes: 10 * 1024 * 1024 * 1024,
+      usedRatio: 3000 / (10 * 1024 * 1024 * 1024),
+    })
   })
 
   it('returns zero stats for an empty table', async () => {
     const response = await app.request('/api/stats', { headers: { Cookie: cookie } }, env)
-    await expect(response.json()).resolves.toEqual({ fileCount: 0, totalBytes: 0 })
+    await expect(response.json()).resolves.toEqual({
+      fileCount: 0,
+      totalBytes: 0,
+      quotaBytes: 10 * 1024 * 1024 * 1024,
+      usedRatio: 0,
+    })
   })
 
   it('batch-deletes multiple files logically and reports the count', async () => {

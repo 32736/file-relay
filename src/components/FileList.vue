@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-import { api } from '../lib/api'
+import { api, getUserErrorMessage, localizeErrorMessage } from '../lib/api'
+import { COPY, formatFileRetention } from '../lib/copy'
 import { formatBytes, formatDate } from '../lib/format'
+import { buildPaginationItems } from '../lib/pagination'
 import { toast } from '../lib/toast'
+import FileExpirationDialog from './FileExpirationDialog.vue'
 import FileTypeIcon from './FileTypeIcon.vue'
 import ShareDialog from './ShareDialog.vue'
 
@@ -13,42 +16,70 @@ export interface FileItem {
   size: number
   mimeType: string | null
   createdAt: number
+  expiresAt?: number | null
 }
 
 const emit = defineEmits<{ shared: []; hasfiles: [value: boolean]; changed: [] }>()
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50] as const
 const files = ref<FileItem[]>([])
+const total = ref(0)
 const nextCursor = ref<string | null>(null)
+const page = ref(1)
+const pageCursors = ref<Array<string | null>>([null])
+const pageSize = ref<number>(PAGE_SIZE_OPTIONS[0])
+const jumpPage = ref('')
 const query = ref('')
 const selected = ref<Set<string>>(new Set())
 const loading = ref(false)
 const error = ref<string | null>(null)
 const sharing = ref<FileItem | null>(null)
+const expiration = ref<FileItem | null>(null)
 const confirming = ref<string[] | null>(null)
+const zipBusy = ref(false)
+const confirmDialog = ref<HTMLDialogElement | null>(null)
+const deleteTrigger = ref<HTMLElement | null>(null)
 const undo = ref<{ ids: string[] } | null>(null)
 let undoTimer: ReturnType<typeof setTimeout> | undefined
 
-async function load(reset = true): Promise<void> {
+const pageCount = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)))
+const paginationItems = computed(() => buildPaginationItems(page.value, pageCount.value))
+
+async function loadPage(targetPage: number): Promise<void> {
+  if (loading.value) return
+  const cursor = targetPage > 1
+    ? pageCursors.value[targetPage - 1] ?? String((targetPage - 1) * pageSize.value)
+    : null
+  if (targetPage > 1 && !cursor) return
+
   loading.value = true
   error.value = null
   try {
     const params = new URLSearchParams()
+    params.set('limit', String(pageSize.value))
     if (query.value.trim()) params.set('q', query.value.trim())
-    if (!reset && nextCursor.value) params.set('cursor', nextCursor.value)
-    const body = await api<{ files: FileItem[]; nextCursor: string | null }>(
+    if (cursor) params.set('cursor', cursor)
+    const body = await api<{ files: FileItem[]; total?: number; nextCursor: string | null }>(
       `/api/files?${params.toString()}`,
     )
-    files.value = reset ? body.files : [...files.value, ...body.files]
+    files.value = body.files
+    total.value = body.total ?? (body.nextCursor
+      ? (targetPage + 1) * pageSize.value
+      : (targetPage - 1) * pageSize.value + body.files.length)
+    page.value = targetPage
     nextCursor.value = body.nextCursor
+    if (body.nextCursor) pageCursors.value[targetPage] = body.nextCursor
+    else pageCursors.value = pageCursors.value.slice(0, targetPage)
     emit('hasfiles', files.value.length > 0)
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : String(cause)
+    error.value = getUserErrorMessage(cause, COPY.errors.fileList)
   } finally {
     loading.value = false
   }
 }
 
 let searchTimer: ReturnType<typeof setTimeout> | undefined
+onBeforeUnmount(() => clearTimeout(searchTimer))
 function onSearch(): void {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => void load(true), 250)
@@ -64,12 +95,33 @@ function toggle(id: string): void {
 function askDelete(): void {
   const ids = [...selected.value]
   if (ids.length === 0) return
+  deleteTrigger.value = document.activeElement instanceof HTMLElement ? document.activeElement : null
   confirming.value = ids
 }
 
+function closeDeleteDialog(): void {
+  confirming.value = null
+  void nextTick(() => {
+    if (deleteTrigger.value?.isConnected) deleteTrigger.value.focus()
+  })
+}
+
+watch(confirming, async (ids) => {
+  if (!ids) return
+  await nextTick()
+  const dialog = confirmDialog.value
+  if (!dialog || dialog.open) return
+  try {
+    if (typeof dialog.showModal === 'function') dialog.showModal()
+    else dialog.setAttribute('open', '')
+  } catch {
+    dialog.setAttribute('open', '')
+  }
+})
+
 async function confirmDelete(): Promise<void> {
   const ids = confirming.value
-  confirming.value = null
+  closeDeleteDialog()
   if (!ids) return
   try {
     await api<{ deleted: number }>('/api/files/batch-delete', {
@@ -85,7 +137,7 @@ async function confirmDelete(): Promise<void> {
     await load(true)
     emit('changed')
   } catch (cause) {
-    toast(cause instanceof Error ? cause.message : String(cause), 'error')
+    toast(getUserErrorMessage(cause, COPY.errors.delete), 'error')
   }
 }
 
@@ -101,12 +153,85 @@ async function undoDelete(): Promise<void> {
     })
     await load(true)
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : String(cause)
+    error.value = getUserErrorMessage(cause, COPY.errors.fileList)
   }
 }
 
-function download(id: string): void {
-  window.location.href = `/api/files/${id}/download`
+function download(file: FileItem): void {
+  toast(`开始下载：${file.name}`, 'info')
+  window.location.href = `/api/files/${file.id}/download`
+}
+
+async function downloadSelectedZip(): Promise<void> {
+  const ids = [...selected.value]
+  if (ids.length === 0 || zipBusy.value) return
+  zipBusy.value = true
+  try {
+    const response = await fetch('/api/files/batch-download', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: window.location.origin,
+      },
+      body: JSON.stringify({ ids }),
+    })
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null
+      throw new Error(localizeErrorMessage(body?.error?.code, body?.error?.message))
+    }
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = 'drop-files.zip'
+    anchor.click()
+    URL.revokeObjectURL(url)
+    selected.value = new Set()
+    toast(`已生成 ZIP，包含 ${ids.length} 个文件`, 'success')
+  } catch (cause) {
+    toast(getUserErrorMessage(cause, COPY.errors.batchDownload), 'error')
+  } finally {
+    zipBusy.value = false
+  }
+}
+
+async function load(reset = true): Promise<void> {
+  if (reset) {
+    page.value = 1
+    pageCursors.value = [null]
+    await loadPage(1)
+    return
+  }
+  await nextPage()
+}
+
+async function previousPage(): Promise<void> {
+  if (page.value <= 1) return
+  await loadPage(page.value - 1)
+}
+
+async function nextPage(): Promise<void> {
+  if (!nextCursor.value) return
+  await loadPage(page.value + 1)
+}
+
+function onPageSizeChange(): void {
+  page.value = 1
+  jumpPage.value = ''
+  pageCursors.value = [null]
+  void loadPage(1)
+}
+
+function goToPage(targetPage: number): void {
+  if (loading.value || targetPage < 1 || targetPage > pageCount.value || targetPage === page.value) return
+  void loadPage(targetPage)
+}
+
+function jumpToPage(): void {
+  const targetPage = Number.parseInt(jumpPage.value, 10)
+  if (!Number.isFinite(targetPage)) return
+  goToPage(Math.min(pageCount.value, Math.max(1, targetPage)))
+  jumpPage.value = ''
 }
 
 onMounted(() => void load(true))
@@ -114,38 +239,58 @@ defineExpose({ load })
 </script>
 
 <template>
-  <section class="file-list">
+  <div
+    class="file-list"
+    :aria-busy="loading"
+  >
     <div class="toolbar">
       <input
         v-model="query"
         class="search"
         type="search"
-        placeholder="搜索文件名…"
+        :placeholder="COPY.files.searchPlaceholder"
         aria-label="搜索文件名"
         @input="onSearch"
       >
       <button
         v-if="selected.size > 0"
-        class="ghost danger"
-        :disabled="selected.size === 0"
-        @click="askDelete"
+        class="ghost"
+        :disabled="zipBusy"
+        type="button"
+        @click="downloadSelectedZip"
       >
-        删除选中（{{ selected.size }}）
+        {{ zipBusy ? COPY.upload.loadingZip : `${COPY.actions.downloadSelected}（${selected.size}）` }}
       </button>
       <button
-        v-if="undo"
-        class="ghost"
-        role="status"
-        @click="undoDelete"
+        v-if="selected.size > 0"
+        class="ghost danger"
+        :disabled="selected.size === 0"
+        type="button"
+        @click="askDelete"
       >
-        已删除 · 撤销
+        {{ COPY.actions.deleteSelected }}（{{ selected.size }}）
       </button>
+      <div
+        v-if="undo"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <button
+          class="ghost"
+          type="button"
+          @click="undoDelete"
+        >
+          已删除 {{ undo.ids.length }} 个文件 · {{ COPY.actions.undo }}
+        </button>
+      </div>
     </div>
 
     <p
       v-if="error"
       class="error"
       role="alert"
+      aria-atomic="true"
     >
       {{ error }}
     </p>
@@ -153,15 +298,17 @@ defineExpose({ load })
       v-if="loading && files.length > 0"
       class="list-loading"
       role="status"
-      aria-label="加载中"
+      :aria-label="COPY.common.loading"
+      aria-live="polite"
     >
-      加载中
+      {{ COPY.common.loading }}
     </div>
     <div
       v-if="loading && files.length === 0"
       class="skeleton-list"
       role="status"
-      aria-label="加载中"
+      :aria-label="COPY.common.loading"
+      aria-live="polite"
     >
       <div
         v-for="n in 4"
@@ -185,153 +332,268 @@ defineExpose({ load })
     <div
       v-else-if="files.length === 0"
       class="empty"
+      role="status"
+      aria-live="polite"
     >
-      <p>暂无文件</p>
+      <p>{{ COPY.files.empty }}</p>
     </div>
-
-    <table v-else>
-      <thead>
-        <tr>
-          <th>名称</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="file in files"
-          :key="file.id"
-          :class="{ selected: selected.has(file.id) }"
-        >
-          <td
-            class="name"
-            :title="file.name"
-          >
-            <span class="name-inner">
-              <FileTypeIcon :mime="file.mimeType" />
-              <span class="name-text">
-                <span class="file-name">{{ file.name }}</span>
-                <span class="file-meta">
-                  <span>{{ formatBytes(file.size) }}</span>
-                  <span>{{ formatDate(file.createdAt) }}</span>
-                </span>
-              </span>
-            </span>
-          </td>
-          <td class="actions">
-            <button
-              class="icon-btn"
-              title="下载"
-              aria-label="下载"
-              @click="download(file.id)"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M12 4v11m0 0 4.5-4.5M12 15 7.5 10.5"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M5 19h14"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-              </svg>
-            </button>
-            <button
-              class="icon-btn"
-              title="分享"
-              aria-label="分享"
-              @click="sharing = file"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-              >
-                <circle
-                  cx="6"
-                  cy="12"
-                  r="2.4"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <circle
-                  cx="17.5"
-                  cy="6"
-                  r="2.4"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <circle
-                  cx="17.5"
-                  cy="18"
-                  r="2.4"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <path
-                  d="m8.2 10.8 7-3.4m-7 5.8 7 3.4"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-              </svg>
-            </button>
-            <button
-              class="icon-btn select-btn"
-              :class="{ selected: selected.has(file.id) }"
-              :title="selected.has(file.id) ? '取消选择' : '选择'"
-              :aria-label="selected.has(file.id) ? `取消选择 ${file.name}` : `选择 ${file.name}`"
-              :aria-pressed="selected.has(file.id)"
-              @click="toggle(file.id)"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-              >
-                <rect
-                  x="4.5"
-                  y="4.5"
-                  width="15"
-                  height="15"
-                  rx="4"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <path
-                  d="m8 12.5 2.7 2.7L16.5 9"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
 
     <div
-      v-if="nextCursor"
-      class="more"
+      v-else-if="files.length > 0"
+      class="table-scroll"
     >
-      <button
-        class="ghost"
-        :disabled="loading"
-        @click="load(false)"
-      >
-        {{ loading ? '加载中…' : '加载更多' }}
-      </button>
+      <table>
+        <caption class="sr-only">
+          {{ COPY.files.list }}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">
+              名称
+            </th>
+            <th scope="col">
+              操作
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="file in files"
+            :key="file.id"
+            :class="{ selected: selected.has(file.id) }"
+          >
+            <td
+              class="name"
+              :title="file.name"
+            >
+              <span class="name-inner">
+                <FileTypeIcon :mime="file.mimeType" />
+                <span class="name-text">
+                  <span class="file-name">{{ file.name }}</span>
+                  <span class="file-meta">
+                    <span>{{ formatBytes(file.size) }}</span>
+                    <span>{{ formatDate(file.createdAt) }}</span>
+                    <span>{{ formatFileRetention(file.expiresAt, formatDate) }}</span>
+                  </span>
+                </span>
+              </span>
+            </td>
+            <td class="actions">
+              <button
+                class="icon-btn"
+                :title="COPY.actions.setFileRetention"
+                :aria-label="COPY.actions.setFileRetention"
+                type="button"
+                @click="expiration = file"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="8"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M12 7v5l3 2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </button>
+              <button
+                class="icon-btn"
+                :title="COPY.actions.download"
+                :aria-label="COPY.actions.download"
+                type="button"
+                @click="download(file)"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M12 4v11m0 0 4.5-4.5M12 15 7.5 10.5"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M5 19h14"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </button>
+              <button
+                class="icon-btn"
+                :title="COPY.actions.share"
+                :aria-label="COPY.actions.share"
+                type="button"
+                @click="sharing = file"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="6"
+                    cy="12"
+                    r="2.4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <circle
+                    cx="17.5"
+                    cy="6"
+                    r="2.4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <circle
+                    cx="17.5"
+                    cy="18"
+                    r="2.4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="m8.2 10.8 7-3.4m-7 5.8 7 3.4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </button>
+              <button
+                class="icon-btn select-btn"
+                :class="{ selected: selected.has(file.id) }"
+                :title="selected.has(file.id) ? '取消选择' : '选择'"
+                :aria-label="selected.has(file.id) ? `取消选择 ${file.name}` : `选择 ${file.name}`"
+                :aria-pressed="selected.has(file.id)"
+                type="button"
+                @click="toggle(file.id)"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <rect
+                    x="4.5"
+                    y="4.5"
+                    width="15"
+                    height="15"
+                    rx="4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="m8 12.5 2.7 2.7L16.5 9"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+
+    <nav
+      v-if="files.length > 0 || page > 1 || nextCursor"
+      class="pagination"
+      aria-label="文件列表分页"
+    >
+      <span
+        class="pagination-total"
+        aria-live="polite"
+      >
+        共 {{ total }} 项
+      </span>
+      <label class="pagination-size">
+        <span>每页</span>
+        <select
+          v-model.number="pageSize"
+          :disabled="loading"
+          aria-label="文件列表每页条数"
+          @change="onPageSizeChange"
+        >
+          <option
+            v-for="size in PAGE_SIZE_OPTIONS"
+            :key="size"
+            :value="size"
+          >
+            {{ size }}
+          </option>
+        </select>
+        <span>条</span>
+      </label>
+      <div class="pagination-center">
+        <button
+          class="ghost pagination-arrow"
+          :disabled="page <= 1 || loading"
+          type="button"
+          aria-label="上一页"
+          @click="previousPage"
+        >
+          ‹
+        </button>
+        <template
+          v-for="(item, index) in paginationItems"
+          :key="typeof item === 'number' ? item : `ellipsis-${index}`"
+        >
+          <button
+            v-if="typeof item === 'number'"
+            class="pagination-page"
+            :class="{ current: item === page }"
+            :aria-current="item === page ? 'page' : undefined"
+            :disabled="item === page || loading"
+            type="button"
+            @click="goToPage(item)"
+          >
+            {{ item }}
+          </button>
+          <span
+            v-else
+            class="pagination-ellipsis"
+            aria-hidden="true"
+          >…</span>
+        </template>
+        <button
+          class="ghost pagination-arrow"
+          :disabled="page >= pageCount || !nextCursor || loading"
+          type="button"
+          aria-label="下一页"
+          @click="nextPage"
+        >
+          ›
+        </button>
+      </div>
+      <label class="pagination-jump">
+        <span>跳转到</span>
+        <input
+          v-model="jumpPage"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          type="text"
+          :aria-label="`跳转到第 ${pageCount} 页以内`"
+          @keydown.enter.prevent="jumpToPage"
+        >
+      </label>
+    </nav>
 
     <ShareDialog
       v-if="sharing"
@@ -340,45 +602,67 @@ defineExpose({ load })
       @shared="emit('shared')"
     />
 
-    <div
+    <FileExpirationDialog
+      v-if="expiration"
+      :file="expiration"
+      @close="expiration = null"
+      @saved="expiration = null; void load(true); emit('changed')"
+    />
+
+    <dialog
       v-if="confirming"
-      class="confirm-overlay"
-      @click.self="confirming = null"
+      ref="confirmDialog"
+      class="confirm-dialog"
+      aria-labelledby="file-delete-title"
+      aria-describedby="file-delete-description"
+      aria-modal="true"
+      @cancel.prevent="closeDeleteDialog"
+      @click.self="closeDeleteDialog"
     >
-      <div
-        class="confirm-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-label="确认删除"
+      <h2
+        id="file-delete-title"
+        class="confirm-title"
       >
-        <p class="confirm-title">
-          删除 {{ confirming.length }} 个文件？
-        </p>
-        <p class="confirm-sub">
-          删除后将无法恢复。
-        </p>
-        <div class="confirm-actions">
-          <button
-            class="btn-secondary"
-            @click="confirming = null"
-          >
-            取消
-          </button>
-          <button
-            class="btn-danger"
-            @click="confirmDelete"
-          >
-            删除 {{ confirming.length }} 个文件
-          </button>
-        </div>
-      </div>
-    </div>
-  </section>
+        删除 {{ confirming.length }} 个文件？
+      </h2>
+      <p
+        id="file-delete-description"
+        class="confirm-sub"
+      >
+        删除后将无法恢复。
+      </p>
+      <form
+        class="confirm-actions"
+        @submit.prevent="confirmDelete"
+      >
+        <button
+          class="btn-secondary"
+          type="button"
+          autofocus
+          @click="closeDeleteDialog"
+        >
+          取消
+        </button>
+        <button
+          class="btn-danger"
+          type="submit"
+          @click.prevent="confirmDelete"
+        >
+          删除 {{ confirming.length }} 个文件
+        </button>
+      </form>
+    </dialog>
+  </div>
 </template>
 
 <style scoped>
 /* All theme surfaces use drop-* tokens so both light (newspaper print) and
    dark (CRT terminal) palettes render with consistent contrast. */
+.file-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 .toolbar {
   display: flex;
   gap: 0.75rem;
@@ -402,9 +686,48 @@ defineExpose({ load })
   border: 2px solid var(--drop-brand);
   padding: calc(0.5rem - 1px) calc(0.875rem - 1px);
 }
+.search:focus-visible {
+  outline: 2px solid var(--drop-brand);
+  outline-offset: 2px;
+}
+.table-scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--drop-ink);
+  background: var(--drop-surface);
+}
 table {
   width: 100%;
   border-collapse: collapse;
+}
+.table-scroll > table {
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.table-scroll thead {
+  display: table;
+  flex: none;
+  width: 100%;
+  table-layout: fixed;
+}
+.table-scroll tbody {
+  display: block;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.table-scroll tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
 }
 th,
 td {
@@ -449,12 +772,12 @@ tbody tr { transition: background-color var(--drop-dur-fast) linear; }
   width: 100%;
   table-layout: fixed;
   background: var(--drop-surface);
-  border: 1px solid var(--drop-ink);
+  border: 0;
   border-radius: 0;
   overflow: hidden;
   color: var(--drop-ink-2);
 }
-.file-list th:last-child, .file-list td:last-child { width: 9rem; }
+.file-list th:last-child, .file-list td:last-child { width: 11rem; }
 .file-list th { text-align: center; }
 .file-list td.actions { display: table-cell; min-height: 3.6rem; vertical-align: middle; text-align: right; white-space: nowrap; }
 .file-list td.actions .icon-btn { margin-left: .35rem; vertical-align: middle; }
@@ -478,8 +801,9 @@ tbody tr.selected {
   }
 }
 .icon-btn {
-  width: 2.25rem;
+  width: auto;
   height: 2.25rem;
+  aspect-ratio: 1;
   display: inline-grid;
   place-items: center;
   background: transparent;
@@ -569,24 +893,112 @@ tbody tr.selected {
 @keyframes skeleton-blink {
   50% { opacity: 0.3; }
 }
-.confirm-overlay {
-  position: fixed;
-  inset: 0;
-  background: color-mix(in srgb, var(--drop-ink) 56%, transparent);
-  display: grid;
-  place-items: center;
-  z-index: 50;
-}
 .confirm-dialog {
+  margin: auto;
+  padding: 1.75rem 2rem;
+  max-width: 22rem;
+  width: 90%;
   background: var(--drop-card);
   border: 2px solid var(--drop-ink);
   border-top: 6px solid var(--drop-state-error);
   border-radius: 0;
   color: var(--drop-ink-2);
   box-shadow: var(--drop-shadow-hard);
-  padding: 1.75rem 2rem;
-  max-width: 22rem;
-  width: 90%;
+}
+.pagination {
+  flex: none;
+  display: grid;
+  grid-template-columns: auto auto auto auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .5rem;
+  margin-top: .75rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--drop-line);
+}
+.pagination-total {
+  color: var(--drop-ink-3);
+  font-family: var(--font-micro);
+  font-size: .72rem;
+  white-space: nowrap;
+}
+.pagination-center {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  padding: 0 .25rem;
+}
+.pagination-arrow { font-size: 1.1rem; line-height: 1; }
+.pagination-page,
+.pagination-ellipsis {
+  min-width: 1.85rem;
+  min-height: 2.25rem;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 .25rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--drop-ink-2);
+  font-family: var(--font-micro);
+  font-size: .72rem;
+  font-weight: 700;
+}
+.pagination-page:not(:disabled):hover,
+.pagination-page.current {
+  border-color: var(--drop-brand);
+  background: var(--drop-brand-tint);
+  color: var(--drop-brand);
+}
+.pagination-page.current { cursor: default; }
+.pagination-size {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  color: var(--drop-ink-3);
+  font-family: var(--font-micro);
+  font-size: .72rem;
+  white-space: nowrap;
+}
+.pagination-size select {
+  width: 3.9rem;
+  min-height: 2.25rem;
+  padding: .25rem .45rem;
+  border: 1px solid var(--drop-line);
+  border-radius: 0;
+  background: var(--drop-surface);
+  color: var(--drop-ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: center;
+}
+.pagination-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  color: var(--drop-ink-3);
+  font-family: var(--font-micro);
+  font-size: .72rem;
+  white-space: nowrap;
+}
+.pagination-jump input {
+  width: 3rem;
+  min-height: 2.25rem;
+  padding: .25rem .4rem;
+  border: 1px solid var(--drop-line);
+  border-radius: 0;
+  background: var(--drop-surface);
+  color: var(--drop-ink);
+  font: inherit;
+  text-align: center;
+}
+.pagination button.ghost {
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: .4rem .65rem;
+}
+.confirm-dialog::backdrop {
+  background: color-mix(in srgb, var(--drop-ink) 56%, transparent);
 }
 .confirm-title {
   margin: 0 0 0.35rem;

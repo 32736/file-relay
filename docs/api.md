@@ -87,8 +87,10 @@ validate `Origin`.
 
 ### `POST /api/uploads`
 
-Body: `{ "name": string, "size": number, "type": string | null }`. Filenames
-are reduced to a bare basename; `size` must be an integer within
+Body: `{ "name": string, "size": number, "type": string | null,
+"expiresIn"?: number | null }`. `expiresIn` is in seconds and `null` means
+permanent storage; omitted uses `DEFAULT_RETENTION_DAYS`. Filenames are reduced
+to a bare basename; `size` must be an integer within
 `[1, MAX_FILE_SIZE]`.
 
 - Invalid body → `400 VALIDATION_ERROR`.
@@ -125,7 +127,9 @@ Marks a pending session `aborted` (`204`; idempotent). Completed uploads →
 
 Cursor-paginated listing (`?limit=30&cursor=<token>`, default 30, max 100),
 `created_at DESC`, excluding logically deleted files. Response:
-`{ "files": [{ "id", "name", "size", "mimeType", "createdAt" }], "nextCursor" }`.
+`{ "files": [{ "id", "name", "size", "mimeType", "createdAt", "expiresAt" }],
+"total", "nextCursor" }`. `total` reflects the current search/filter result;
+expired files are excluded.
 Internal fields such as `object_key` are never exposed.
 
 ### `GET /api/files/:id`
@@ -221,7 +225,8 @@ token. Missing/deleted file → `404`.
 ### `GET /api/shares` (owner)
 
 Cursor-paginated share list with `{ id, fileId, fileName, createdAt,
-expiresAt, maxDownloads, downloadCount, deleteFileAfterExhausted, revokedAt }`
+expiresAt, maxDownloads, downloadCount, deleteFileAfterExhausted, revokedAt }`,
+plus `total` for the current search result,
 — never raw tokens.
 
 ### `DELETE /api/shares/:id` (owner)
@@ -246,7 +251,9 @@ delete, and filename search.
 
 ### `GET /api/stats` (owner)
 
-`200 { "fileCount", "totalBytes" }` over non-deleted files.
+`200 { "fileCount", "totalBytes", "quotaBytes", "usedRatio" }` over
+currently active files. The default quota is 10 GiB and is configured by the
+Worker variable `STORAGE_QUOTA_BYTES`.
 
 ### `POST /api/files/batch-delete` (owner)
 
@@ -257,6 +264,25 @@ number }`.
 
 Case-insensitive filename search (`LIKE` with escaped wildcards); empty `q`
 ignored; pagination unchanged.
+
+### `PATCH /api/files/:id/expiration` (owner)
+
+Same-origin body `{ "expiresIn": number | null }`, where the number is in
+seconds and `null` means permanent storage. The file list and download routes
+hide files whose expiration has passed; the scheduled cleanup later removes
+their R2 objects.
+
+### `POST /api/files/batch-download` (owner)
+
+Same-origin body `{ "ids": string[] }` (1–100). Returns a streamed ZIP32
+archive using the store method; duplicate names are made unique inside the
+archive and file bytes are never buffered in the Worker.
+
+### `GET /api/audit` (owner)
+
+Cursor-paginated operation records with `total`. Entries contain the action,
+target type/ID, timestamp, and limited non-sensitive metadata; raw session/share
+tokens are never recorded.
 
 ## Phases with no public API surface
 

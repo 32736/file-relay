@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 
+import { localizeErrorMessage } from '../lib/api'
 import {
   type PendingUploadRecord,
   type UploadMode,
@@ -22,6 +23,7 @@ export interface UploadTask extends PendingUploadRecord {
 }
 
 const MAX_CONCURRENT = 3
+const DEFAULT_RETENTION_SECONDS = 30 * 24 * 60 * 60
 
 function fileMatchesRecord(file: File, record: PendingUploadRecord): boolean {
   return (
@@ -29,6 +31,10 @@ function fileMatchesRecord(file: File, record: PendingUploadRecord): boolean {
     file.size === record.size &&
     file.lastModified === record.lastModified
   )
+}
+
+function isSessionCreationFailure(task: UploadTask): boolean {
+  return task.uploadId.startsWith('err-')
 }
 
 export function useUploads(onListRefresh: () => void) {
@@ -55,6 +61,7 @@ export function useUploads(onListRefresh: () => void) {
         chunkSize: task.chunkSize,
         totalParts: task.totalParts,
         createdAt: task.createdAt,
+        expiresIn: task.expiresIn,
       }))
     savePendingUploads(pending)
   }
@@ -154,7 +161,7 @@ export function useUploads(onListRefresh: () => void) {
         } else {
           updateTask(task.uploadId, {
             status: 'failed',
-            error: error instanceof Error ? error.message : String(error),
+            error: localizeErrorMessage(undefined, error instanceof Error ? error.message : String(error)),
           })
         }
       } finally {
@@ -166,7 +173,32 @@ export function useUploads(onListRefresh: () => void) {
     }
   }
 
-  function addFile(file: File): void {
+  async function retrySessionCreation(task: UploadTask, file: File): Promise<void> {
+    const previousUploadId = task.uploadId
+    updateTask(previousUploadId, { status: 'queued', error: undefined })
+    try {
+      const session = await createUploadSession(file, task.expiresIn)
+      fileCache.delete(previousUploadId)
+      Object.assign(task, {
+        uploadId: session.uploadId,
+        type: file.type,
+        mode: session.mode,
+        chunkSize: session.chunkSize,
+        totalParts: session.totalParts,
+      })
+      fileCache.set(task.uploadId, file)
+      persist()
+      void runTask(task, file)
+    } catch (error) {
+      updateTask(previousUploadId, {
+        status: 'failed',
+        error: localizeErrorMessage(undefined, error instanceof Error ? error.message : String(error)),
+      })
+      persist()
+    }
+  }
+
+  function addFile(file: File, expiresIn: number | null = DEFAULT_RETENTION_SECONDS): void {
     // Resume match: same name+size+lastModified as a pending record.
     const pending = tasks.value.find(
       (task) =>
@@ -175,17 +207,19 @@ export function useUploads(onListRefresh: () => void) {
     )
     if (pending) {
       updateTask(pending.uploadId, { error: undefined })
-      void runTask(pending, file)
+      if (isSessionCreationFailure(pending)) void retrySessionCreation(pending, file)
+      else void runTask(pending, file)
       return
     }
 
     void (async () => {
       let session: UploadSessionInfo
       try {
-        session = await createUploadSession(file)
+        session = await createUploadSession(file, expiresIn)
       } catch (error) {
-        tasks.value.push({
-          uploadId: `err-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        const uploadId = `err-${Date.now()}-${crypto.randomUUID()}`
+        const failedTask: UploadTask = {
+          uploadId,
           name: file.name,
           size: file.size,
           type: file.type,
@@ -196,8 +230,12 @@ export function useUploads(onListRefresh: () => void) {
           createdAt: Date.now(),
           status: 'failed',
           transferred: 0,
-          error: error instanceof Error ? error.message : String(error),
-        })
+          expiresIn,
+          error: localizeErrorMessage(undefined, error instanceof Error ? error.message : String(error)),
+        }
+        fileCache.set(uploadId, file)
+        tasks.value.push(failedTask)
+        persist()
         return
       }
       const task: UploadTask = {
@@ -212,6 +250,7 @@ export function useUploads(onListRefresh: () => void) {
         createdAt: Date.now(),
         status: 'queued',
         transferred: 0,
+        expiresIn,
       }
       tasks.value.push(task)
       persist()
@@ -219,8 +258,11 @@ export function useUploads(onListRefresh: () => void) {
     })()
   }
 
-  function addFiles(files: File[]): void {
-    for (const file of files) addFile(file)
+  function addFiles(
+    files: File[],
+    expiresIn: number | null = DEFAULT_RETENTION_SECONDS,
+  ): void {
+    for (const file of files) addFile(file, expiresIn)
   }
 
   function pause(uploadId: string): void {
@@ -255,10 +297,19 @@ export function useUploads(onListRefresh: () => void) {
     const task = tasks.value.find((item) => item.uploadId === uploadId)
     if (!task || (task.status !== 'failed' && task.status !== 'canceled')) return
     const file = fileCache.get(uploadId)
-    updateTask(uploadId, { status: 'queued', error: undefined })
-    if (file) {
-      void runTask(task, file)
+    if (!file) {
+      if (task.status === 'canceled') {
+        updateTask(uploadId, { status: 'paused', error: '请重新选择同一文件后重试' })
+        persist()
+      }
+      return
     }
+    if (isSessionCreationFailure(task)) {
+      void retrySessionCreation(task, file)
+      return
+    }
+    updateTask(uploadId, { status: 'queued', error: undefined })
+    void runTask(task, file)
     persist()
   }
 

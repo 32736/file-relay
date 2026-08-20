@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { useUploads, type UploadTask } from '../composables/useUploads'
+import { COPY, getUploadStatusLabel } from '../lib/copy'
 import { formatBytes } from '../lib/format'
 import { toast } from '../lib/toast'
 
@@ -15,7 +16,10 @@ const { tasks, addFiles, pause, resume, cancel, retry, restore, hasFile } = useU
 const dragging = ref(false)
 const speeds = ref<Record<string, number>>({})
 const lastBytes = new Map<string, number>()
-const pickInput = ref<HTMLInputElement | null>(null)
+const filePicker = ref<HTMLInputElement | null>(null)
+const resumeInput = ref<HTMLInputElement | null>(null)
+const retention = ref<number | null>(30 * 24 * 60 * 60)
+const uploadBusy = computed(() => tasks.value.some((task) => task.status === 'queued' || task.status === 'uploading'))
 
 let timer: ReturnType<typeof setInterval> | undefined
 
@@ -50,8 +54,25 @@ watch(
       if (!seenCompleted.has(id)) {
         seenCompleted.add(id)
         const task = tasks.value.find((item) => item.uploadId === id)
-        if (task) toast(`已上传：${task.name}`, 'success')
+        if (task) toast(`${COPY.upload.completed}：${task.name}`, 'success')
       }
+    }
+  },
+)
+
+const seenFailed = new Set<string>()
+watch(
+  () => tasks.value.filter((task) => task.status === 'failed').map((task) => task.uploadId),
+  (ids) => {
+    const failedIds = new Set(ids)
+    for (const id of seenFailed) {
+      if (!failedIds.has(id)) seenFailed.delete(id)
+    }
+    for (const id of ids) {
+      if (seenFailed.has(id)) continue
+      seenFailed.add(id)
+      const task = tasks.value.find((item) => item.uploadId === id)
+      if (task) toast(`${COPY.upload.failed}：${task.name}`, 'error')
     }
   },
 )
@@ -67,25 +88,12 @@ function etaSeconds(task: UploadTask): number {
 }
 
 function statusLabel(task: UploadTask): string {
-  switch (task.status) {
-    case 'queued':
-      return '排队中'
-    case 'uploading':
-      return '上传中'
-    case 'paused':
-      return hasFile(task.uploadId) ? '已暂停' : '已暂停（需重新选择文件）'
-    case 'completed':
-      return '完成'
-    case 'canceled':
-      return '已取消'
-    case 'failed':
-      return '失败'
-  }
+  return getUploadStatusLabel(task.status, hasFile(task.uploadId))
 }
 
 async function handleFiles(files: File[]): Promise<void> {
   if (files.length === 0) return
-  addFiles(files)
+  addFiles(files, retention.value)
 }
 
 function onDragEnter(): void {
@@ -117,7 +125,17 @@ function onPickFiles(event: Event): void {
 }
 
 function pickForResume(): void {
-  pickInput.value?.click()
+  resumeInput.value?.click()
+}
+
+function openFilePicker(): void {
+  filePicker.value?.click()
+}
+
+function onDropAreaKeydown(event: KeyboardEvent): void {
+  if (event.key !== 'Enter' && event.key !== ' ') return
+  event.preventDefault()
+  openFilePicker()
 }
 
 function onPickResume(event: Event): void {
@@ -130,41 +148,65 @@ defineExpose({ addFiles, tasks })
 </script>
 
 <template>
-  <section
+  <div
     class="upload-zone"
     :class="{ dragging }"
+    :aria-busy="uploadBusy"
   >
-    <div
+    <label
+      class="retention-control"
+      for="file-retention"
+    >
+      <span>{{ COPY.upload.fileRetention }}</span>
+      <select
+        id="file-retention"
+        v-model="retention"
+        name="retention"
+      >
+        <option :value="7 * 24 * 60 * 60">7 天</option>
+        <option :value="30 * 24 * 60 * 60">30 天</option>
+        <option :value="90 * 24 * 60 * 60">90 天</option>
+        <option :value="365 * 24 * 60 * 60">1 年</option>
+        <option :value="null">永久</option>
+      </select>
+    </label>
+    <label
       class="drop-area"
       :class="{ compact }"
+      for="file-picker"
       role="button"
       tabindex="0"
+      aria-describedby="drop-area-help"
       @dragenter.prevent.stop="onDragEnter"
       @dragover.prevent.stop="onDragOver"
       @dragleave.prevent.stop="onDragLeave"
       @drop.prevent.stop="onDrop"
-      @keydown.enter.prevent="pickInput?.click()"
-      @click="pickInput?.click()"
+      @keydown="onDropAreaKeydown"
     >
-      <p class="drop-title">
-        选择文件上传
-      </p>
-      <p class="drop-sub">
+      <span class="drop-title">
+        {{ COPY.actions.selectFileUpload }}
+      </span>
+      <span
+        id="drop-area-help"
+        class="drop-sub"
+      >
         <template v-if="noDrag">
-          单文件最大 2 GB
+          {{ COPY.upload.helpWithoutDrag }}
         </template>
         <template v-else>
-          也可拖入页面任意位置 · 单文件最大 2 GB
+          {{ COPY.upload.helpWithDrag }}
         </template>
-      </p>
+      </span>
       <input
-        ref="pickInput"
+        id="file-picker"
+        ref="filePicker"
         class="standalone-input"
         type="file"
         multiple
+        tabindex="-1"
         @change="onPickFiles"
       >
-    </div>
+    </label>
 
     <ul
       v-if="tasks.length"
@@ -185,7 +227,13 @@ defineExpose({ addFiles, tasks })
           />
           <span class="name">{{ task.name }}</span>
           <span class="meta">{{ formatBytes(task.size) }}</span>
-          <span class="status">{{ statusLabel(task) }}</span>
+          <span
+            class="status"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            :aria-label="`${task.name}：${statusLabel(task)}`"
+          >{{ statusLabel(task) }}</span>
         </div>
         <div class="progress-row">
           <span
@@ -201,8 +249,10 @@ defineExpose({ addFiles, tasks })
             v-else-if="task.status === 'failed'"
             class="progress-info error"
             role="alert"
+            aria-atomic="true"
+            :aria-label="`上传失败：${task.name}：${task.error ?? '请重试'}`"
           >
-            {{ task.error }}
+            {{ task.error ?? '上传失败，请重试' }}
           </span>
           <span
             v-else-if="task.status === 'paused' && !hasFile(task.uploadId)"
@@ -230,38 +280,43 @@ defineExpose({ addFiles, tasks })
             <button
               v-if="task.status === 'uploading'"
               type="button"
+              :aria-label="`暂停 ${task.name}`"
               @click="pause(task.uploadId)"
             >
-              暂停
+              {{ COPY.upload.pause }}
             </button>
             <button
               v-else-if="task.status === 'paused' && hasFile(task.uploadId)"
               type="button"
+              :aria-label="`继续上传 ${task.name}`"
               @click="resume(task.uploadId)"
             >
-              继续
+              {{ COPY.actions.continueUpload }}
             </button>
             <button
               v-else-if="task.status === 'paused' && !hasFile(task.uploadId)"
               type="button"
+              :aria-label="`选择文件继续上传 ${task.name}`"
               @click="pickForResume"
             >
-              选择文件续传
+              {{ COPY.actions.chooseFileContinueUpload }}
             </button>
             <button
               v-if="task.status === 'failed' || task.status === 'canceled'"
               type="button"
+              :aria-label="`重试 ${task.name}`"
               @click="retry(task.uploadId)"
             >
-              重试
+              {{ COPY.actions.retry }}
             </button>
             <button
               v-if="task.status !== 'completed' && task.status !== 'canceled'"
               type="button"
               class="danger"
+              :aria-label="`取消 ${task.name}`"
               @click="cancel(task.uploadId)"
             >
-              取消
+              {{ COPY.actions.cancel }}
             </button>
           </div>
         </div>
@@ -269,16 +324,37 @@ defineExpose({ addFiles, tasks })
     </ul>
 
     <input
-      ref="pickInput"
+      id="resume-picker"
+      ref="resumeInput"
       type="file"
       class="hidden-input"
       multiple
+      tabindex="-1"
       @change="onPickResume"
     >
-  </section>
+  </div>
 </template>
 
 <style scoped>
+.retention-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+  color: var(--drop-ink-3);
+  font-family: var(--font-micro);
+  font-size: 0.72rem;
+}
+.retention-control select {
+  min-height: 1.8rem;
+  padding: 0 0.45rem;
+  border: 1px solid var(--drop-line);
+  border-radius: 0;
+  background: var(--drop-surface);
+  color: var(--drop-ink-2);
+  font: inherit;
+}
 .upload-zone .drop-area {
   position: relative;
   border: 2px dashed var(--drop-ink);
@@ -309,7 +385,8 @@ defineExpose({ addFiles, tasks })
   line-height: 1;
 }
 .upload-zone .drop-area:hover,
-.upload-zone.dragging .drop-area {
+.upload-zone.dragging .drop-area,
+.upload-zone .drop-area:focus-within {
   border-style: solid;
   border-color: var(--drop-brand);
   background: var(--drop-surface-muted);
@@ -339,7 +416,15 @@ defineExpose({ addFiles, tasks })
   letter-spacing: 0.06em;
 }
 .standalone-input {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 .tasks {
   list-style: none;

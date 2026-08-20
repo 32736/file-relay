@@ -12,6 +12,7 @@ type IconName =
   | 'search-x'
   | 'x'
   | 'plus'
+  | 'more'
   | 'chevron-right'
   | 'chevron-left'
   | 'folder'
@@ -29,6 +30,7 @@ type IconName =
   | 'image'
   | 'film'
   | 'qr-code'
+  | 'clock'
 
 const PATHS: Record<IconName, string[]> = {
   user: [
@@ -47,6 +49,7 @@ const PATHS: Record<IconName, string[]> = {
   ],
   x: ['M6 6l12 12', 'M18 6L6 18'],
   plus: ['M12 5v14', 'M5 12h14'],
+  more: ['M5 12h.01', 'M12 12h.01', 'M19 12h.01'],
   'chevron-right': ['M9 5l7 7-7 7'],
   'chevron-left': ['M15 5l-7 7 7 7'],
   folder: [
@@ -121,6 +124,10 @@ const PATHS: Record<IconName, string[]> = {
     'M18.5 14.5h1',
     'M14.5 18.5h1',
     'M17.5 18.5h2',
+  ],
+  clock: [
+    'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18',
+    'M12 7v5l3 2',
   ],
 }
 </script>

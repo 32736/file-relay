@@ -1,6 +1,7 @@
 const DEFAULT_CHUNK_SIZE = 32 * 1024 * 1024
 const DEFAULT_MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024
 const DEFAULT_RETENTION_SECONDS = 30 * 24 * 60 * 60
+const DEFAULT_STORAGE_QUOTA_BYTES = 10 * 1024 * 1024 * 1024
 
 /** Chunk size in bytes; uploads at or below this are single, above need multipart. */
 export function chunkSize(raw: string | undefined): number {
@@ -13,6 +14,10 @@ export function maxFileSize(raw: string | undefined): number {
 
 export function retentionSeconds(raw: string | undefined): number {
   return Number(raw) * 24 * 60 * 60 || DEFAULT_RETENTION_SECONDS
+}
+
+export function storageQuotaBytes(raw: string | undefined): number {
+  return Number(raw) > 0 ? Number(raw) : DEFAULT_STORAGE_QUOTA_BYTES
 }
 
 /**

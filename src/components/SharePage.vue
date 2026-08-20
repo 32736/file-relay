@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
-import { api } from '../lib/api'
+import { api, getUserErrorMessage } from '../lib/api'
+import { COPY } from '../lib/copy'
 import { formatBytes, formatDate } from '../lib/format'
 
 const props = defineProps<{ token: string }>()
@@ -16,15 +17,19 @@ interface ShareMeta {
 
 const meta = ref<ShareMeta | null>(null)
 const error = ref<string | null>(null)
+const loading = ref(true)
 const busy = ref(false)
 const done = ref(false)
 
 async function load(): Promise<void> {
+  loading.value = true
   try {
     meta.value = await api<ShareMeta>(`/api/public/shares/${props.token}`)
     error.value = null
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '该分享不存在或已失效'
+    error.value = getUserErrorMessage(cause, COPY.errors.sharePage)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -59,9 +64,13 @@ onMounted(() => void load())
 <template>
   <section
     class="share-page"
-    aria-label="分享的文件"
+    aria-labelledby="share-page-title"
+    :aria-busy="loading || busy"
   >
-    <h1 class="file-title">
+    <h1
+      id="share-page-title"
+      class="file-title"
+    >
       {{ meta?.name ?? '分享' }}
     </h1>
 
@@ -69,6 +78,7 @@ onMounted(() => void load())
       v-if="error"
       class="error"
       role="alert"
+      aria-atomic="true"
     >
       {{ error }}
     </p>
@@ -76,15 +86,19 @@ onMounted(() => void load())
       v-if="done"
       class="ok"
       role="status"
+      aria-live="polite"
+      aria-atomic="true"
     >
       下载已开始
     </p>
 
     <p
-      v-if="!meta && !error"
+      v-if="loading && !error"
       role="status"
+      aria-live="polite"
+      aria-atomic="true"
     >
-      加载中…
+      {{ COPY.common.loadingEllipsis }}
     </p>
 
     <template v-if="meta">
@@ -94,7 +108,7 @@ onMounted(() => void load())
           <dd>{{ formatBytes(meta.size) }}</dd>
         </div>
         <div v-if="meta.expiresAt">
-          <dt>有效期至</dt>
+          <dt>{{ COPY.shares.columnValidity }}至</dt>
           <dd>{{ formatDate(meta.expiresAt) }}</dd>
         </div>
         <div v-if="meta.remainingDownloads !== null">
@@ -107,6 +121,7 @@ onMounted(() => void load())
         v-if="terminalReason()"
         class="terminal"
         role="alert"
+        aria-atomic="true"
       >
         {{ terminalReason() }}，请联系发送者重新分享。
       </p>

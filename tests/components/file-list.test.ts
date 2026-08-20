@@ -82,6 +82,7 @@ describe('FileList', () => {
     expect(wrapper.text()).toContain('报告.pdf')
     expect(wrapper.text()).toContain('照片.png')
     expect(wrapper.text()).toContain('2.0 KB')
+    expect(wrapper.get('.pagination-page[aria-current="page"]').text()).toBe('1')
 
     await wrapper
       .findAll('button')
@@ -89,6 +90,50 @@ describe('FileList', () => {
       ?.trigger('click')
     await flushPromises()
     expect(wrapper.find('dialog.dialog').exists()).toBe(true)
+  })
+
+  it('paginates file rows with ten items per page', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://localhost')
+      if (url.pathname !== '/api/files') return new Response('not found', { status: 404 })
+      const cursor = url.searchParams.get('cursor')
+      const files = cursor
+        ? [{ id: 'f11', name: '第十一项.txt', size: 10, mimeType: 'text/plain', createdAt: 11 }]
+        : Array.from({ length: 10 }, (_, index) => ({
+            id: `f${index + 1}`,
+            name: `第${index + 1}项.txt`,
+            size: 10,
+            mimeType: 'text/plain',
+            createdAt: index + 1,
+          }))
+      return new Response(JSON.stringify({ files, nextCursor: cursor ? null : '10' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const wrapper = mount(FileList)
+    await flushPromises()
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain('limit=10')
+    expect(wrapper.findAll('tbody tr')).toHaveLength(10)
+    expect(wrapper.get('.pagination-page[aria-current="page"]').text()).toBe('1')
+
+    await wrapper.get('select[aria-label="文件列表每页条数"]').setValue('20')
+    await flushPromises()
+    expect(String(fetchMock.mock.calls.at(-1)?.[0])).toContain('limit=20')
+
+    await wrapper.get('.pagination button[aria-label="下一页"]').trigger('click')
+    await flushPromises()
+    expect(String(fetchMock.mock.calls.at(-1)?.[0])).toContain('cursor=10')
+    expect(wrapper.text()).toContain('第十一项.txt')
+    expect(wrapper.get('.pagination-page[aria-current="page"]').text()).toBe('2')
+
+    await wrapper.get('.pagination button[aria-label="上一页"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('第1项.txt')
+    expect(wrapper.get('.pagination-page[aria-current="page"]').text()).toBe('1')
   })
 
 
@@ -108,7 +153,7 @@ describe('FileList', () => {
     expect(wrapper.find('.confirm-dialog').exists()).toBe(true)
     await wrapper.find('.btn-danger').trigger('click')
     await flushPromises()
-    expect(wrapper.text()).toContain('已删除 · 撤销')
+    expect(wrapper.text()).toContain('已删除 2 个文件 · 撤销')
 
     await wrapper.find('button:not(.danger)').trigger('click') // the undo button
     await flushPromises()
@@ -159,6 +204,8 @@ describe('FileList', () => {
         file: { id: 'f1', name: 'a.pdf', size: 10, mimeType: 'application/pdf', createdAt: 1 },
       },
     })
+    expect(wrapper.text()).toContain('下载 1 次后链接失效，文件将自动清理')
+    expect(wrapper.text()).not.toContain('阅后即焚')
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 

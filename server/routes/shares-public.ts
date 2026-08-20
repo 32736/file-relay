@@ -4,6 +4,7 @@ import type { AppEnv } from '../env'
 import { buildDownloadResponse, parseRange } from '../lib/download'
 import { sha256Hex } from '../lib/crypto'
 import { apiError } from '../lib/errors'
+import { recordAudit } from '../services/audit'
 import { findShareByHash } from './shares'
 
 interface PublicFileRow {
@@ -105,6 +106,13 @@ export const publicShareRoutes = new Hono<AppEnv>()
     if (!object) {
       return apiError(c, 404, 'NOT_FOUND', 'File content is missing')
     }
+
+    await recordAudit(c.env, {
+      action: 'share.downloaded',
+      targetType: 'share',
+      targetId: share.id,
+      metadata: { fileId: file.id, size: file.size, ranged: range.kind !== 'full' },
+    })
 
     return buildDownloadResponse(object, file.original_name, file.mime_type, range)
   })

@@ -29,6 +29,11 @@ together.
 - Phase 05: `shares`（仅存令牌哈希；通过 `UPDATE ... RETURNING` 原子计数下载）。
 - Magic Link: `owner_emails`（GitHub 已验证主邮箱的加密值）和
   `magic_link_tokens`（令牌哈希、过期时间与单次消费状态）。
+- File retention: `files.expires_at` is the file-level expiration policy;
+  `upload_sessions.file_expires_at` carries the selected policy until upload
+  completion.
+- Audit: `audit_logs` records non-sensitive operation metadata with indexes for
+  time, action, and target lookups.
 
 ## Planned ownership
 

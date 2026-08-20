@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 
-import { api } from '../../lib/api'
+import { api, getUserErrorMessage } from '../../lib/api'
+import { copyText } from '../../lib/clipboard'
+import { COPY, getShareStatusLabel } from '../../lib/copy'
 import { formatDate } from '../../lib/format'
 import { loadShareUrls } from '../../lib/share-urls'
 import { toast } from '../../lib/toast'
@@ -16,15 +18,13 @@ const error = ref<string | null>(null)
 const copied = ref(false)
 const shareUrl = ref('')
 const qrCanvas = ref<HTMLCanvasElement | null>(null)
+const backButton = ref<HTMLButtonElement | null>(null)
+const returnFocus = typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
+  ? document.activeElement
+  : null
 
 function stateLabel(): string {
-  if (props.share.revokedAt !== null) return '已撤销'
-  if (props.share.expiresAt !== null && props.share.expiresAt <= Math.floor(Date.now() / 1000)) {
-    return '已过期'
-  }
-  return props.share.maxDownloads !== null && props.share.downloadCount >= props.share.maxDownloads
-    ? '已耗尽'
-    : '有效'
+  return getShareStatusLabel(props.share)
 }
 
 const isActive = computed(() => stateLabel() === '有效')
@@ -36,10 +36,14 @@ function daysLeft(): number | null {
 
 async function copyUrl(): Promise<void> {
   if (!shareUrl.value || !isActive.value) return
-  await navigator.clipboard.writeText(shareUrl.value)
-  toast('链接已复制', 'success')
-  copied.value = true
-  setTimeout(() => (copied.value = false), 1500)
+  try {
+    await copyText(shareUrl.value)
+    toast(COPY.feedback.linkCopied, 'success')
+    copied.value = true
+    setTimeout(() => (copied.value = false), 1500)
+  } catch (cause) {
+    toast(getUserErrorMessage(cause, COPY.errors.copy), 'error')
+  }
 }
 
 async function revoke(): Promise<void> {
@@ -48,10 +52,11 @@ async function revoke(): Promise<void> {
   error.value = null
   try {
     await api(`/api/shares/${props.share.id}`, { method: 'DELETE' })
-    toast('分享已撤销', 'success')
+    toast(COPY.feedback.shareRevoked, 'success')
     emit('revoked')
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : String(cause)
+    error.value = getUserErrorMessage(cause, COPY.errors.shareRevoke)
+    toast(error.value, 'error')
   } finally {
     busy.value = false
   }
@@ -72,31 +77,41 @@ function goBack(): void {
 onMounted(async () => {
   window.history.pushState({ view: 'share-detail' }, '', '')
   window.addEventListener('popstate', onPopState)
+  await nextTick()
+  backButton.value?.focus()
 
   // Server-recovered URL first (works on any logged-in device); the local
   // cache only backs up legacy shares created before server-side recovery.
   shareUrl.value = props.share.url ?? loadShareUrls()[props.share.id] ?? ''
   if (shareUrl.value) {
-    await nextTick()
-    if (qrCanvas.value) {
-      const { default: QRCode } = await import('qrcode')
-      await QRCode.toCanvas(qrCanvas.value, shareUrl.value, { width: 112 })
+    try {
+      await nextTick()
+      if (qrCanvas.value) {
+        const { default: QRCode } = await import('qrcode')
+        await QRCode.toCanvas(qrCanvas.value, shareUrl.value, { width: 112 })
+      }
+    } catch {
+      toast(COPY.errors.qrCode, 'error')
     }
   }
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('popstate', onPopState)
+  void nextTick(() => {
+    if (returnFocus?.isConnected) returnFocus.focus()
+  })
 })
 </script>
 
 <template>
   <section
     class="detail"
-    aria-label="分享详情"
+    aria-labelledby="mobile-share-detail-title"
   >
     <header class="detail-header">
       <button
+        ref="backButton"
         type="button"
         class="back-btn"
         aria-label="返回"
@@ -104,25 +119,31 @@ onBeforeUnmount(() => {
       >
         <AppIcon name="chevron-left" />
       </button>
-      <span class="detail-title">分享详情</span>
+      <h2
+        id="mobile-share-detail-title"
+        class="detail-title"
+      >
+        {{ COPY.shares.detail }}
+      </h2>
     </header>
 
     <p
       v-if="error"
       class="error"
       role="alert"
+      aria-atomic="true"
     >
       {{ error }}
     </p>
 
-    <section class="card file-card">
+    <div class="card file-card">
       <div class="file-head">
         <span class="tile">
           <AppIcon name="link" />
         </span>
         <div class="file-body">
           <div class="file-name">
-            {{ share.fileName ?? share.fileId }}
+            {{ share.fileName || '未命名文件' }}
           </div>
           <div class="file-meta">
             创建于 {{ formatDate(share.createdAt) }}
@@ -133,9 +154,9 @@ onBeforeUnmount(() => {
           :class="stateLabel() === '有效' ? 'active' : 'inactive'"
         >{{ stateLabel() }}</span>
       </div>
-    </section>
+    </div>
 
-    <section class="card">
+    <div class="card">
       <div
         v-if="shareUrl && isActive"
         class="link-row"
@@ -158,7 +179,7 @@ onBeforeUnmount(() => {
         v-else
         class="url-missing"
       >
-        {{ isActive ? '分享链接仅在本设备创建时可见，其他设备无法复制。' : '分享已失效，无法复制链接。' }}
+        {{ isActive ? '当前设备暂时无法获取分享链接，请重新创建分享。' : '分享已失效，无法复制链接。' }}
       </p>
       <div
         v-if="shareUrl && isActive"
@@ -170,9 +191,9 @@ onBeforeUnmount(() => {
           aria-label="分享二维码"
         />
       </div>
-    </section>
+    </div>
 
-    <section class="card">
+    <div class="card">
       <div class="stat-grid">
         <div class="stat">
           <div class="stat-value">
@@ -208,7 +229,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </div>
-    </section>
+    </div>
 
     <div
       v-if="share.revokedAt === null"
@@ -220,7 +241,7 @@ onBeforeUnmount(() => {
         :disabled="busy"
         @click="revoke"
       >
-        {{ busy ? '撤销中…' : '撤销分享' }}
+        {{ busy ? '撤销中…' : COPY.actions.revokeShare }}
       </button>
     </div>
   </section>
@@ -233,7 +254,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
-  padding: 0 0.875rem 0.875rem;
+  padding: 0 var(--drop-mobile-gutter) 0.875rem;
 }
 
 .detail-header {
@@ -242,35 +263,63 @@ onBeforeUnmount(() => {
   gap: 0.375rem;
   height: 2.5rem;
   border-bottom: 2px solid var(--drop-ink);
-  margin: 0 -0.875rem 0.125rem;
-  padding-left: 0.125rem;
-  padding-right: 0.875rem;
+  margin: 0 0 0.125rem;
+  padding: 0;
 }
 
 .back-btn {
+  position: relative;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border: 1px solid var(--drop-ink);
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-left: -0.375rem;
+  box-sizing: border-box;
+  border: 0;
   border-radius: 0;
   background: transparent;
-  color: var(--drop-ink-2);
+  color: var(--drop-ink);
   -webkit-tap-highlight-color: transparent;
-  transition: background-color var(--drop-dur-fast) linear, color var(--drop-dur-fast) linear;
+  transition: color var(--drop-dur-fast) linear, transform var(--drop-dur-fast) linear;
 }
-.back-btn:active {
-  background: var(--drop-ink);
-  color: var(--drop-background);
+.back-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0.375rem;
+  border: 1px solid var(--drop-ink);
+  border-left: 3px solid var(--drop-brand);
+  background: var(--drop-surface-2);
+  box-shadow: 2px 2px 0 var(--drop-ink);
+  transition: background-color var(--drop-dur-fast) linear, border-color var(--drop-dur-fast) linear, box-shadow var(--drop-dur-fast) linear;
 }
 .back-btn :deep(svg) {
+  position: relative;
+  z-index: 1;
   width: 1rem;
   height: 1rem;
 }
+.back-btn:hover {
+  color: var(--drop-background);
+}
+.back-btn:hover::before {
+  border-color: var(--drop-ink);
+  background: var(--drop-brand);
+}
+.back-btn:active {
+  color: var(--drop-background);
+  transform: translate(2px, 2px);
+}
+.back-btn:active::before {
+  background: var(--drop-brand-strong);
+  box-shadow: 0 0 0 var(--drop-ink);
+}
+.back-btn:focus-visible { outline: 2px solid var(--drop-brand); outline-offset: 2px; }
 
 .detail-title {
   flex: 1;
+  margin: 0;
   font-family: var(--font-micro);
   font-size: 0.85rem;
   font-weight: 700;
@@ -303,7 +352,7 @@ onBeforeUnmount(() => {
 }
 .revoke:active {
   background: var(--drop-state-error);
-  color: #FFFFFF;
+  color: var(--drop-background);
   transform: translate(2px, 2px);
   box-shadow: 0 0 0 #000000;
 }
@@ -407,12 +456,14 @@ onBeforeUnmount(() => {
   color: var(--drop-ink-2);
 }
 .copy-btn {
-  flex: none;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.25rem;
+  width: auto;
   height: 1.25rem;
+  aspect-ratio: 1;
+  box-sizing: border-box;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: transparent;
@@ -425,7 +476,7 @@ onBeforeUnmount(() => {
 }
 .copy-btn:active {
   background: var(--drop-brand);
-  color: #FFFFFF;
+  color: var(--drop-background);
 }
 
 .url-missing {

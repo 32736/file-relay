@@ -1,25 +1,53 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import UploadZone from '../UploadZone.vue'
 import type { UploadTask } from '../../composables/useUploads'
+import { COPY } from '../../lib/copy'
 import AppIcon from './AppIcon.vue'
 
 const emit = defineEmits<{ close: []; uploaded: [] }>()
 
 const uploadZone = ref<InstanceType<typeof UploadZone> | null>(null)
+const sheetDialog = ref<HTMLDialogElement | null>(null)
+const sheetClose = ref<HTMLButtonElement | null>(null)
 const imageInput = ref<HTMLInputElement | null>(null)
 const videoInput = ref<HTMLInputElement | null>(null)
+const returnFocus = typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
+  ? document.activeElement
+  : null
 
 const tasks = computed<UploadTask[]>(() => uploadZone.value?.tasks ?? [])
 
+const queuedCount = computed(
+  () => tasks.value.filter((task) => task.status === 'queued').length,
+)
 const uploadingCount = computed(
-  () => tasks.value.filter((task) => task.status === 'uploading' || task.status === 'queued').length,
+  () => tasks.value.filter((task) => task.status === 'uploading').length,
+)
+const pausedCount = computed(
+  () => tasks.value.filter((task) => task.status === 'paused').length,
 )
 const completedCount = computed(
   () => tasks.value.filter((task) => task.status === 'completed').length,
 )
-const busy = computed(() => uploadingCount.value > 0)
+const failedCount = computed(
+  () => tasks.value.filter((task) => task.status === 'failed').length,
+)
+const canceledCount = computed(
+  () => tasks.value.filter((task) => task.status === 'canceled').length,
+)
+const busy = computed(() => queuedCount.value > 0 || uploadingCount.value > 0)
+const summaryText = computed(() => {
+  const parts: string[] = []
+  if (uploadingCount.value) parts.push(`${uploadingCount.value} 个文件${COPY.upload.uploading}`)
+  if (queuedCount.value) parts.push(`${queuedCount.value} 个文件${COPY.upload.queued}`)
+  if (pausedCount.value) parts.push(`${pausedCount.value} 个文件${COPY.upload.paused}`)
+  if (completedCount.value) parts.push(`${completedCount.value} 个${COPY.upload.completed}`)
+  if (failedCount.value) parts.push(`${failedCount.value} 个${COPY.upload.failed}`)
+  if (canceledCount.value) parts.push(`${canceledCount.value} 个${COPY.upload.canceled}`)
+  return parts.join(' · ') || COPY.upload.empty
+})
 
 function addFiles(files: File[]): void {
   uploadZone.value?.addFiles(files)
@@ -33,34 +61,67 @@ function onPickFiltered(event: Event): void {
 }
 
 defineExpose({ addFiles })
+
+onMounted(() => {
+  const dialog = sheetDialog.value
+  if (!dialog) return
+  try {
+    if (typeof dialog.showModal === 'function') dialog.showModal()
+    else dialog.setAttribute('open', '')
+    void nextTick(() => sheetClose.value?.focus())
+  } catch {
+    dialog.setAttribute('open', '')
+  }
+})
+
+onBeforeUnmount(() => {
+  if (returnFocus?.isConnected) returnFocus.focus()
+})
 </script>
 
 <template>
   <Teleport to="body">
-    <div
+    <dialog
+      ref="sheetDialog"
       class="sheet-overlay"
+      aria-labelledby="upload-sheet-title"
+      aria-describedby="upload-sheet-description"
+      aria-modal="true"
+      @cancel.prevent="emit('close')"
       @click.self="emit('close')"
     >
       <div
         class="sheet upload-sheet"
-        role="dialog"
-        aria-modal="true"
-        aria-label="上传文件"
       >
         <div class="sheet-handle" />
-        <div class="sheet-head">
-          <span class="sheet-title">{{ busy ? '上传中' : '上传文件' }}</span>
+        <header class="sheet-head">
+          <h2
+            id="upload-sheet-title"
+            class="sheet-title"
+          >
+            {{ busy ? COPY.upload.uploading : COPY.upload.title }}
+          </h2>
+          <p
+            id="upload-sheet-description"
+            class="sr-only"
+          >
+            选择文件或粘贴文件开始上传。
+          </p>
           <button
+            ref="sheetClose"
             type="button"
             class="sheet-close"
-            aria-label="关闭"
+            :aria-label="COPY.actions.close"
             @click="emit('close')"
           >
             <AppIcon name="x" />
           </button>
-        </div>
+        </header>
 
-        <div class="sheet-body">
+        <section
+          class="sheet-body"
+          aria-label="上传内容"
+        >
           <UploadZone
             ref="uploadZone"
             class="mobile-uploads"
@@ -100,25 +161,30 @@ defineExpose({ addFiles })
             hidden
             @change="onPickFiltered"
           >
-        </div>
+        </section>
 
-        <div
+        <footer
           v-if="tasks.length"
           class="sheet-summary"
         >
-          <span class="summary-text">
-            {{ uploadingCount ? `${uploadingCount} 个文件上传中` : '全部完成' }}<template v-if="completedCount"> · {{ completedCount }} 个完成</template>
+          <span
+            class="summary-text"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {{ summaryText }}
           </span>
           <button
             type="button"
             class="summary-done"
             @click="emit('close')"
           >
-            完成
+            {{ COPY.actions.close }}
           </button>
-        </div>
+        </footer>
       </div>
-    </div>
+    </dialog>
   </Teleport>
 </template>
 
@@ -129,6 +195,13 @@ defineExpose({ addFiles })
   z-index: 80;
   display: flex;
   align-items: flex-end;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
   background: rgba(10, 10, 10, 0.55);
   animation: overlay-in 0.2s linear;
 }
@@ -139,6 +212,7 @@ defineExpose({ addFiles })
 
 .sheet {
   width: 100%;
+  box-sizing: border-box;
   max-height: calc(100dvh - 64px);
   display: flex;
   flex-direction: column;
@@ -165,10 +239,11 @@ defineExpose({ addFiles })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.375rem 0.75rem 0.25rem;
+  padding: 0.375rem var(--drop-mobile-gutter) 0.25rem;
   border-bottom: 2px solid var(--drop-ink);
 }
 .sheet-title {
+  margin: 0;
   font-family: var(--font-micro);
   font-size: 0.85rem;
   font-weight: 700;
@@ -185,11 +260,14 @@ defineExpose({ addFiles })
   color: var(--drop-brand);
 }
 .sheet-close {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
+  width: auto;
   height: 1.5rem;
+  aspect-ratio: 1;
+  box-sizing: border-box;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: transparent;
@@ -203,7 +281,7 @@ defineExpose({ addFiles })
 .sheet-body {
   min-height: 0;
   overflow-y: auto;
-  padding: 0.75rem;
+  padding: 0.75rem var(--drop-mobile-gutter);
 }
 
 .mobile-uploads :deep(.drop-area) {
@@ -317,7 +395,7 @@ defineExpose({ addFiles })
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.375rem 0.75rem;
+  padding: 0.375rem var(--drop-mobile-gutter);
   border-top: 2px solid var(--drop-ink);
   background: var(--drop-surface-2);
 }
@@ -334,7 +412,7 @@ defineExpose({ addFiles })
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: var(--drop-brand);
-  color: #fff;
+  color: var(--drop-background);
   font-family: var(--font-micro);
   font-size: 0.78rem;
   font-weight: 700;
