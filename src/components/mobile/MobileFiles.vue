@@ -257,8 +257,8 @@ defineExpose({ load })
 }
 .search-box input {
   width: 100%;
-  height: 2.5rem;
-  padding: 0 2.25rem 0 2.125rem;
+  height: 2.25rem;
+  padding: 0 2rem 0 1.875rem;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: var(--drop-surface);
@@ -282,12 +282,12 @@ defineExpose({ load })
 }
 .clear-btn {
   position: absolute;
-  right: 0.5rem;
+  right: 0.375rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border: 1px solid transparent;
   border-radius: 0;
   background: transparent;
@@ -299,8 +299,8 @@ defineExpose({ load })
   color: var(--drop-background);
 }
 .clear-btn :deep(svg) {
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .list-head {
@@ -341,9 +341,9 @@ defineExpose({ load })
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 0.625rem;
-  padding: 0.625rem 0.875rem;
-  min-height: 3rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  min-height: 2.5rem;
   border: 0;
   border-left: 4px solid transparent;
   border-radius: 0;
@@ -366,23 +366,23 @@ defineExpose({ load })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: var(--drop-surface-2);
   color: var(--drop-ink-2);
 }
 .tile :deep(.file-icon) {
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 1rem;
+  height: 1rem;
   border: 0;
   background: transparent;
   color: inherit;
 }
 .tile :deep(.file-icon svg) {
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
 }
 .tile :deep(.file-icon.image) {
   color: var(--drop-brand);
@@ -414,19 +414,19 @@ defineExpose({ load })
   margin-left: auto;
 }
 .chevron {
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
   color: var(--drop-ink-3);
 }
 
 .more {
   display: flex;
   justify-content: center;
-  padding: 0.5rem 0;
+  padding: 0.375rem 0;
 }
 .more button {
-  min-height: 2.25rem;
-  padding: 0 1rem;
+  min-height: 2rem;
+  padding: 0 0.875rem;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: var(--drop-card);
@@ -451,17 +451,17 @@ defineExpose({ load })
 .skeleton-row {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  padding: 0.625rem 0.875rem;
-  min-height: 3rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  min-height: 2.5rem;
 }
 .skeleton-row + .skeleton-row {
   border-top: 1px solid var(--drop-line);
 }
 .skeleton-tile {
   flex: none;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border: 1px solid var(--drop-line);
   border-radius: 0;
   background: var(--drop-surface-2);
@@ -540,10 +540,10 @@ defineExpose({ load })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.375rem;
-  height: 2.5rem;
+  gap: 0.25rem;
+  height: 2.25rem;
   margin-top: 1rem;
-  padding: 0 1.25rem;
+  padding: 0 1rem;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: var(--drop-brand);

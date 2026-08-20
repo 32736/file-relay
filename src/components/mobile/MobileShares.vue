@@ -307,8 +307,8 @@ defineExpose({ load })
 }
 .search-box input {
   width: 100%;
-  height: 2.5rem;
-  padding: 0 2.25rem 0 2.125rem;
+  height: 2.25rem;
+  padding: 0 2rem 0 1.875rem;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: var(--drop-surface);
@@ -332,12 +332,12 @@ defineExpose({ load })
 }
 .clear-btn {
   position: absolute;
-  right: 0.5rem;
+  right: 0.375rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border: 1px solid transparent;
   border-radius: 0;
   background: transparent;
@@ -349,15 +349,15 @@ defineExpose({ load })
   color: var(--drop-background);
 }
 .clear-btn :deep(svg) {
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .list-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0.875rem 0.375rem;
+  padding: 0.5rem 0.75rem 0.375rem;
 }
 .list-title {
   font-family: var(--font-micro);
@@ -427,9 +427,9 @@ defineExpose({ load })
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 0.625rem;
-  padding: 0.625rem 0.875rem;
-  min-height: 3rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  min-height: 2.5rem;
   border: 0;
   border-left: 4px solid transparent;
   border-radius: 0;
@@ -452,16 +452,16 @@ defineExpose({ load })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: var(--drop-surface-2);
   color: var(--drop-brand);
 }
 .tile :deep(svg) {
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
 }
 .share-body {
   flex: 1;
@@ -536,8 +536,8 @@ defineExpose({ load })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.625rem;
-  height: 1.25rem;
+  width: 1.5rem;
+  height: 1rem;
   border: 1px solid var(--drop-line);
   border-radius: 0;
   background: transparent;
@@ -554,8 +554,8 @@ defineExpose({ load })
   color: var(--drop-background);
 }
 .chevron {
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
   color: var(--drop-ink-3);
 }
 
@@ -566,17 +566,17 @@ defineExpose({ load })
 .skeleton-row {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  padding: 0.625rem 0.875rem;
-  min-height: 3rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  min-height: 2.5rem;
 }
 .skeleton-row + .skeleton-row {
   border-top: 1px solid var(--drop-line);
 }
 .skeleton-tile {
   flex: none;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border: 1px solid var(--drop-line);
   border-radius: 0;
   background: var(--drop-surface-2);

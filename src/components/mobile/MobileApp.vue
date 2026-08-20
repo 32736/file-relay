@@ -266,17 +266,17 @@ onMounted(() => void loadStats())
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 3.25rem;
-  padding: 0 1rem;
+  height: 2.75rem;
+  padding: 0 0.875rem;
 }
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.5rem;
 }
 .logo {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
   display: block;
 }
 .wordmark {
@@ -294,11 +294,11 @@ onMounted(() => void loadStats())
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.5rem;
 }
 .usage {
   font-family: var(--font-micro);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--drop-ink-2);
@@ -316,8 +316,8 @@ onMounted(() => void loadStats())
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.875rem;
-  height: 1.875rem;
+  width: 1.625rem;
+  height: 1.625rem;
   border: 1px solid var(--drop-border);
   border-radius: 0;
   background: transparent;
@@ -339,7 +339,7 @@ onMounted(() => void loadStats())
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .tabbar {
@@ -353,7 +353,7 @@ onMounted(() => void loadStats())
   align-items: center;
   width: 100%;
   max-width: 30rem;
-  height: calc(4rem + env(safe-area-inset-bottom, 0px));
+  height: calc(3.5rem + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   border-top: 2px solid var(--drop-ink);
   background: var(--drop-surface);
@@ -364,8 +364,8 @@ onMounted(() => void loadStats())
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.3rem;
-  height: 4rem;
+  gap: 0.25rem;
+  height: 3.5rem;
   padding: 0 0.25rem;
   border: 0;
   background: transparent;
@@ -386,15 +386,15 @@ onMounted(() => void loadStats())
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 3.25rem;
-  height: 3.25rem;
+  width: 2.75rem;
+  height: 2.75rem;
   margin: 0 auto;
   border: 2px solid var(--drop-ink);
   border-radius: 0;
   background: var(--drop-brand);
   color: #FFFFFF;
   box-shadow: var(--drop-shadow-2);
-  transform: translateY(-0.5rem);
+  transform: translateY(-0.375rem);
   transition: transform var(--drop-dur-fast) linear, box-shadow var(--drop-dur-fast) linear;
 }
 .tab-upload:active {

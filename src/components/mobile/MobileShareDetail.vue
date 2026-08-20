@@ -240,7 +240,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  height: 2.75rem;
+  height: 2.5rem;
   border-bottom: 2px solid var(--drop-ink);
   margin: 0 -0.875rem 0.125rem;
   padding-left: 0.125rem;
@@ -251,8 +251,8 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2rem;
+  height: 2rem;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: transparent;
@@ -265,8 +265,8 @@ onBeforeUnmount(() => {
   color: var(--drop-background);
 }
 .back-btn :deep(svg) {
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 1rem;
+  height: 1rem;
 }
 
 .detail-title {
@@ -288,7 +288,7 @@ onBeforeUnmount(() => {
 }
 .revoke {
   width: 100%;
-  min-height: 2.75rem;
+  min-height: 2.5rem;
   border: 1px solid var(--drop-state-error);
   border-radius: 0;
   background: transparent;
@@ -329,16 +329,16 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border: 1px solid var(--drop-brand);
   border-radius: 0;
   background: var(--drop-surface-2);
   color: var(--drop-brand);
 }
 .tile :deep(svg) {
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
 }
 .file-body {
   flex: 1;
@@ -385,7 +385,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.375rem 0.5rem;
+  padding: 0.25rem 0.5rem;
   border: 1px solid var(--drop-ink);
   border-left: 4px solid var(--drop-brand);
   border-radius: 0;
@@ -411,8 +411,8 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: transparent;

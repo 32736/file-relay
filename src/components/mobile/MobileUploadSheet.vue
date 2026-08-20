@@ -154,9 +154,9 @@ defineExpose({ addFiles })
   to { transform: translateY(0); }
 }
 .sheet-handle {
-  width: 2.5rem;
+  width: 2rem;
   height: 0.375rem;
-  margin: 0.5rem auto 0;
+  margin: 0.375rem auto 0;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: var(--drop-surface-2);
@@ -165,7 +165,7 @@ defineExpose({ addFiles })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0.875rem 0.375rem;
+  padding: 0.375rem 0.75rem 0.25rem;
   border-bottom: 2px solid var(--drop-ink);
 }
 .sheet-title {
@@ -188,8 +188,8 @@ defineExpose({ addFiles })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.5rem;
+  height: 1.5rem;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: transparent;
@@ -203,7 +203,7 @@ defineExpose({ addFiles })
 .sheet-body {
   min-height: 0;
   overflow-y: auto;
-  padding: 0.875rem 0.875rem 0.875rem;
+  padding: 0.75rem;
 }
 
 .mobile-uploads :deep(.drop-area) {
@@ -211,7 +211,7 @@ defineExpose({ addFiles })
   border-radius: 0;
   background: var(--drop-surface-2);
   box-shadow: none;
-  padding: 1rem 0.875rem;
+  padding: 0.875rem 0.75rem;
   gap: 0.375rem;
   transition: border-color var(--drop-dur-fast) linear, background-color var(--drop-dur-fast) linear;
 }
@@ -293,7 +293,7 @@ defineExpose({ addFiles })
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
-  min-height: 2.5rem;
+  min-height: 2.25rem;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: var(--drop-card);
@@ -317,7 +317,7 @@ defineExpose({ addFiles })
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.5rem 0.875rem;
+  padding: 0.375rem 0.75rem;
   border-top: 2px solid var(--drop-ink);
   background: var(--drop-surface-2);
 }
@@ -329,8 +329,8 @@ defineExpose({ addFiles })
   color: var(--drop-ink-2);
 }
 .summary-done {
-  min-height: 2.25rem;
-  padding: 0 1rem;
+  min-height: 2rem;
+  padding: 0 0.875rem;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: var(--drop-brand);

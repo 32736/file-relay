@@ -109,7 +109,7 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.625rem 0.875rem;
+  padding: 0.5rem 0.75rem;
   border-bottom: 2px solid var(--drop-ink);
   background: var(--drop-surface-2);
 }
@@ -118,23 +118,23 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border: 1px solid var(--drop-ink);
   border-radius: 0;
   background: var(--drop-card);
   color: var(--drop-ink-2);
 }
 .tile :deep(.file-icon) {
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 1rem;
+  height: 1rem;
   border: 0;
   background: transparent;
   color: inherit;
 }
 .tile :deep(.file-icon svg) {
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
 }
 .file-body {
   flex: 1;
@@ -162,9 +162,9 @@ const emit = defineEmits<{ close: []; share: []; download: []; delete: [] }>()
 .action-row {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.5rem;
   width: 100%;
-  padding: 0.75rem 0.875rem;
+  padding: 0.5rem 0.75rem;
   border: 0;
   border-left: 4px solid transparent;
   border-radius: 0;
