@@ -561,37 +561,36 @@ th {
   grid-template-columns: auto auto auto auto;
   align-items: center;
   justify-content: flex-end;
-  gap: .5rem;
-  margin-top: .75rem;
-  padding-top: .75rem;
-  border-top: 1px solid var(--drop-line);
+  gap: .35rem;
+  margin-top: .45rem;
+  padding-top: 0;
 }
 .pagination-total {
   color: var(--drop-ink-3);
   font-family: var(--font-micro);
-  font-size: .72rem;
+  font-size: .68rem;
   white-space: nowrap;
 }
 .pagination-center {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: .35rem;
-  padding: 0 .25rem;
+  gap: .25rem;
+  padding: 0 .15rem;
 }
-.pagination-arrow { font-size: 1.1rem; line-height: 1; }
+.pagination-arrow { min-width: 1.8rem; font-size: .95rem; line-height: 1; }
 .pagination-page,
 .pagination-ellipsis {
-  min-width: 1.85rem;
-  min-height: 2.25rem;
+  min-width: 1.55rem;
+  min-height: 1.8rem;
   display: inline-grid;
   place-items: center;
-  padding: 0 .25rem;
+  padding: 0 .15rem;
   border: 1px solid transparent;
   background: transparent;
   color: var(--drop-ink-2);
   font-family: var(--font-micro);
-  font-size: .72rem;
+  font-size: .68rem;
   font-weight: 700;
 }
 .pagination-page:not(:disabled):hover,
@@ -604,25 +603,25 @@ th {
 .pagination-size {
   display: inline-flex;
   align-items: center;
-  gap: .35rem;
+  gap: .25rem;
   color: var(--drop-ink-3);
   font-family: var(--font-micro);
-  font-size: .72rem;
+  font-size: .68rem;
   white-space: nowrap;
 }
 .pagination-jump {
   display: inline-flex;
   align-items: center;
-  gap: .35rem;
+  gap: .25rem;
   color: var(--drop-ink-3);
   font-family: var(--font-micro);
-  font-size: .72rem;
+  font-size: .68rem;
   white-space: nowrap;
 }
 .pagination-jump input {
-  width: 3rem;
-  min-height: 2.25rem;
-  padding: .25rem .4rem;
+  width: 2.5rem;
+  min-height: 1.8rem;
+  padding: .1rem .25rem;
   border: 1px solid var(--drop-line);
   border-radius: 0;
   background: var(--drop-surface);
@@ -631,9 +630,9 @@ th {
   text-align: center;
 }
 .pagination-size select {
-  width: 3.9rem;
-  min-height: 2.25rem;
-  padding: .25rem .45rem;
+  width: 3.2rem;
+  min-height: 1.8rem;
+  padding: .1rem .25rem;
   border: 1px solid var(--drop-line);
   border-radius: 0;
   background: var(--drop-surface);
@@ -643,9 +642,9 @@ th {
   text-align: center;
 }
 .pagination button.ghost {
-  min-width: 2.25rem;
-  min-height: 2.25rem;
-  padding: .4rem .65rem;
+  min-width: 1.8rem;
+  min-height: 1.8rem;
+  padding: .2rem .4rem;
 }
 .share-list > .empty {
   flex: 1;

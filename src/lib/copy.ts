@@ -72,7 +72,7 @@ export const COPY = {
   },
   files: {
     all: '全部文件',
-    defaultRetention: '默认保存 30 天',
+    defaultRetention: '默认永久保存',
     empty: '暂无文件',
     list: '文件列表',
     noResults: '未找到匹配的文件',

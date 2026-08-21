@@ -180,9 +180,9 @@ export const uploadRoutes = new Hono<AppEnv>()
     const fileId = crypto.randomUUID()
     const sessionId = crypto.randomUUID()
     const now = Math.floor(Date.now() / 1000)
-    const fileExpiresAt = expiresIn === null
-      ? null
-      : now + (expiresIn ?? retentionSeconds(c.env.DEFAULT_RETENTION_DAYS))
+    const defaultRetention = retentionSeconds(c.env.DEFAULT_RETENTION_DAYS)
+    const effectiveRetention = expiresIn ?? defaultRetention
+    const fileExpiresAt = effectiveRetention === null ? null : now + effectiveRetention
     const objectKey = objectKeyFor(fileId, new Date())
 
     if (size <= chunk) {

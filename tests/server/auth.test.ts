@@ -41,7 +41,7 @@ function testEnv(db: D1Fake): Bindings {
     UPLOAD_CHUNK_SIZE: '33554432',
     MAX_FILE_SIZE: '2147483648',
     SESSION_TTL_SECONDS: '2592000',
-    DEFAULT_RETENTION_DAYS: '30',
+    DEFAULT_RETENTION_DAYS: '0',
   }
 }
 

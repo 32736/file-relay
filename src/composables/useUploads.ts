@@ -23,7 +23,7 @@ export interface UploadTask extends PendingUploadRecord {
 }
 
 const MAX_CONCURRENT = 3
-const DEFAULT_RETENTION_SECONDS = 30 * 24 * 60 * 60
+const DEFAULT_RETENTION_SECONDS: number | null = null
 
 function fileMatchesRecord(file: File, record: PendingUploadRecord): boolean {
   return (

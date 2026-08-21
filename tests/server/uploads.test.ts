@@ -175,8 +175,8 @@ describe('Phase 02 uploads', () => {
     expect(files[0].id).toBe(body.id)
     expect(files[0].size).toBe(1024)
     expect(files[0].etag).toBe(body.etag)
-    // Default retention: 30 days from creation, stored as epoch seconds
-    expect(files[0].expires_at).toBe((files[0].created_at as number) + 30 * 24 * 60 * 60)
+    // Default retention is permanent; timestamps are stored as epoch seconds.
+    expect(files[0].expires_at).toBeNull()
 
     expect(db.rows('upload_sessions')[0].status).toBe('completed')
   })

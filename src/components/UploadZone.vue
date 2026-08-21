@@ -18,7 +18,7 @@ const speeds = ref<Record<string, number>>({})
 const lastBytes = new Map<string, number>()
 const filePicker = ref<HTMLInputElement | null>(null)
 const resumeInput = ref<HTMLInputElement | null>(null)
-const retention = ref<number | null>(30 * 24 * 60 * 60)
+const retention = ref<number | null>(null)
 const uploadBusy = computed(() => tasks.value.some((task) => task.status === 'queued' || task.status === 'uploading'))
 
 let timer: ReturnType<typeof setInterval> | undefined

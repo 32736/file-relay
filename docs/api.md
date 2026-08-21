@@ -89,8 +89,8 @@ validate `Origin`.
 
 Body: `{ "name": string, "size": number, "type": string | null,
 "expiresIn"?: number | null }`. `expiresIn` is in seconds and `null` means
-permanent storage; omitted uses `DEFAULT_RETENTION_DAYS`. Filenames are reduced
-to a bare basename; `size` must be an integer within
+permanent storage; omitted uses `DEFAULT_RETENTION_DAYS` (`0` means permanent).
+Filenames are reduced to a bare basename; `size` must be an integer within
 `[1, MAX_FILE_SIZE]`.
 
 - Invalid body → `400 VALIDATION_ERROR`.
